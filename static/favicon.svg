@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Same waveform identity as the splash + unlock gate, but icon-tuned:
+       solid rounded-square background so it stands out at small sizes,
+       thicker strokes (small renders blur thin lines), and slightly
+       enlarged dot for the data point. -->
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1d24"/>
+      <stop offset="100%" stop-color="#0b0d10"/>
+    </linearGradient>
+    <linearGradient id="stroke" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5b8bff"/>
+      <stop offset="100%" stop-color="#8e5bff"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#5b8bff" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#5b8bff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect width="1024" height="1024" rx="200" ry="200" fill="url(#bg)"/>
+
+  <!-- Subtle inner glow behind the mark -->
+  <circle cx="512" cy="512" r="380" fill="url(#glow)"/>
+
+  <!-- Outer ring -->
+  <circle cx="512" cy="512" r="420" stroke="url(#stroke)" stroke-width="14" opacity="0.30" fill="none"/>
+
+  <!-- Waveform — same node positions as the in-app marks, scaled and
+       beefier so it survives the 32×32 favicon render. -->
+  <path
+    d="M 152 590 L 280 500 L 380 630 L 512 320 L 620 530 L 750 380 L 880 460"
+    stroke="url(#stroke)"
+    stroke-width="44"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"/>
+
+  <!-- Peak data point -->
+  <circle cx="512" cy="320" r="34" fill="url(#stroke)"/>
+  <circle cx="512" cy="320" r="34" fill="#fff" fill-opacity="0.18"/>
+</svg>

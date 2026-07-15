@@ -1,0 +1,4717 @@
+{
+  "$schema_version": 1,
+  "$generated_from": "14 sample CUF / Germano de Sousa lab PDFs (2022-02-09 → 2025-08-19)",
+  "$generated_at": "2026-04-28",
+  "$notes": [
+    "Seed file — read-only. User edits are persisted as overlays in the DB (analyte_aliases + analyte_overrides tables).",
+    "Range grammars listed are EVERY form seen across reports; parser captures the printed range from each report rather than relying on these defaults.",
+    "Lab updated several female reference ranges between 2025-07 and 2025-08 (GGT, AST, Creatininémia). Always trust the per-report printed range over any default."
+  ],
+  "lab_meta": {
+    "lab_name": "Germano de Sousa",
+    "lab_full_name": "CENTRO DE MEDICINA LABORATORIAL GERMANO DE SOUSA, SA",
+    "lab_director": "Germano de Sousa",
+    "lab_address": "Pólo Tecnológico de Lisboa, Rua Cupertino de Miranda, 9 - lote 8, 1600-513 Lisboa",
+    "lab_contact": "Tel. 213 561 066, Fax 217 161 676, contact@germanodesousa.com",
+    "lab_license": "Nº 8117L/2009",
+    "lab_certification": "ISO 9001",
+    "clinic_entities": [
+      "CLÍNICA CUF SINTRA",
+      "HOSPITAL CUF CASCAIS"
+    ],
+    "collection_centers": [
+      "Hospital CUF Sintra",
+      "CUF Cascais URG (UC)",
+      "CUF Sintra Urg (UR)"
+    ],
+    "patient_salutations": {
+      "m": "Exmo Sr.",
+      "f": "Exma Sra."
+    },
+    "header_metadata_fields": [
+      "Centro de colheita",
+      "Entidade",
+      "Data de colheita",
+      "Data de emissão",
+      "Destino",
+      "Requisitado por",
+      "Nº Processo",
+      "Nº Inscrição",
+      "Nº Origem",
+      "Idade"
+    ]
+  },
+  "sections": [
+    "Hematologia",
+    "Patologia Química",
+    "Imunologia"
+  ],
+  "subsections": [
+    "Hemograma",
+    "Eritrograma",
+    "Leucograma",
+    "Trombocitograma",
+    "Fibrinólise",
+    "Metabolismo do Ferro",
+    "Maturação Megaloblástica",
+    "Proteínas",
+    "Função Renal",
+    "Função Hepato-Biliar",
+    "Enzimologia",
+    "Biomarcadores Cardíacos",
+    "Metabolismo dos Hidratos de Carbono",
+    "Metabolismo Lípidico",
+    "Metabolismo Purínico",
+    "Metabolismo Fosfo-Cálcico",
+    "Equilíbrio Hidroelectrolítico",
+    "Eixo Hipófiso-Tiroideu",
+    "Eixo Hipófiso-Gonadal",
+    "Eixo Hipófiso-Corto-Supra-Renal",
+    "Ritmo Hormonal",
+    "Doenças Atópicas",
+    "Doenças Atópicas I"
+  ],
+  "panels": {
+    "hemograma": [
+      "hemoglobina",
+      "eritrocitos",
+      "hematocrito",
+      "vgm",
+      "hgm",
+      "cmhg",
+      "rdw",
+      "leucocitos",
+      "neutrofilos",
+      "eosinofilos",
+      "basofilos",
+      "linfocitos",
+      "monocitos",
+      "plaquetas"
+    ],
+    "lipid": [
+      "colesterol_total",
+      "colesterol_ldl",
+      "colesterol_hdl",
+      "triglicerides"
+    ],
+    "renal": [
+      "uremia",
+      "creatininemia",
+      "tfge_ckd_epi",
+      "ionograma",
+      "natremia",
+      "kaliemia",
+      "cloremia"
+    ],
+    "hepatic": [
+      "ast",
+      "alt",
+      "ggt",
+      "fosfatase_alcalina",
+      "bilirrubinemia_total",
+      "ldh"
+    ],
+    "thyroid": [
+      "tsh",
+      "ft4"
+    ],
+    "gonadal": [
+      "prolactina",
+      "fsh",
+      "lh",
+      "estradiol",
+      "testosterona_total",
+      "testosterona_livre",
+      "shbg",
+      "dht"
+    ],
+    "adrenal": [
+      "acth",
+      "cortisol_basal"
+    ],
+    "carbs": [
+      "glicemia",
+      "a1c_ngsp",
+      "a1c_ifcc",
+      "glicemia_media_estimada"
+    ],
+    "phospho_calcium": [
+      "calcemia",
+      "magnesiemia",
+      "fosfatemia",
+      "vitamin_d_25oh"
+    ],
+    "iron": [
+      "ferritina"
+    ],
+    "b_vitamins": [
+      "vitamina_b12",
+      "acido_folico"
+    ],
+    "atopy": [
+      "ige_total",
+      "ige_inalantes_multiplo"
+    ],
+    "cardiac": [
+      "troponina_i",
+      "troponina_i_hs"
+    ],
+    "purinic": [
+      "uricemia"
+    ],
+    "hgh_axis": [
+      "igf1"
+    ]
+  },
+  "analytes": [
+    {
+      "id": "hemoglobina",
+      "pt_name": "Hemoglobina",
+      "aliases": [
+        "Hb",
+        "HGB"
+      ],
+      "loinc": "718-7",
+      "section": "Hematologia",
+      "subsection": "Eritrograma",
+      "panel": "hemograma",
+      "expected_units": [
+        "g/dl"
+      ],
+      "range_grammar": [
+        "a_b",
+        "sex_stratified"
+      ],
+      "sex_dependent": true,
+      "default_ref": {
+        "m": [
+          13,
+          17
+        ],
+        "f": [
+          12,
+          15
+        ]
+      },
+      "description": "Iron-containing protein in red blood cells that carries oxygen from lungs to tissues and CO₂ back. Primary marker for anemia and oxygen-carrying capacity.",
+      "high_means": "Polycythemia, dehydration, smoking, chronic hypoxia (high altitude, lung/heart disease), or rare bone marrow disorders (polycythemia vera).",
+      "low_means": "Anemia. Common causes: iron deficiency (most common), B12/folate deficiency, blood loss, chronic disease, kidney disease, hemolysis, bone marrow suppression.",
+      "unit_notes": "Sex-stratified reference: M 13–17, F 12–15 g/dL. Pregnancy reduces normal values (lower bound ~11)."
+    },
+    {
+      "id": "eritrocitos",
+      "pt_name": "Eritrócitos",
+      "aliases": [
+        "RBC",
+        "Red Blood Cells"
+      ],
+      "loinc": "789-8",
+      "section": "Hematologia",
+      "subsection": "Eritrograma",
+      "panel": "hemograma",
+      "expected_units": [
+        "x 10^6/µl"
+      ],
+      "range_grammar": [
+        "a_b",
+        "sex_stratified"
+      ],
+      "sex_dependent": true,
+      "default_ref": {
+        "m": [
+          4.5,
+          5.5
+        ],
+        "f": [
+          3.8,
+          4.8
+        ]
+      },
+      "description": "Red blood cell count — number of RBCs per microliter of blood. Interpreted alongside Hb, Hct, and the indices (MCV/MCH/MCHC).",
+      "high_means": "Polycythemia, dehydration, hypoxia (smoking, altitude), or in rare cases polycythemia vera.",
+      "low_means": "Anemia (any cause), bleeding, hemolysis, marrow suppression, kidney disease (low EPO)."
+    },
+    {
+      "id": "hematocrito",
+      "pt_name": "Hematócrito",
+      "aliases": [
+        "Hct",
+        "HCT",
+        "PCV"
+      ],
+      "loinc": "4544-3",
+      "section": "Hematologia",
+      "subsection": "Eritrograma",
+      "panel": "hemograma",
+      "expected_units": [
+        "%"
+      ],
+      "range_grammar": [
+        "a_b",
+        "sex_stratified"
+      ],
+      "sex_dependent": true,
+      "default_ref": {
+        "m": [
+          40,
+          50
+        ],
+        "f": [
+          36,
+          46
+        ]
+      },
+      "description": "Volume fraction of red blood cells in whole blood. Roughly tracks hemoglobin (Hct ≈ 3 × Hb).",
+      "high_means": "Same as elevated Hb — polycythemia, dehydration, hypoxia.",
+      "low_means": "Anemia, overhydration, recent blood loss."
+    },
+    {
+      "id": "vgm",
+      "pt_name": "V.G.M.",
+      "aliases": [
+        "VGM",
+        "MCV",
+        "Mean Corpuscular Volume"
+      ],
+      "loinc": "787-2",
+      "section": "Hematologia",
+      "subsection": "Eritrograma",
+      "panel": "hemograma",
+      "expected_units": [
+        "fl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          80,
+          97
+        ]
+      },
+      "description": "Mean Corpuscular Volume — average size of red blood cells. Critical for classifying anemia.",
+      "high_means": "Macrocytic anemia (>100 fL): B12/folate deficiency, alcohol abuse, hypothyroidism, liver disease, certain medications (methotrexate, AZT).",
+      "low_means": "Microcytic anemia (<80 fL): iron deficiency (most common), thalassemia, anemia of chronic disease, lead poisoning."
+    },
+    {
+      "id": "hgm",
+      "pt_name": "H.G.M.",
+      "aliases": [
+        "HGM",
+        "MCH",
+        "Mean Corpuscular Hemoglobin"
+      ],
+      "loinc": "785-6",
+      "section": "Hematologia",
+      "subsection": "Eritrograma",
+      "panel": "hemograma",
+      "expected_units": [
+        "pg"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          27,
+          32
+        ]
+      },
+      "description": "Mean Corpuscular Hemoglobin — average mass of hemoglobin per RBC. Tracks MCV closely.",
+      "high_means": "Hyperchromic / macrocytic anemia — B12 or folate deficiency.",
+      "low_means": "Hypochromic anemia — iron deficiency or thalassemia."
+    },
+    {
+      "id": "cmhg",
+      "pt_name": "C.M.H.G.",
+      "aliases": [
+        "CMHG",
+        "MCHC",
+        "Mean Corpuscular Hemoglobin Concentration"
+      ],
+      "loinc": "786-4",
+      "section": "Hematologia",
+      "subsection": "Eritrograma",
+      "panel": "hemograma",
+      "expected_units": [
+        "g/dl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          32,
+          36
+        ]
+      },
+      "description": "Mean Corpuscular Hemoglobin Concentration — average Hb concentration inside each RBC.",
+      "high_means": "Hereditary spherocytosis, autoimmune hemolytic anemia, severe dehydration. Values >36 are uncommon and warrant investigation.",
+      "low_means": "Iron deficiency, thalassemia, lead poisoning (anything causing hypochromic cells)."
+    },
+    {
+      "id": "rdw",
+      "pt_name": "R.D.W.",
+      "aliases": [
+        "RDW",
+        "Red Cell Distribution Width"
+      ],
+      "loinc": "788-0",
+      "section": "Hematologia",
+      "subsection": "Eritrograma",
+      "panel": "hemograma",
+      "expected_units": [
+        "%"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          11.6,
+          14
+        ]
+      },
+      "description": "Variation in red blood cell size. Helps distinguish causes of anemia (e.g., iron deficiency = high RDW; thalassemia = normal RDW).",
+      "high_means": "Mixed-cause anemias, early iron / B12 / folate deficiency, recent transfusion, post-bleeding recovery, myelodysplasia.",
+      "low_means": "Rarely clinically significant when low; uniform RBC size population."
+    },
+    {
+      "id": "leucocitos",
+      "pt_name": "Leucócitos",
+      "aliases": [
+        "WBC",
+        "White Blood Cells",
+        "Leucócitos Totais"
+      ],
+      "loinc": "6690-2",
+      "section": "Hematologia",
+      "subsection": "Leucograma",
+      "panel": "hemograma",
+      "expected_units": [
+        "x 10^3/µl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          4,
+          10
+        ]
+      },
+      "description": "Total white blood cell count. The differential (neutrophils / lymphocytes / etc.) gives more diagnostic information than the total alone.",
+      "high_means": "Leukocytosis — bacterial infection, inflammation, stress, corticosteroids, leukemia (very high values), recent strenuous exercise.",
+      "low_means": "Leukopenia — viral infection, severe sepsis, autoimmune disease, chemotherapy, marrow failure, certain medications, B12/folate deficiency."
+    },
+    {
+      "id": "neutrofilos",
+      "pt_name": "Neutrófilos",
+      "aliases": [
+        "NEUT%",
+        "Neutrophils"
+      ],
+      "loinc": "770-8",
+      "section": "Hematologia",
+      "subsection": "Leucograma",
+      "panel": "hemograma",
+      "expected_units": [
+        "%",
+        "x 10^3/µl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "paired_value": true,
+      "default_ref": {
+        "all": [
+          40,
+          80
+        ]
+      },
+      "description": "Most abundant white blood cells; first responders to bacterial infection. Reported as both percent of WBC and absolute count.",
+      "high_means": "Bacterial infection, acute inflammation, stress, corticosteroids, smoking, leukemoid reaction.",
+      "low_means": "Neutropenia — viral infection (often), chemotherapy, autoimmune destruction, severe overwhelming sepsis, marrow failure. ANC <500 = severe risk of infection."
+    },
+    {
+      "id": "eosinofilos",
+      "pt_name": "Eosinófilos",
+      "aliases": [
+        "EOS%",
+        "Eosinophils"
+      ],
+      "loinc": "713-8",
+      "section": "Hematologia",
+      "subsection": "Leucograma",
+      "panel": "hemograma",
+      "expected_units": [
+        "%",
+        "x 10^3/µl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "paired_value": true,
+      "default_ref": {
+        "all": [
+          1,
+          6
+        ]
+      },
+      "description": "WBC subtype involved in allergic reactions and parasitic infections.",
+      "high_means": "Allergic disease (asthma, eczema, drug reactions), parasitic infections, eosinophilic disorders, certain leukemias, Addison's disease.",
+      "low_means": "Acute stress, corticosteroid therapy, Cushing's. Usually not clinically alarming when low."
+    },
+    {
+      "id": "basofilos",
+      "pt_name": "Basófilos",
+      "aliases": [
+        "BASO%",
+        "Basophils"
+      ],
+      "loinc": "706-2",
+      "section": "Hematologia",
+      "subsection": "Leucograma",
+      "panel": "hemograma",
+      "expected_units": [
+        "%",
+        "x 10^3/µl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "paired_value": true,
+      "default_ref": {
+        "all": [
+          0,
+          2
+        ]
+      },
+      "description": "Least common WBC. Releases histamine; involved in allergic and inflammatory responses.",
+      "high_means": "Chronic myeloid leukemia (key marker), polycythemia vera, hypothyroidism, allergic reactions, chronic inflammation.",
+      "low_means": "Rarely clinically significant; acute infection, hyperthyroidism, corticosteroids."
+    },
+    {
+      "id": "linfocitos",
+      "pt_name": "Linfócitos",
+      "aliases": [
+        "LYMPH%",
+        "Lymphocytes"
+      ],
+      "loinc": "736-9",
+      "section": "Hematologia",
+      "subsection": "Leucograma",
+      "panel": "hemograma",
+      "expected_units": [
+        "%",
+        "x 10^3/µl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "paired_value": true,
+      "default_ref": {
+        "all": [
+          20,
+          40
+        ]
+      },
+      "description": "Adaptive immune cells — T cells, B cells, NK cells. Drive antibody response and cell-mediated immunity.",
+      "high_means": "Viral infections (EBV, CMV, hepatitis), pertussis, chronic lymphocytic leukemia, lymphoma.",
+      "low_means": "HIV infection, immunosuppression, corticosteroids, autoimmune disease, severe stress, congenital immunodeficiency."
+    },
+    {
+      "id": "monocitos",
+      "pt_name": "Monócitos",
+      "aliases": [
+        "MONO%",
+        "Monocytes"
+      ],
+      "loinc": "5905-5",
+      "section": "Hematologia",
+      "subsection": "Leucograma",
+      "panel": "hemograma",
+      "expected_units": [
+        "%",
+        "x 10^3/µl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "paired_value": true,
+      "default_ref": {
+        "all": [
+          2,
+          10
+        ]
+      },
+      "description": "Largest WBCs. Differentiate into macrophages and dendritic cells in tissues; important in chronic infection and inflammation.",
+      "high_means": "Chronic infection (TB, endocarditis), inflammatory disease, autoimmune conditions (lupus, IBD), some leukemias (CMML).",
+      "low_means": "Aplastic anemia, hairy cell leukemia, corticosteroid therapy, severe acute infection."
+    },
+    {
+      "id": "plaquetas",
+      "pt_name": "Plaquetas",
+      "aliases": [
+        "PLT",
+        "Platelets",
+        "Trombócitos"
+      ],
+      "loinc": "777-3",
+      "section": "Hematologia",
+      "subsection": "Trombocitograma",
+      "panel": "hemograma",
+      "expected_units": [
+        "x 10^3/µl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          150,
+          400
+        ]
+      },
+      "description": "Cell fragments essential for blood clotting. Form the primary plug at injury sites and trigger coagulation.",
+      "high_means": "Thrombocytosis — reactive (infection, inflammation, iron deficiency, post-splenectomy, cancer) or essential thrombocythemia / myeloproliferative disease.",
+      "low_means": "Thrombocytopenia — ITP, drugs (heparin, quinine), DIC, sepsis, marrow failure, hypersplenism, vitamin deficiencies. <50 = bleeding risk; <20 = high spontaneous bleeding risk."
+    },
+    {
+      "id": "ferritina",
+      "pt_name": "Ferritina",
+      "aliases": [
+        "Ferritin",
+        "Iron Stores"
+      ],
+      "loinc": "2276-4",
+      "section": "Hematologia",
+      "subsection": "Metabolismo do Ferro",
+      "panel": "iron",
+      "expected_units": [
+        "ng/ml"
+      ],
+      "range_grammar": [
+        "a_b",
+        "categorical",
+        "sex_stratified"
+      ],
+      "sex_dependent": true,
+      "method_annotation": "Quimioluminescência",
+      "default_ref": {
+        "m": [
+          30,
+          400
+        ],
+        "f": [
+          13,
+          150
+        ]
+      },
+      "description": "Iron-storage protein — the best single marker of total body iron stores. Also an acute-phase reactant (rises with inflammation), which can mask iron deficiency.",
+      "high_means": "Iron overload (hemochromatosis, repeated transfusions), inflammation / infection / cancer (acute-phase reactant), liver disease, hyperthyroidism. Very high (>1000) raises concern for hemochromatosis or malignancy.",
+      "low_means": "Iron deficiency (most specific test). <30 ng/mL suggests deficiency; <15 is virtually diagnostic. May precede anemia by months.",
+      "unit_notes": "Sex- and age-dependent. Inflammation can falsely normalize ferritin in iron-deficient patients — pair with transferrin saturation if doubt.",
+      "categorical_tiers": [
+        {
+          "label": "Ferropénia absoluta",
+          "max": 30
+        },
+        {
+          "label": "Ferropénia funcional",
+          "min": 30,
+          "max": 50
+        },
+        {
+          "label": "Limite",
+          "min": 50,
+          "max": 100
+        },
+        {
+          "label": "Normal",
+          "min": 100,
+          "max": 340
+        },
+        {
+          "label": "Possível sobrecarga",
+          "min": 340
+        }
+      ]
+    },
+    {
+      "id": "vitamina_b12",
+      "pt_name": "Vitamina B12",
+      "aliases": [
+        "B12",
+        "Cobalamin",
+        "Cyanocobalamin"
+      ],
+      "loinc": "2132-9",
+      "section": "Hematologia",
+      "subsection": "Maturação Megaloblástica",
+      "panel": "b_vitamins",
+      "expected_units": [
+        "pg/ml"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "method_annotation": "Quimioluminescência",
+      "default_ref": {
+        "all": [
+          200,
+          900
+        ]
+      },
+      "description": "Essential vitamin for DNA synthesis, red blood cell formation, and neurological function. Sourced from animal products. Deficiency causes megaloblastic anemia and neurological deficits.",
+      "high_means": "Excessive supplementation, liver disease (releases stored B12), myeloproliferative disorders. Rarely a clinical concern when high.",
+      "low_means": "Pernicious anemia (autoimmune loss of intrinsic factor), strict vegan diet, malabsorption (Crohn's, celiac, post-gastric surgery), metformin use, PPIs. Causes macrocytic anemia + peripheral neuropathy + dementia. Treat early — neuro damage may be irreversible."
+    },
+    {
+      "id": "acido_folico",
+      "pt_name": "Ácido Fólico",
+      "aliases": [
+        "Folate",
+        "Folic Acid",
+        "Vitamin B9"
+      ],
+      "loinc": "2284-8",
+      "section": "Hematologia",
+      "subsection": "Maturação Megaloblástica",
+      "panel": "b_vitamins",
+      "expected_units": [
+        "ng/ml"
+      ],
+      "range_grammar": [
+        "gt"
+      ],
+      "method_annotation": "Quimioluminescência",
+      "default_ref": {
+        "all": [
+          5,
+          17
+        ]
+      },
+      "description": "B9 vitamin essential for DNA synthesis and cell division. Critical in pregnancy to prevent neural tube defects.",
+      "high_means": "Excessive supplementation. Generally not harmful but masks B12 deficiency neurologic symptoms.",
+      "low_means": "Poor diet (low leafy greens), alcoholism, malabsorption, pregnancy (increased need), methotrexate / phenytoin / sulfasalazine. Causes megaloblastic anemia (indistinguishable from B12 deficiency on smear) and neural tube defects in pregnancy."
+    },
+    {
+      "id": "d_dimero",
+      "pt_name": "Dímeros D da Fibrina (D-Dímero)",
+      "aliases": [
+        "D-Dímero"
+      ],
+      "loinc": "30240-9",
+      "section": "Hematologia",
+      "subsection": "Fibrinólise",
+      "expected_units": [
+        "ng/ml"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "method_annotation": "Ensaio Fluorimunoenzimático",
+      "default_ref": {
+        "all": [
+          null,
+          500
+        ]
+      },
+      "description": "Cross-linked fibrin degradation product. Negative result has very high negative-predictive value for VTE in low-pretest-probability patients — the workhorse rule-out test for DVT / PE. Many false positives, so a positive value alone never rules in.",
+      "high_means": "VTE (DVT / PE), DIC, recent surgery / trauma / sepsis, malignancy, pregnancy (rises through gestation), advanced age (use age-adjusted cutoff age × 10 ng/mL after 50). Useful only in conjunction with pretest-probability tools (Wells, Geneva).",
+      "low_means": "Below the assay cutoff. With low/intermediate Wells: VTE essentially excluded. Doesn't guarantee no clot in high-pretest-probability patients — image regardless.",
+      "unit_notes": "Reference <500 ng/mL (FEU). Age-adjusted cutoff for >50 y: age × 10 ng/mL. Some labs report DDU (≈ FEU/2) — check assay before applying cutoffs."
+    },
+    {
+      "id": "glicemia",
+      "pt_name": "Glicémia",
+      "aliases": [
+        "Glucose",
+        "Blood Glucose",
+        "FPG",
+        "Glicemia em jejum"
+      ],
+      "loinc": "2345-7",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo dos Hidratos de Carbono",
+      "panel": "carbs",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "method_annotation": "Hexoquinase-Glicose-6-Fosfato Deshidrogenase",
+      "default_ref": {
+        "all": [
+          70,
+          110
+        ]
+      },
+      "description": "Fasting plasma glucose. The primary screening test for diabetes mellitus. Reflects current blood sugar at the moment of draw.",
+      "high_means": "≥126 mg/dL fasting on two separate days = diabetes (ADA criteria). 100–125 = impaired fasting glucose / prediabetes. Stress, illness, steroids, recent meal, and some medications also elevate.",
+      "low_means": "<70 mg/dL is hypoglycemia. Causes: insulin or sulfonylurea overdose, prolonged fasting, alcohol, adrenal insufficiency, severe liver disease, insulinoma. Symptoms: tremor, sweating, confusion.",
+      "unit_notes": "Reference ~70–110 mg/dL fasting. To convert to mmol/L: divide by 18.018. HbA1c gives 2–3 month average glycemia."
+    },
+    {
+      "id": "a1c_ngsp",
+      "pt_name": "Hemoglobina Glicada (A1c)",
+      "aliases": [
+        "A1c",
+        "HbA1c",
+        "NGSP",
+        "Hemoglobina Glicada (A1c) [NGSP]",
+        "Glicohemoglobina"
+      ],
+      "loinc": "4548-4",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo dos Hidratos de Carbono",
+      "panel": "carbs",
+      "expected_units": [
+        "%"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "method_annotation": "NGSP / HPLC",
+      "default_ref": {
+        "all": [
+          null,
+          5.7
+        ]
+      },
+      "description": "Glycated hemoglobin — the percentage of hemoglobin molecules with glucose attached. Reflects average blood glucose over the prior 2–3 months.",
+      "high_means": "≥6.5% = diabetes (ADA). 5.7–6.4% = prediabetes. Higher values indicate poor glycemic control; each 1% rise ≈ 30 mg/dL average glucose.",
+      "low_means": "<4% is uncommon; suggests recent acute blood loss, hemolytic anemia, or sickle cell trait (false low). Hypoglycemia from over-treated diabetes also produces low A1c.",
+      "unit_notes": "NGSP %: <5.7 normal · 5.7–6.4 prediabetes · ≥6.5 diabetes. IFCC reports in mmol/mol (different scale)."
+    },
+    {
+      "id": "a1c_ifcc",
+      "pt_name": "HbA1c (IFCC)",
+      "aliases": [
+        "IFCC",
+        "Hemoglobina Glicada (A1c) [IFCC]"
+      ],
+      "loinc": "59261-8",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo dos Hidratos de Carbono",
+      "panel": "carbs",
+      "expected_units": [
+        "mmol/mol"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "method_annotation": "IFCC",
+      "default_ref": {
+        "all": [
+          null,
+          39
+        ]
+      },
+      "description": "IFCC-standardised glycated haemoglobin in mmol/mol. Same biology as the NGSP %-based A1c — average glycaemia over the prior 8–12 weeks — on the SI-aligned scale used across most of Europe. Conversion: NGSP% = (IFCC × 0.0915) + 2.15.",
+      "high_means": "≥48 mmol/mol = diabetes. 39–47 = prediabetes / increased risk. Higher = poorer glycaemic control; each 11 mmol/mol rise ≈ 1% NGSP rise.",
+      "low_means": "<20 mmol/mol is unusual. Suggests recent acute blood loss, haemolytic anaemia, sickle-cell trait (false low), or over-treated diabetes with frequent hypoglycaemia.",
+      "unit_notes": "<39 normal · 39–47 prediabetes · ≥48 diabetes (mmol/mol). Reliable only when RBC lifespan is normal — adjust for haemoglobinopathies, recent transfusion, ESRD, or pregnancy."
+    },
+    {
+      "id": "glicemia_media_estimada",
+      "pt_name": "Glicémia média estimada",
+      "aliases": [
+        "eAG"
+      ],
+      "loinc": "27353-2",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo dos Hidratos de Carbono",
+      "panel": "carbs",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "none"
+      ],
+      "is_derived": true,
+      "default_ref": {
+        "all": [
+          70,
+          117
+        ]
+      },
+      "description": "Estimated average glucose derived from HbA1c via the ADAG formula: eAG (mg/dL) = 28.7 × A1c% − 46.7. Translates an A1c % into the everyday glucose units patients see on glucometers.",
+      "high_means": "Mirrors high A1c — poor glycaemic control, elevated complication risk over time.",
+      "low_means": "Mirrors low A1c. Frequent hypoglycaemia in over-treated diabetes is the main concern.",
+      "unit_notes": "Derived value — the column is informational. Convert mg/dL → mmol/L by dividing by 18. Useful patient-facing translation but never replaces home monitoring / CGM trends."
+    },
+    {
+      "id": "colesterol_total",
+      "pt_name": "Colesterol Total",
+      "aliases": [
+        "Total Cholesterol",
+        "TC"
+      ],
+      "loinc": "2093-3",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo Lípidico",
+      "panel": "lipid",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "method_annotation": "Colesterol oxidase-esterase",
+      "default_ref": {
+        "all": [
+          null,
+          190
+        ]
+      },
+      "description": "Total cholesterol = LDL + HDL + (TG/5). A composite of all cholesterol-carrying particles. Modern guidelines weight LDL and non-HDL more heavily for risk.",
+      "high_means": "Cardiovascular risk (when paired with high LDL or low HDL). Familial hypercholesterolemia, hypothyroidism, nephrotic syndrome, diet, obesity, certain meds.",
+      "low_means": "Hyperthyroidism, malnutrition, malabsorption, severe liver disease, certain anemias. Very low values (<120) sometimes associated with depression / suicide risk in some studies."
+    },
+    {
+      "id": "colesterol_ldl",
+      "pt_name": "Colesterol LDL",
+      "aliases": [
+        "LDL",
+        "LDL-C",
+        "Bad Cholesterol"
+      ],
+      "loinc": "2089-1",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo Lípidico",
+      "panel": "lipid",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "lt",
+        "categorical"
+      ],
+      "method_annotation": "Ensaio Enzimático Colorimétrico Homogéneo Directo",
+      "default_ref": {
+        "all": [
+          null,
+          115
+        ]
+      },
+      "description": "Low-Density Lipoprotein cholesterol — the primary atherogenic particle that deposits cholesterol in arterial walls. The main lipid target for cardiovascular risk reduction.",
+      "high_means": "Atherosclerosis / cardiovascular disease risk. Familial hypercholesterolemia, hypothyroidism, nephrotic syndrome, diet (saturated fat, trans fat).",
+      "low_means": "Hyperthyroidism, severe liver disease, malnutrition. Very low values usually reflect statin therapy and are typically beneficial.",
+      "unit_notes": "Risk-tier targets: low/moderate <115, high <100, very high <70 mg/dL. Some labs report apoB or non-HDL-C alongside."
+    },
+    {
+      "id": "colesterol_hdl",
+      "pt_name": "Colesterol HDL",
+      "aliases": [
+        "HDL",
+        "HDL-C",
+        "Good Cholesterol"
+      ],
+      "loinc": "2085-9",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo Lípidico",
+      "panel": "lipid",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "sex_dependent": false,
+      "method_annotation": "Ensaio Enzimático Colorimétrico Homogéneo Directo",
+      "default_ref": {
+        "all": [
+          35,
+          55
+        ]
+      },
+      "description": "High-Density Lipoprotein cholesterol — reverse-transports cholesterol from peripheral tissues back to the liver. Higher levels are associated with lower cardiovascular risk.",
+      "high_means": "Often protective. Genetic, regular aerobic exercise, moderate alcohol, certain estrogens. Very high (>90) without lifestyle explanation is being re-evaluated as no longer purely protective.",
+      "low_means": "Increased cardiovascular risk. Sedentary lifestyle, smoking, obesity, type 2 diabetes, metabolic syndrome, anabolic steroids, certain meds (beta-blockers, progestins).",
+      "unit_notes": "Lab default reference: 35–55 mg/dL (single range). Clinical *protective* cutoffs are sex-stratified — ≥40 in men, ≥50 in women — but those describe CV-risk thresholds rather than the reported reference interval. Below the protective cutoff is an independent CV risk factor regardless of being inside the lab range."
+    },
+    {
+      "id": "trigliceridos",
+      "pt_name": "Triglicéridos",
+      "aliases": [
+        "TG",
+        "Triglycerides"
+      ],
+      "loinc": "2571-8",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo Lípidico",
+      "panel": "lipid",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "method_annotation": "Glicerol Fosfato Oxidase Peroxidase",
+      "default_ref": {
+        "all": [
+          null,
+          150
+        ]
+      },
+      "description": "Major form of fat in blood and the primary energy storage form. Carried in VLDL and chylomicrons. High levels contribute to cardiovascular risk and pancreatitis.",
+      "high_means": "Diet (sugar, alcohol), insulin resistance / type 2 diabetes, obesity, hypothyroidism, kidney disease, genetic disorders. >500 mg/dL = pancreatitis risk; >1000 = high pancreatitis risk.",
+      "low_means": "Hyperthyroidism, malnutrition, malabsorption. Rarely clinically alarming when low.",
+      "unit_notes": "Must be measured fasting (≥9–12h). Optimal <150, borderline 150–199, high 200–499, very high ≥500. Convert mg/dL → mmol/L by /88.5."
+    },
+    {
+      "id": "pcr",
+      "pt_name": "Proteína C Reactiva",
+      "aliases": [
+        "PCR",
+        "CRP",
+        "C-Reactive Protein"
+      ],
+      "loinc": "1988-5",
+      "section": "Patologia Química",
+      "subsection": "Proteínas",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "method_annotation": "Imunoturbidimetria reforçada com latéx",
+      "default_ref": {
+        "all": [
+          0,
+          0.5
+        ]
+      },
+      "categorical_tiers": [
+        {
+          "label": "Normal",
+          "max": 0.5
+        },
+        {
+          "label": "Elevação leve",
+          "min": 0.5,
+          "max": 1
+        },
+        {
+          "label": "Inflamação",
+          "min": 1,
+          "max": 10
+        },
+        {
+          "label": "Inflamação severa",
+          "min": 10
+        }
+      ],
+      "description": "Acute-phase reactant produced by the liver in response to inflammation (within hours). The most widely-used marker of systemic inflammation. High-sensitivity CRP (hs-CRP) used for cardiovascular risk stratification.",
+      "high_means": "Bacterial infection (often >10), severe trauma / surgery / burns, autoimmune flares (RA, SLE), inflammatory bowel disease, cancer, MI. hs-CRP <1 low CV risk, 1-3 average, >3 high.",
+      "low_means": "No inflammation. Generally a reassuring finding. Patients with severe liver failure can't mount an acute-phase response.",
+      "unit_notes": "Reference <0.5 mg/dL (or <5 mg/L). hs-CRP has the same biology but lower detection limit for CV-risk stratification."
+    },
+    {
+      "id": "proteinas_totais",
+      "pt_name": "Proteínas Totais séricas",
+      "aliases": [
+        "TP"
+      ],
+      "loinc": "2885-2",
+      "section": "Patologia Química",
+      "subsection": "Proteínas",
+      "expected_units": [
+        "g/dl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          6.4,
+          8.3
+        ]
+      },
+      "description": "Sum of all circulating serum proteins — albumin (~60%) plus the globulins. The headline value of a serum-protein-electrophoresis (SPE) panel; the fractionation that follows tells you which compartment is high or low.",
+      "high_means": "Hyperglobulinaemia: chronic inflammation / infection, autoimmune disease, multiple myeloma + other monoclonal gammopathies, chronic liver disease (polyclonal hypergammaglobulinaemia). Dehydration produces a falsely high reading.",
+      "low_means": "Albumin-driven hypoproteinaemia: liver synthesis failure, nephrotic syndrome (urinary loss), severe protein-losing enteropathy, malnutrition, burns, sepsis. Also genetic agammaglobulinaemia (rare).",
+      "unit_notes": "Reference 6.4–8.3 g/dL. Always interpret with the SPE fractions and total albumin. Convert g/dL → g/L by ×10."
+    },
+    {
+      "id": "albumina",
+      "pt_name": "Albumina",
+      "aliases": [],
+      "loinc": "1751-7",
+      "section": "Patologia Química",
+      "subsection": "Proteínas",
+      "expected_units": [
+        "%",
+        "g/dl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "paired_value": true,
+      "default_ref": {
+        "all": [
+          55.8,
+          66.1
+        ]
+      },
+      "description": "Albumin band on serum-protein electrophoresis — typically reported as both a percentage of total protein and an absolute concentration. The largest peak; densitometric quantification of the dominant carrier protein.",
+      "high_means": "Dehydration (relative). True hyperalbuminaemia is essentially never pathological.",
+      "low_means": "Liver synthesis failure (chronic hepatitis, cirrhosis), nephrotic syndrome (urinary loss), protein-losing enteropathy, malnutrition, sepsis, third-spacing. A drop here pushes the relative globulin fractions up even when their absolute amounts are unchanged.",
+      "unit_notes": "Reference 55.8–66.1% (electrophoresis fractional). Compare with the absolute serum albumin (`Albuminémia`) — fractional drops can mask absolute decline if total protein is also low."
+    },
+    {
+      "id": "alfa1_globulinas",
+      "pt_name": "Alfa 1-Globulinas",
+      "section": "Patologia Química",
+      "subsection": "Proteínas",
+      "expected_units": [
+        "%",
+        "g/dl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "paired_value": true,
+      "default_ref": {
+        "all": [
+          2.9,
+          4.9
+        ]
+      },
+      "description": "α₁ band on SPE. Dominated by α₁-antitrypsin with smaller contributions from α₁-acid glycoprotein, α-fetoprotein, HDL, and TBG. An acute-phase reactant compartment.",
+      "high_means": "Acute inflammation / infection / trauma (acute-phase rise of α₁-antitrypsin and α₁-acid glycoprotein), pregnancy, oestrogen therapy.",
+      "low_means": "α₁-antitrypsin deficiency (genetic — emphysema + early-onset liver disease). A flat or absent α₁ band on the gel is a cardinal SPE finding for this diagnosis.",
+      "unit_notes": "Reference 2.9–4.9% (electrophoresis fractional). Pair with quantitative α₁-antitrypsin if the band is low/absent."
+    },
+    {
+      "id": "alfa2_globulinas",
+      "pt_name": "Alfa 2-Globulinas",
+      "section": "Patologia Química",
+      "subsection": "Proteínas",
+      "expected_units": [
+        "%",
+        "g/dl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "paired_value": true,
+      "default_ref": {
+        "all": [
+          7.1,
+          11.8
+        ]
+      },
+      "description": "α₂ band on SPE. Mostly haptoglobin and α₂-macroglobulin. Acute-phase reactant compartment.",
+      "high_means": "Acute / chronic inflammation (haptoglobin up), nephrotic syndrome (α₂-macroglobulin up — large molecule retained while albumin lost in urine).",
+      "low_means": "Intravascular haemolysis (haptoglobin consumed binding free haemoglobin), severe liver disease, congenital ahaptoglobinaemia.",
+      "unit_notes": "Reference 7.1–11.8% (electrophoresis fractional). Isolated α₂ rise + heavy proteinuria is the classic nephrotic-syndrome SPE pattern."
+    },
+    {
+      "id": "beta1_globulinas",
+      "pt_name": "Beta 1-Globulinas",
+      "section": "Patologia Química",
+      "subsection": "Proteínas",
+      "expected_units": [
+        "%",
+        "g/dl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "paired_value": true,
+      "default_ref": {
+        "all": [
+          4.7,
+          7.2
+        ]
+      },
+      "description": "β₁ band on SPE. Mostly transferrin. Some labs combine β₁ and β₂ into a single β band.",
+      "high_means": "Iron deficiency (transferrin synthesis up), pregnancy / oestrogens.",
+      "low_means": "Anaemia of chronic disease, severe liver disease, malnutrition, nephrotic syndrome (urinary loss).",
+      "unit_notes": "Reference 4.7–7.2% (electrophoresis fractional)."
+    },
+    {
+      "id": "beta2_globulinas",
+      "pt_name": "Beta 2-Globulinas",
+      "section": "Patologia Química",
+      "subsection": "Proteínas",
+      "expected_units": [
+        "%",
+        "g/dl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "paired_value": true,
+      "default_ref": {
+        "all": [
+          3.2,
+          6.5
+        ]
+      },
+      "description": "β₂ band on SPE. Mostly C3 complement. Sometimes shows β-γ bridging in chronic liver disease.",
+      "high_means": "Inflammation (C3 acute-phase rise).",
+      "low_means": "Active SLE flare or other complement-consuming disease (low C3), chronic liver disease (β-γ bridging blurs the band), severe protein loss.",
+      "unit_notes": "Reference 3.2–6.5% (electrophoresis fractional). β-γ bridging on the gel is a hint of chronic liver disease."
+    },
+    {
+      "id": "gama_globulinas",
+      "pt_name": "Gama-Globulinas",
+      "section": "Patologia Química",
+      "subsection": "Proteínas",
+      "expected_units": [
+        "%",
+        "g/dl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "paired_value": true,
+      "default_ref": {
+        "all": [
+          11.1,
+          18.8
+        ]
+      },
+      "description": "γ band on SPE. Almost entirely immunoglobulins (IgG dominantly, plus IgA and IgM). The most diagnostically informative SPE band — a sharp `monoclonal spike` (M-protein) in this region is the cornerstone of multiple-myeloma / MGUS / Waldenström screening.",
+      "high_means": "Monoclonal: multiple myeloma, MGUS, Waldenström macroglobulinaemia, primary amyloidosis (M-spike — perform immunofixation). Polyclonal: chronic infection (TB, HIV), autoimmune disease (SLE, RA), chronic liver disease (esp. autoimmune hepatitis).",
+      "low_means": "Hypogammaglobulinaemia: CVID, X-linked agammaglobulinaemia, severe protein loss, immunosuppressive therapy, multiple myeloma (suppression of non-tumour Ig classes).",
+      "unit_notes": "Reference 11.1–18.8% (electrophoresis fractional). Any narrow spike here warrants immunofixation electrophoresis (IFE) plus serum free light chains to characterise it."
+    },
+    {
+      "id": "ag_ratio",
+      "pt_name": "Rel.Albumina/Globulinas",
+      "aliases": [
+        "A/G"
+      ],
+      "loinc": "1759-0",
+      "section": "Patologia Química",
+      "subsection": "Proteínas",
+      "range_grammar": [
+        "a_b"
+      ],
+      "is_derived": true,
+      "default_ref": {
+        "all": [
+          1.2,
+          2.2
+        ]
+      },
+      "description": "Albumin / (Total Protein − Albumin). A summary descriptor of the SPE pattern. Inverted ratio (<1) usually means a relative gain in globulins or a relative loss of albumin.",
+      "high_means": "High A/G usually reflects globulin deficiency (immunodeficiency, severe undernutrition).",
+      "low_means": "Inverted ratio (<1) — chronic liver disease, multiple myeloma / monoclonal gammopathy, chronic inflammation, nephrotic syndrome (selective albumin loss).",
+      "unit_notes": "Reference 1.2–2.2. Derived value — meaningful only with the underlying SPE."
+    },
+    {
+      "id": "albuminemia",
+      "pt_name": "Albuminémia",
+      "aliases": [],
+      "section": "Patologia Química",
+      "subsection": "Proteínas",
+      "expected_units": [
+        "g/dl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "method_annotation": "Púrpura de Bromocresol",
+      "default_ref": {
+        "all": [
+          3.5,
+          5
+        ]
+      },
+      "description": "Absolute serum albumin concentration measured colorimetrically (bromocresol purple, BCP — more specific than older bromocresol-green methods). Reflects hepatic synthesis, protein loss, and overall nutritional status. Long half-life (~20 days) makes it a slow-changing marker — not a sensitive tracker of acute insults.",
+      "high_means": "Dehydration. True hyperalbuminaemia is essentially never pathological.",
+      "low_means": "Hepatic synthesis failure (cirrhosis, severe hepatitis), nephrotic syndrome (urinary loss), protein-losing enteropathy, malabsorption, severe burns, sepsis (acute-phase suppression), chronic inflammation. Drives oedema by lowering oncotic pressure when <2.5 g/dL.",
+      "unit_notes": "Reference 3.5–5.0 g/dL. Use BCP-based methods preferentially (older BCG over-estimates by 0.2–0.5 g/dL). Convert mg/dL → µmol/L: ×151. Always correct serum calcium for albumin (+0.8 mg/dL Ca per 1 g/dL albumin below 4.0)."
+    },
+    {
+      "id": "uricemia",
+      "pt_name": "Uricémia",
+      "aliases": [
+        "Uric acid",
+        "Ácido Úrico"
+      ],
+      "loinc": "3084-1",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo Purínico",
+      "panel": "purinic",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "method_annotation": "Cinético Urease",
+      "default_ref": {
+        "m": [
+          3.5,
+          7.2
+        ],
+        "f": [
+          2.6,
+          6
+        ]
+      },
+      "description": "End product of purine metabolism. Elevated uric acid causes gout and kidney stones; also independently associated with hypertension and cardiovascular risk.",
+      "high_means": "Hyperuricemia: dietary excess (meat, alcohol, fructose), kidney disease, diuretics (especially thiazides), tumor lysis syndrome, psoriasis, lead toxicity. Symptomatic gout typically >6.8 mg/dL.",
+      "low_means": "SIADH, pregnancy (mild), Wilson disease, Fanconi syndrome, severe liver disease, uricosuric drugs (probenecid, losartan).",
+      "unit_notes": "M 3.5–7.2, F 2.6–6.0 mg/dL. Goal in gout management <6 (often <5 if tophaceous). Convert to µmol/L: ×59.48."
+    },
+    {
+      "id": "uremia",
+      "pt_name": "Urémia",
+      "aliases": [
+        "BUN",
+        "Urea",
+        "Blood Urea Nitrogen"
+      ],
+      "loinc": "3094-0",
+      "section": "Patologia Química",
+      "subsection": "Função Renal",
+      "panel": "renal",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "lt",
+        "a_b"
+      ],
+      "method_annotation": "Cinético Urease/ Glutamato Deshidrogenase",
+      "default_ref": {
+        "all": [
+          10,
+          50
+        ]
+      },
+      "description": "Nitrogenous waste product from protein metabolism, filtered by kidneys. Less specific than creatinine for kidney function — varies with protein intake, hydration, and bleeding.",
+      "high_means": "Kidney dysfunction (paired with high creatinine), dehydration, high-protein diet, GI bleeding (protein load), heart failure, urinary obstruction, catabolic states. BUN/creatinine ratio >20 suggests prerenal cause.",
+      "low_means": "Low protein intake, severe liver disease (urea synthesized in liver), SIADH, overhydration, late pregnancy.",
+      "unit_notes": "Reference 10–50 mg/dL urea (Portuguese labs report urea, not BUN). To convert urea mg/dL ↔ BUN mg/dL: BUN ≈ urea / 2.14. Pair with creatinine for kidney evaluation."
+    },
+    {
+      "id": "creatininemia",
+      "pt_name": "Creatininémia",
+      "aliases": [
+        "Creatinine",
+        "Cr",
+        "Serum Creatinine"
+      ],
+      "loinc": "2160-0",
+      "section": "Patologia Química",
+      "subsection": "Função Renal",
+      "panel": "renal",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b",
+        "sex_stratified"
+      ],
+      "sex_dependent": true,
+      "method_annotation": "Jaffé Cinético modificado",
+      "default_ref": {
+        "m": [
+          0.7,
+          1.3
+        ],
+        "f": [
+          0.5,
+          1.1
+        ]
+      },
+      "description": "Waste product from muscle metabolism (creatine breakdown), filtered by the kidneys. The most common marker of kidney function but lags behind eGFR for early disease detection.",
+      "high_means": "Reduced kidney function (acute kidney injury or chronic kidney disease), dehydration, heavy muscle mass, muscle injury (rhabdomyolysis), high-protein diet, certain meds (cimetidine, trimethoprim).",
+      "low_means": "Reduced muscle mass (elderly, malnutrition, muscle-wasting diseases), pregnancy (increased filtration), liver disease.",
+      "unit_notes": "Muscle-mass dependent — same value means worse kidney function in a small frail person than in a large athlete. Always interpret alongside eGFR."
+    },
+    {
+      "id": "tfge_ckd_epi",
+      "pt_name": "TFGe",
+      "aliases": [
+        "TFGe",
+        "eGFR",
+        "TFGe [CKD-EPI 2009]",
+        "CKD-EPI 2009",
+        "estimated GFR",
+        "Glomerular Filtration Rate"
+      ],
+      "loinc": "62238-1",
+      "section": "Patologia Química",
+      "subsection": "Função Renal",
+      "panel": "renal",
+      "expected_units": [
+        "ml/min/1,73 m2"
+      ],
+      "range_grammar": [
+        "gte"
+      ],
+      "is_derived": true,
+      "default_ref": {
+        "all": [
+          60,
+          null
+        ]
+      },
+      "method_annotation": "CKD-EPI 2009",
+      "description": "Estimated Glomerular Filtration Rate — calculated from creatinine, age, and sex (CKD-EPI 2009 equation). The modern primary indicator of kidney function and CKD staging.",
+      "high_means": "Generally good — high filtration capacity. Hyperfiltration (early diabetes, pregnancy, high protein diet) can produce values that look reassuring but mask developing pathology.",
+      "low_means": "Reduced kidney function. CKD stages: G1 ≥90 (normal/high), G2 60–89 (mild), G3a 45–59 (mild-moderate), G3b 30–44 (moderate-severe), G4 15–29 (severe), G5 <15 (kidney failure).",
+      "unit_notes": "Reference: ≥60 mL/min/1.73 m². Persistently <60 for ≥3 months = CKD by definition. Pair with urine albumin/creatinine ratio (RAC) to fully stage."
+    },
+    {
+      "id": "ast",
+      "pt_name": "Aspartato aminotransferase (AST)",
+      "aliases": [
+        "AST",
+        "SGOT",
+        "Aspartate Aminotransferase"
+      ],
+      "loinc": "1920-8",
+      "section": "Patologia Química",
+      "subsection": "Função Hepato-Biliar",
+      "panel": "hepatic",
+      "expected_units": [
+        "U/l"
+      ],
+      "range_grammar": [
+        "lt",
+        "a_b",
+        "sex_stratified"
+      ],
+      "sex_dependent": true,
+      "method_annotation": "Ensaio Enzimático Colorimétrico Ultravioleta 37º",
+      "default_ref": {
+        "m": [
+          null,
+          34
+        ],
+        "f": [
+          15,
+          37
+        ]
+      },
+      "description": "Liver enzyme also present in heart, muscle, and red blood cells. Less liver-specific than ALT — can rise from muscle damage too.",
+      "high_means": "Hepatocellular injury (viral / alcoholic / NAFLD / drug-induced hepatitis), muscle injury (rhabdomyolysis, intense exercise), MI (older marker, now replaced by troponin), hemolysis.",
+      "low_means": "Rarely clinically significant. Vitamin B6 deficiency or end-stage liver disease (no liver tissue left).",
+      "unit_notes": "AST/ALT ratio >2 with elevated levels suggests alcoholic liver disease; ratio <1 suggests viral / NAFLD. Always evaluated together."
+    },
+    {
+      "id": "alt",
+      "pt_name": "Alanina aminotransferase (ALT)",
+      "aliases": [
+        "ALT",
+        "SGPT",
+        "Alanine Aminotransferase"
+      ],
+      "loinc": "1742-6",
+      "section": "Patologia Química",
+      "subsection": "Função Hepato-Biliar",
+      "panel": "hepatic",
+      "expected_units": [
+        "U/l"
+      ],
+      "range_grammar": [
+        "a_b",
+        "sex_stratified"
+      ],
+      "sex_dependent": true,
+      "method_annotation": "Ensaio Enzimático Colorimétrico Ultravioleta 37º",
+      "default_ref": {
+        "m": [
+          null,
+          41
+        ],
+        "f": [
+          null,
+          33
+        ]
+      },
+      "description": "The most liver-specific aminotransferase. Rises with hepatocellular injury — the canonical marker of acute or chronic liver damage.",
+      "high_means": "Viral hepatitis, alcoholic hepatitis, NAFLD/NASH, drug-induced liver injury (acetaminophen, statins, antibiotics), autoimmune hepatitis, ischemic hepatitis. >1000 U/L suggests acute massive injury.",
+      "low_means": "Rarely clinically significant. May reflect vitamin B6 deficiency or extensive liver tissue loss."
+    },
+    {
+      "id": "ggt",
+      "pt_name": "Gama-Glutamil-Transpeptidase (GGT)",
+      "aliases": [
+        "GGT",
+        "Gamma-GT",
+        "Gamma-Glutamyl Transferase"
+      ],
+      "loinc": "2324-2",
+      "section": "Patologia Química",
+      "subsection": "Função Hepato-Biliar",
+      "panel": "hepatic",
+      "expected_units": [
+        "U/l"
+      ],
+      "range_grammar": [
+        "lt",
+        "a_b",
+        "sex_stratified"
+      ],
+      "sex_dependent": true,
+      "method_annotation": "Ensaio Enzimático Colorimétrico Ultravioleta 37º",
+      "default_ref": {
+        "m": [
+          null,
+          73
+        ],
+        "f": [
+          null,
+          38
+        ]
+      },
+      "description": "Enzyme found in liver and biliary tract. Sensitive marker for alcohol use and biliary obstruction; helps confirm hepatic origin of elevated alkaline phosphatase.",
+      "high_means": "Alcohol use (sensitive marker), cholestasis / biliary obstruction, fatty liver, drug-induced enzyme induction (phenytoin, barbiturates), pancreatic disease.",
+      "low_means": "Hypothyroidism. Rarely clinically significant when low.",
+      "unit_notes": "If both ALP and GGT are elevated → biliary/cholestatic source. If ALP up but GGT normal → likely bone source."
+    },
+    {
+      "id": "fosfatase_alcalina",
+      "pt_name": "Fosfatase Alcalina",
+      "aliases": [
+        "ALP",
+        "FA",
+        "Alkaline Phosphatase"
+      ],
+      "loinc": "6768-6",
+      "section": "Patologia Química",
+      "subsection": "Função Hepato-Biliar",
+      "panel": "hepatic",
+      "expected_units": [
+        "U/l"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "method_annotation": "p-Nitrofenilfosfato",
+      "default_ref": {
+        "all": [
+          40,
+          130
+        ]
+      },
+      "description": "Enzyme abundant in liver (bile ducts), bone (osteoblasts), placenta, and intestine. Used to detect cholestatic liver disease and bone turnover. Source of elevation determined by GGT.",
+      "high_means": "Cholestasis / biliary obstruction (paired with high GGT), bone disease (Paget's, osteomalacia, fractures, growing children — paired with NORMAL GGT), pregnancy (placental ALP), hepatic infiltration, hyperthyroidism.",
+      "low_means": "Hypothyroidism, malnutrition, vitamin C / zinc / magnesium deficiency, hypophosphatasia (rare genetic), recent transfusion.",
+      "unit_notes": "Reference 40–130 U/L (varies by lab and age). Normally elevated in growing children and pregnancy."
+    },
+    {
+      "id": "bilirrubinemia_total",
+      "pt_name": "Bilirrubinémia Total",
+      "aliases": [
+        "Total Bilirubin",
+        "TBIL",
+        "Bilirrubina Total"
+      ],
+      "loinc": "1975-2",
+      "section": "Patologia Química",
+      "subsection": "Função Hepato-Biliar",
+      "panel": "hepatic",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "method_annotation": "Jendrassik-Grof",
+      "default_ref": {
+        "all": [
+          0.2,
+          1.2
+        ]
+      },
+      "description": "Heme breakdown product. Total bilirubin = unconjugated (indirect, from RBC breakdown) + conjugated (direct, processed by liver). Causes jaundice when elevated above ~2-3 mg/dL.",
+      "high_means": "Pre-hepatic (hemolysis — indirect predominates), hepatic (hepatitis, cirrhosis — both rise), post-hepatic (cholestasis / obstruction — direct predominates). Gilbert's syndrome: mild isolated indirect hyperbilirubinemia, benign.",
+      "low_means": "Generally not clinically significant. May reflect low heme turnover.",
+      "unit_notes": "Reference 0.2–1.2 mg/dL. Order direct bilirubin to fractionate when total is high. Convert mg/dL → µmol/L: ×17.1."
+    },
+    {
+      "id": "ldh",
+      "pt_name": "Desidrogenase Láctica (LDH)",
+      "aliases": [
+        "LDH",
+        "Lactate Dehydrogenase"
+      ],
+      "loinc": "2532-0",
+      "section": "Patologia Química",
+      "subsection": "Enzimologia",
+      "expected_units": [
+        "U/l"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          125,
+          220
+        ]
+      },
+      "description": "Ubiquitous enzyme released from any damaged tissue. Non-specific marker of cell damage. Used in oncology (tumor burden / treatment response) and to track hemolysis.",
+      "high_means": "Hemolysis (often very high), tissue damage of any kind: MI (older marker), liver injury, lung injury / PE, muscle damage, hemolytic anemia, lymphoma / leukemia / metastatic cancer (treatment-response marker).",
+      "low_means": "Rarely clinically significant. Some genetic LDH subunit deficiencies."
+    },
+    {
+      "id": "ck_total",
+      "pt_name": "Creatinaquinase Total (CK Total)",
+      "aliases": [
+        "CK",
+        "CPK",
+        "CK Total",
+        "Creatine Kinase"
+      ],
+      "loinc": "2157-6",
+      "section": "Patologia Química",
+      "subsection": "Enzimologia",
+      "expected_units": [
+        "U/l"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "m": [
+          55,
+          170
+        ],
+        "f": [
+          30,
+          135
+        ]
+      },
+      "description": "Enzyme abundant in skeletal muscle, heart, and brain. Released with muscle injury. Total CK rises in any muscle damage; CK-MB isoform is heart-specific (largely replaced by troponin).",
+      "high_means": "Rhabdomyolysis (often >5000-10000), strenuous exercise, intramuscular injections, trauma, statin myopathy, muscular dystrophy, hypothyroidism, MI (CK-MB).",
+      "low_means": "Reduced muscle mass, prolonged bed rest, methotrexate / steroids (chronic). Rarely a flag."
+    },
+    {
+      "id": "calcemia",
+      "pt_name": "Calcémia",
+      "aliases": [
+        "Calcium",
+        "Ca",
+        "Total Calcium"
+      ],
+      "loinc": "17861-6",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo Fosfo-Cálcico",
+      "panel": "phospho_calcium",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "method_annotation": "Ensaio Colorimétrico com Arsenazo III",
+      "default_ref": {
+        "all": [
+          8.7,
+          10.4
+        ]
+      },
+      "description": "Total serum calcium — about 50% bound to albumin, 40% ionized (active), 10% complexed. Critical for muscle/nerve function, clotting, bone. Always interpret with albumin (correction: +0.8 mg/dL per 1 g/dL albumin below 4.0).",
+      "high_means": "Hyperparathyroidism (most common outpatient cause), malignancy (most common inpatient cause), vitamin D toxicity, sarcoidosis, milk-alkali, thiazide diuretics, immobilization, lithium.",
+      "low_means": "Hypoparathyroidism, vitamin D deficiency, kidney disease, magnesium deficiency, pancreatitis, sepsis, transfusion citrate, low albumin (apparent low — calculate corrected).",
+      "unit_notes": "Reference 8.7–10.4 mg/dL. Severely abnormal causes tetany (low) or arrhythmia/AKI (high). Convert to mmol/L: ÷4.008."
+    },
+    {
+      "id": "magnesiemia",
+      "pt_name": "Magnesiémia",
+      "aliases": [
+        "Mg",
+        "Magnesium"
+      ],
+      "loinc": "19123-9",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo Fosfo-Cálcico",
+      "panel": "phospho_calcium",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "method_annotation": "Azul de Metiltimol",
+      "default_ref": {
+        "all": [
+          1.3,
+          2.7
+        ]
+      },
+      "description": "Essential cation for ATP, enzyme cofactor (>300 enzymes), muscle/nerve function, bone. Mostly intracellular — serum levels can underestimate total body deficit.",
+      "high_means": "Kidney failure, excessive intake (laxatives, antacids), tumor lysis, severe hemolysis, adrenal insufficiency. Symptoms at >4-5: weakness, hyporeflexia, arrhythmia.",
+      "low_means": "Diuretics (loop, thiazide), PPIs, alcoholism, malabsorption, refeeding syndrome, diabetic ketoacidosis. Causes refractory hypokalemia and hypocalcemia. Symptoms: tetany, arrhythmia."
+    },
+    {
+      "id": "fosfatemia",
+      "pt_name": "Fosfatémia",
+      "aliases": [
+        "P",
+        "Phosphate",
+        "Phosphorus"
+      ],
+      "loinc": "2777-1",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo Fosfo-Cálcico",
+      "panel": "phospho_calcium",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "method_annotation": "Fosfomolibdato",
+      "default_ref": {
+        "all": [
+          2.4,
+          5.1
+        ]
+      },
+      "description": "Mostly stored in bone with calcium. Critical for ATP, DNA, cell membranes. Inversely related to calcium via PTH and vitamin D regulation.",
+      "high_means": "Kidney failure (most common), hypoparathyroidism, tumor lysis syndrome, rhabdomyolysis, vitamin D toxicity.",
+      "low_means": "Refeeding syndrome (life-threatening), hyperparathyroidism, vitamin D deficiency, alcoholism, diabetic ketoacidosis recovery, antacids."
+    },
+    {
+      "id": "vitamin_d_25oh",
+      "pt_name": "25-Hidroxivitamina D",
+      "aliases": [
+        "Vitamin D",
+        "25-OH-D",
+        "Vit D",
+        "Calcidiol",
+        "25(OH)D"
+      ],
+      "loinc": "62292-8",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo Fosfo-Cálcico",
+      "panel": "phospho_calcium",
+      "expected_units": [
+        "ng/ml"
+      ],
+      "range_grammar": [
+        "categorical"
+      ],
+      "method_annotation": "Quimioluminescência [Liaison]",
+      "default_ref": {
+        "all": [
+          30,
+          100
+        ]
+      },
+      "categorical_tiers": [
+        {
+          "label": "Deficiência",
+          "max": 10
+        },
+        {
+          "label": "Insuficiência",
+          "min": 10,
+          "max": 30
+        },
+        {
+          "label": "Suficiência",
+          "min": 30,
+          "max": 100
+        },
+        {
+          "label": "Toxicidade",
+          "min": 100
+        }
+      ],
+      "description": "Storage form of vitamin D — the standard test for vitamin D status. Produced in skin from sunlight and hydroxylated in liver. Essential for calcium / bone homeostasis and immune function.",
+      "high_means": "Excessive supplementation (>100 ng/mL = toxicity risk: hypercalcemia, kidney stones, soft-tissue calcification). Sun-rich lifestyle rarely produces toxicity.",
+      "low_means": "Insufficient sun exposure, dark skin, obesity, malabsorption (celiac, IBD, gastric bypass), kidney/liver disease. Linked to bone disease (osteomalacia, rickets), increased fracture risk, possible immune effects.",
+      "unit_notes": "Categorical tiers (ng/mL): <10 deficient · 10–30 insufficient · 30–100 sufficient · >100 toxicity. Convert to nmol/L by ×2.5."
+    },
+    {
+      "id": "ionograma",
+      "pt_name": "Ionograma sérico",
+      "aliases": [],
+      "section": "Patologia Química",
+      "subsection": "Equilíbrio Hidroelectrolítico",
+      "panel": "renal",
+      "range_grammar": [
+        "none"
+      ],
+      "method_annotation": "Potenciometria Indirecta",
+      "is_panel_header": true
+    },
+    {
+      "id": "natremia",
+      "pt_name": "Natrémia",
+      "aliases": [
+        "Sodium",
+        "Na"
+      ],
+      "loinc": "2951-2",
+      "section": "Patologia Química",
+      "subsection": "Equilíbrio Hidroelectrolítico",
+      "panel": "renal",
+      "expected_units": [
+        "mmol/l"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          132,
+          146
+        ]
+      },
+      "description": "Main extracellular cation. Reflects water balance more than sodium balance — primarily regulated by ADH. Acute changes cause neurological symptoms (cerebral edema or osmotic demyelination).",
+      "high_means": "Hypernatremia: free water deficit (insufficient intake, diabetes insipidus, diuresis), GI losses, profuse sweating, salt poisoning. Risk of cell shrinkage / cerebral hemorrhage.",
+      "low_means": "Hyponatremia: SIADH (cancer, lung disease, drugs), heart/liver/kidney failure, diuretics, primary polydipsia, hypothyroidism, Addison's. Risk of cerebral edema, seizures."
+    },
+    {
+      "id": "kaliemia",
+      "pt_name": "Kaliémia",
+      "aliases": [
+        "Potassium",
+        "K"
+      ],
+      "loinc": "2823-3",
+      "section": "Patologia Química",
+      "subsection": "Equilíbrio Hidroelectrolítico",
+      "panel": "renal",
+      "expected_units": [
+        "mmol/l"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          3.5,
+          5.5
+        ]
+      },
+      "description": "Main intracellular cation. Critical for cardiac and neuromuscular function. Tightly regulated; small serum changes can cause arrhythmias.",
+      "high_means": "Hyperkalemia: kidney failure, ACEi/ARB/spironolactone, tissue breakdown (rhabdo, tumor lysis), acidosis, Addison's, blood transfusion. Risk: peaked T-waves, fatal arrhythmia (>6.5 = emergency).",
+      "low_means": "Hypokalemia: diuretics (loop, thiazide), GI losses (vomiting, diarrhea), magnesium deficiency, alkalosis, refeeding. Risk: U-waves, arrhythmia, weakness."
+    },
+    {
+      "id": "cloremia",
+      "pt_name": "Clorémia",
+      "aliases": [
+        "Chloride",
+        "Cl"
+      ],
+      "loinc": "2075-0",
+      "section": "Patologia Química",
+      "subsection": "Equilíbrio Hidroelectrolítico",
+      "panel": "renal",
+      "expected_units": [
+        "mmol/l"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          99,
+          109
+        ]
+      },
+      "description": "Main extracellular anion. Tracks sodium closely; the difference (along with bicarbonate) determines the anion gap, which classifies metabolic acidosis.",
+      "high_means": "Hyperchloremic metabolic acidosis (renal tubular acidosis, diarrhea, normal-saline overload), dehydration, hyperventilation.",
+      "low_means": "GI losses with H+ (vomiting, NG suction), respiratory acidosis compensation, diuretics, SIADH."
+    },
+    {
+      "id": "tsh",
+      "pt_name": "Tireoestimulina (TSH)",
+      "aliases": [
+        "TSH",
+        "Thyroid Stimulating Hormone",
+        "Thyrotropin"
+      ],
+      "loinc": "3016-3",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Tiroideu",
+      "panel": "thyroid",
+      "expected_units": [
+        "mUI/l"
+      ],
+      "range_grammar": [
+        "a_b",
+        "gestational"
+      ],
+      "method_annotation": "Quimioluminescência",
+      "default_ref": {
+        "all": [
+          0.35,
+          5.5
+        ]
+      },
+      "gestational_ref": {
+        "1": [
+          0.1,
+          2.5
+        ],
+        "2": [
+          0.2,
+          3
+        ],
+        "3": [
+          0.3,
+          3
+        ]
+      },
+      "description": "Pituitary hormone that signals the thyroid to produce T4 / T3. The most sensitive single test of thyroid function — abnormal before T4/T3 change in early disease.",
+      "high_means": "Primary hypothyroidism (Hashimoto's, post-radiation, post-surgical, iodine deficiency, certain meds). Pituitary tumor secreting TSH is rare. Recovery from non-thyroidal illness can transiently elevate.",
+      "low_means": "Primary hyperthyroidism (Graves', toxic nodule, thyroiditis), excess thyroid hormone replacement, secondary hypothyroidism (pituitary failure — T4 also low), pregnancy first trimester.",
+      "unit_notes": "Reference 0.35–5.5 mUI/L (assay-dependent). Pregnancy needs trimester-specific cutoffs (lower upper bound). Subclinical hypothyroidism: TSH high, FT4 normal."
+    },
+    {
+      "id": "ft4",
+      "pt_name": "Tiroxina Livre (FT4)",
+      "aliases": [
+        "FT4",
+        "T4 Livre",
+        "Free T4",
+        "Free Thyroxine"
+      ],
+      "loinc": "3024-7",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Tiroideu",
+      "panel": "thyroid",
+      "expected_units": [
+        "ng/dl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "method_annotation": "Quimioluminescência",
+      "default_ref": {
+        "all": [
+          0.93,
+          1.7
+        ]
+      },
+      "description": "Free (unbound, biologically active) thyroxine. Measured alongside TSH to confirm and stage thyroid dysfunction.",
+      "high_means": "Hyperthyroidism (Graves', toxic nodule), excess T4 replacement, transient with thyroiditis, certain medications.",
+      "low_means": "Overt hypothyroidism (when also TSH high), secondary hypothyroidism (pituitary cause — TSH inappropriately normal/low), severe non-thyroidal illness."
+    },
+    {
+      "id": "prolactina",
+      "pt_name": "Prolactina (PRL)",
+      "aliases": [
+        "PRL",
+        "Prolactin"
+      ],
+      "loinc": "2842-3",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Gonadal",
+      "panel": "gonadal",
+      "expected_units": [
+        "ng/ml"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "method_annotation": "Quimioluminescência",
+      "default_ref": {
+        "m": [
+          4,
+          15.2
+        ],
+        "f": [
+          4.8,
+          23.3
+        ]
+      },
+      "description": "Pituitary hormone that stimulates milk production (lactation) and influences reproductive function. Elevated outside pregnancy/lactation suggests pituitary or hypothalamic disturbance.",
+      "high_means": "Pregnancy, lactation, prolactinoma (pituitary adenoma), hypothyroidism (TRH stimulates prolactin), medications (antipsychotics, metoclopramide, opioids, estrogens), stress, chest-wall stimulation, kidney disease.",
+      "low_means": "Sheehan syndrome (postpartum pituitary infarction), pituitary tumors compressing prolactin-producing cells, dopamine agonists. Usually clinically insignificant when low.",
+      "unit_notes": "Reference: M 4.0–15.2, F 4.8–23.3 ng/mL (non-pregnant). Pregnancy 10–250. Macroprolactinemia (large biologically inactive form) can give false elevations."
+    },
+    {
+      "id": "fsh",
+      "pt_name": "Foliculoestimulina plasmática (FSH)",
+      "aliases": [
+        "FSH",
+        "Follicle Stimulating Hormone",
+        "Folitropina"
+      ],
+      "loinc": "15067-2",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Gonadal",
+      "panel": "gonadal",
+      "expected_units": [
+        "mUI/ml"
+      ],
+      "range_grammar": [
+        "a_b",
+        "sex_stratified",
+        "age_stratified"
+      ],
+      "sex_dependent": true,
+      "method_annotation": "Quimioluminescência",
+      "default_ref": {
+        "m": [
+          1.4,
+          18.1
+        ],
+        "f": [
+          3,
+          20
+        ]
+      },
+      "categorical_tiers": [
+        {
+          "label": "Pré-puberdade",
+          "max": 4
+        },
+        {
+          "label": "Masculino normal",
+          "min": 1.4,
+          "max": 18.1
+        },
+        {
+          "label": "Folicular",
+          "min": 3.5,
+          "max": 12.5
+        },
+        {
+          "label": "Pico ovulatório",
+          "min": 4.7,
+          "max": 21.5
+        },
+        {
+          "label": "Luteínica",
+          "min": 1.7,
+          "max": 7.7
+        },
+        {
+          "label": "Pós-menopausa",
+          "min": 25.8
+        }
+      ],
+      "description": "Pituitary hormone that drives gametogenesis. In females it recruits ovarian follicles; in males it supports spermatogenesis via Sertoli cells. Strongly cycle-dependent in females and rises dramatically post-menopause.",
+      "high_means": "Female: post-menopause (expected, often >25), premature ovarian failure, gonadal dysgenesis (Turner). Male: primary testicular failure (Klinefelter, post-orchitis, chemo). Pituitary FSH-secreting adenoma (rare).",
+      "low_means": "Hypothalamic / pituitary failure (Kallmann, panhypopituitarism, traumatic brain injury, tumors), anorexia / extreme exercise (functional hypothalamic amenorrhea), hyperprolactinemia, GnRH agonist therapy.",
+      "unit_notes": "Male 1.4–18.1; female reference depends heavily on cycle phase. Post-menopausal >25.8 mUI/mL. Used together with LH (LH:FSH ratio >2 in PCOS) and estradiol/testosterone."
+    },
+    {
+      "id": "lh",
+      "pt_name": "Luteinoestimulina plasmática (LH)",
+      "aliases": [
+        "LH",
+        "Luteinizing Hormone",
+        "Lutropina"
+      ],
+      "loinc": "10501-5",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Gonadal",
+      "panel": "gonadal",
+      "expected_units": [
+        "mUI/ml"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "method_annotation": "Quimioluminescência",
+      "default_ref": {
+        "m": [
+          1.5,
+          9.3
+        ],
+        "f": [
+          2.4,
+          12.6
+        ]
+      },
+      "categorical_tiers": [
+        {
+          "label": "Pré-puberdade",
+          "max": 1.5
+        },
+        {
+          "label": "Masculino normal",
+          "min": 1.5,
+          "max": 9.3
+        },
+        {
+          "label": "Folicular",
+          "min": 2.4,
+          "max": 12.6
+        },
+        {
+          "label": "Pico ovulatório",
+          "min": 14,
+          "max": 95.6
+        },
+        {
+          "label": "Luteínica",
+          "min": 1,
+          "max": 11.4
+        },
+        {
+          "label": "Pós-menopausa",
+          "min": 7.7
+        }
+      ],
+      "description": "Pituitary hormone that triggers ovulation in females and stimulates Leydig cells to produce testosterone in males. The LH:FSH ratio is diagnostically useful (>2 in PCOS).",
+      "high_means": "Female: ovulatory peak (normal, transient), post-menopause, premature ovarian failure, PCOS (ratio shift). Male: primary testicular failure. LH-secreting adenoma (rare).",
+      "low_means": "Hypothalamic/pituitary failure, anorexia, hyperprolactinemia, eating disorders, GnRH suppression, exogenous androgen use."
+    },
+    {
+      "id": "estradiol",
+      "pt_name": "17 Beta Estradiol",
+      "aliases": [
+        "E2",
+        "Estradiol",
+        "17β-Estradiol"
+      ],
+      "loinc": "2243-4",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Gonadal",
+      "panel": "gonadal",
+      "expected_units": [
+        "pg/ml"
+      ],
+      "range_grammar": [
+        "lt",
+        "cycle_phase"
+      ],
+      "sex_dependent": true,
+      "cycle_dependent": true,
+      "method_annotation": "Quimioluminescência",
+      "default_ref": {
+        "m": [
+          7.6,
+          42.6
+        ],
+        "f": [
+          11,
+          400
+        ]
+      },
+      "cycle_phases": {
+        "follicular_-12d": [
+          11,
+          69
+        ],
+        "follicular_-4d": [
+          63,
+          165
+        ],
+        "ovulation_-1d": [
+          146,
+          526
+        ],
+        "luteal_+2d": [
+          33,
+          150
+        ],
+        "luteal_+6d": [
+          68,
+          196
+        ],
+        "luteal_+12d": [
+          36,
+          133
+        ],
+        "postmenopause": [
+          0,
+          37
+        ]
+      },
+      "categorical_tiers": [
+        {
+          "label": "Pré-puberdade",
+          "max": 20
+        },
+        {
+          "label": "Pós-menopausa",
+          "max": 37
+        },
+        {
+          "label": "Masculino normal",
+          "min": 7,
+          "max": 43
+        },
+        {
+          "label": "Folicular precoce",
+          "min": 11,
+          "max": 69
+        },
+        {
+          "label": "Folicular tardia",
+          "min": 63,
+          "max": 165
+        },
+        {
+          "label": "Pico ovulatório",
+          "min": 146,
+          "max": 526
+        },
+        {
+          "label": "Luteínica",
+          "min": 33,
+          "max": 196
+        }
+      ],
+      "description": "17-beta-estradiol — the most potent endogenous estrogen. In females, levels swing dramatically across the menstrual cycle (lowest in early follicular, peaks at ovulation). In males, levels are low and stable (aromatized from testosterone).",
+      "high_means": "Female: ovulation peak (normal), pregnancy, ovarian tumors, hyperthyroidism. Male: estrogen-secreting tumors, gynecomastia, severe liver disease.",
+      "low_means": "Female: postmenopause, ovarian failure, hypothalamic amenorrhea, anorexia, intense exercise, oral contraceptives. Male: rarely clinically significant when low.",
+      "unit_notes": "Female interpretation requires knowing the cycle phase. Male reference ~7-43 pg/mL. To convert pg/mL → pmol/L multiply by 3.671."
+    },
+    {
+      "id": "testosterona_total",
+      "pt_name": "Testosterona Total Plasmática (TT)",
+      "aliases": [
+        "TT",
+        "Testosterona Total",
+        "Total Testosterone"
+      ],
+      "loinc": "2986-8",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Gonadal",
+      "panel": "gonadal",
+      "expected_units": [
+        "ng/dl"
+      ],
+      "range_grammar": [
+        "a_b",
+        "sex_stratified"
+      ],
+      "sex_dependent": true,
+      "method_annotation": "Quimioluminescência",
+      "default_ref": {
+        "m": [
+          241,
+          827
+        ],
+        "f": [
+          14,
+          76
+        ]
+      },
+      "description": "Total circulating testosterone — the sum of free testosterone (~2%), albumin-bound (~38%), and SHBG-bound (~60%). The standard screening test for hypogonadism in men and androgen excess in women. Best drawn in the morning.",
+      "high_means": "Male: anabolic steroid use, testosterone replacement, adrenal/testicular tumor, congenital adrenal hyperplasia. Female: PCOS (most common), congenital adrenal hyperplasia, ovarian/adrenal tumor, exogenous androgens.",
+      "low_means": "Male: primary or secondary hypogonadism (Klinefelter, pituitary disease, opioid use, obesity, chronic illness, aging). Female: rarely diagnostic — adrenal insufficiency, hypopituitarism, oral contraceptive use.",
+      "unit_notes": "M 241–827 ng/dL (decreases with age — late-onset hypogonadism debate). F 14–76 ng/dL. Total falsely lowered by high SHBG (oral estrogen, hyperthyroidism, liver disease) — measure free testosterone or SHBG to distinguish."
+    },
+    {
+      "id": "testosterona_livre",
+      "pt_name": "Testosterona Livre (TL)",
+      "aliases": [
+        "TL",
+        "Free Testosterone"
+      ],
+      "loinc": "2991-8",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Gonadal",
+      "panel": "gonadal",
+      "expected_units": [
+        "pg/ml"
+      ],
+      "range_grammar": [
+        "a_b",
+        "age_stratified"
+      ],
+      "sex_dependent": true,
+      "method_annotation": "Quimioluminescência",
+      "default_ref": {
+        "m": [
+          8.69,
+          54.69
+        ],
+        "f": [
+          0.29,
+          3.18
+        ]
+      },
+      "categorical_tiers": [
+        {
+          "label": "Pré-puberdade",
+          "max": 3.2
+        },
+        {
+          "label": "Masculino 20-50 anos",
+          "min": 8.69,
+          "max": 54.69
+        },
+        {
+          "label": "Masculino >50 anos",
+          "min": 6.6,
+          "max": 50
+        },
+        {
+          "label": "Feminino adulto",
+          "min": 0.29,
+          "max": 3.18
+        }
+      ],
+      "description": "The biologically active fraction of testosterone (not bound to SHBG or albumin). Useful when SHBG is abnormal (high SHBG masks low total testosterone — the picture clarifies with free T).",
+      "high_means": "Same as elevated total testosterone — anabolic steroids, exogenous T, PCOS in females, adrenal/gonadal tumors. Free T also rises when SHBG is low (obesity, type 2 diabetes, hypothyroidism).",
+      "low_means": "Hypogonadism (with low total). Isolated low free T with normal total suggests high SHBG (hyperthyroidism, oral estrogen, advancing age, liver cirrhosis).",
+      "unit_notes": "Adult M (20-50y) 8.69–54.69 pg/mL; >50y slightly lower. Adult F 0.29–3.18 pg/mL. Direct measurement preferred over calculated free T from total + SHBG."
+    },
+    {
+      "id": "shbg",
+      "pt_name": "SHBG Basal",
+      "aliases": [
+        "SHBG",
+        "Sex Hormone-Binding Globulin",
+        "Globulina Ligadora de Hormonas Sexuais"
+      ],
+      "loinc": "13967-5",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Gonadal",
+      "panel": "gonadal",
+      "expected_units": [
+        "nmol/l"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "method_annotation": "Quimioluminescência",
+      "default_ref": {
+        "m": [
+          10,
+          57
+        ],
+        "f": [
+          18,
+          144
+        ]
+      },
+      "description": "Liver-produced glycoprotein that binds sex hormones (testosterone > estradiol), regulating their bioavailable fraction. Indispensable for interpreting total testosterone or estradiol.",
+      "high_means": "Hyperthyroidism, liver cirrhosis, oral estrogens (OCPs), HRT, anorexia, anti-epileptics, aging in men. High SHBG → less free hormone → may mask hypogonadism with normal total T.",
+      "low_means": "Hypothyroidism, obesity / metabolic syndrome / type 2 diabetes, PCOS, exogenous androgens / steroids, growth hormone excess, Cushing's syndrome. Low SHBG → more free hormone → free T calculations rise.",
+      "unit_notes": "M 10–57, F 18–144 nmol/L (varies by lab). Calculated free testosterone uses total T + SHBG ± albumin."
+    },
+    {
+      "id": "dht",
+      "pt_name": "Dihidrotestosterona em soro (DHT)",
+      "aliases": [
+        "DHT",
+        "Dihydrotestosterone"
+      ],
+      "loinc": "1854-9",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Gonadal",
+      "panel": "gonadal",
+      "expected_units": [
+        "ng/ml"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "method_annotation": "Ensaio Imunoenzimático",
+      "default_ref": {
+        "m": [
+          0.3,
+          0.85
+        ],
+        "f": [
+          0.04,
+          0.22
+        ]
+      },
+      "description": "More potent androgen than testosterone, produced from T by 5-alpha-reductase in skin, prostate, hair follicles, liver. Drives external male sexual development, prostate growth, body hair, and scalp male-pattern baldness.",
+      "high_means": "5-alpha-reductase upregulation, anabolic steroids, prostate enlargement, hirsutism in females, androgenetic alopecia.",
+      "low_means": "5-alpha-reductase deficiency (DSD), finasteride / dutasteride therapy (intentional). Low DHT relative to T explains the genital phenotype in 5-ARD."
+    },
+    {
+      "id": "acth",
+      "pt_name": "Adrenocorticotrofina Plasmática (ACTH)",
+      "aliases": [
+        "ACTH",
+        "Adrenocorticotropin",
+        "Corticotropin"
+      ],
+      "loinc": "14653-0",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Corto-Supra-Renal",
+      "panel": "adrenal",
+      "expected_units": [
+        "pg/ml"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "method_annotation": "Quimioluminescência",
+      "default_ref": {
+        "all": [
+          7.2,
+          63.3
+        ]
+      },
+      "description": "Pituitary hormone that drives the adrenal cortex to produce cortisol. Diurnal: peaks ~6-8 am, troughs at midnight. Best drawn at 8 am with paired cortisol.",
+      "high_means": "Primary adrenal insufficiency (Addison's), pituitary ACTH-secreting adenoma (Cushing's disease), ectopic ACTH (small-cell lung cancer, carcinoid), congenital adrenal hyperplasia.",
+      "low_means": "Adrenal Cushing's (autonomous cortisol suppresses ACTH), exogenous corticosteroid therapy, secondary/tertiary adrenal insufficiency (pituitary or hypothalamic failure).",
+      "unit_notes": "Reference 7.2–63.3 pg/mL at 8am. Highly stress-sensitive; specimen handling matters (chilled, EDTA, fast processing)."
+    },
+    {
+      "id": "cortisol_basal",
+      "pt_name": "Cortisol Plasmático Basal",
+      "aliases": [
+        "Cortisol",
+        "Hydrocortisone",
+        "Plasma Cortisol"
+      ],
+      "loinc": "2143-6",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Corto-Supra-Renal",
+      "panel": "adrenal",
+      "expected_units": [
+        "µg/dl"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "method_annotation": "Quimioluminescência",
+      "default_ref": {
+        "all": [
+          6.2,
+          19.4
+        ]
+      },
+      "description": "Primary glucocorticoid — regulates glucose, blood pressure, immune response, and the stress response. Highly diurnal: morning peak (~6-8am), evening nadir.",
+      "high_means": "Cushing's syndrome (any cause), acute stress / illness, exogenous corticosteroids, severe depression, alcoholism. Use 1mg overnight dexamethasone suppression test or 24h urine free cortisol to confirm.",
+      "low_means": "Adrenal insufficiency (Addison's, secondary, tertiary), adrenal crisis, pituitary disease, abrupt steroid withdrawal, congenital adrenal hyperplasia (some forms).",
+      "unit_notes": "Morning (8am) reference 6.2–19.4 µg/dL; evening normally <50% of morning. Random cortisol of limited value due to diurnal swing."
+    },
+    {
+      "id": "igf1",
+      "pt_name": "Somatomedina (IGF1) Basal",
+      "aliases": [
+        "IGF1",
+        "IGF-1",
+        "Insulin-like Growth Factor 1",
+        "Somatomedin C"
+      ],
+      "loinc": "2484-4",
+      "section": "Patologia Química",
+      "subsection": "Ritmo Hormonal",
+      "panel": "hgh_axis",
+      "expected_units": [
+        "ng/ml"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "method_annotation": "Quimioluminescência",
+      "default_ref": {
+        "all": [
+          109,
+          284
+        ]
+      },
+      "description": "Liver-produced mediator of growth hormone (GH) action. Stable throughout the day (unlike pulsatile GH), making it the standard screening for acromegaly and GH deficiency.",
+      "high_means": "Acromegaly / gigantism (pituitary GH-secreting adenoma), exogenous GH therapy, pregnancy, puberty.",
+      "low_means": "GH deficiency (pituitary insufficiency), severe malnutrition, liver failure, type 1 diabetes (poorly controlled), advanced age (declines naturally).",
+      "unit_notes": "Strongly age-dependent: peaks puberty, declines with age. Adult ranges 109–284 ng/mL (varies by lab and age decade)."
+    },
+    {
+      "id": "troponina_i",
+      "pt_name": "Troponina I",
+      "aliases": [
+        "Troponin I"
+      ],
+      "loinc": "10839-9",
+      "section": "Patologia Química",
+      "subsection": "Biomarcadores Cardíacos",
+      "panel": "cardiac",
+      "method_annotation": "Ensaio Imunoenzimático",
+      "range_grammar": [
+        "none"
+      ],
+      "expected_units": [
+        "ng/ml"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          0.04
+        ]
+      },
+      "description": "Cardiac-specific contractile protein released into blood when myocardium is damaged. Standard biomarker for myocardial infarction (replaced CK-MB).",
+      "high_means": "Acute MI (STEMI / NSTEMI), myocarditis, acute heart failure decompensation, PE with right-heart strain, severe sepsis, trauma to heart, intense exercise (rare, low-level), cardiac surgery.",
+      "low_means": "Below detection limit — no acute cardiac injury detected. Always interpret with timing and serial measurements."
+    },
+    {
+      "id": "troponina_i_hs",
+      "pt_name": "Troponina I cardíaca (cTn I - hs)",
+      "aliases": [
+        "cTn I - hs",
+        "cTnI",
+        "Troponin I (hs)",
+        "High Sensitivity Troponin I"
+      ],
+      "loinc": "67151-1",
+      "section": "Patologia Química",
+      "subsection": "Biomarcadores Cardíacos",
+      "panel": "cardiac",
+      "expected_units": [
+        "ng/l"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "method_annotation": "Ensaio Imunoenzimático",
+      "default_ref": {
+        "m": [
+          0,
+          19
+        ],
+        "f": [
+          0,
+          11
+        ]
+      },
+      "description": "High-sensitivity troponin assay — same biology as standard troponin but detects much lower concentrations, enabling rapid 0/1h or 0/2h MI rule-in/rule-out algorithms in chest-pain triage.",
+      "high_means": "Acute MI (most common). Also: myocarditis, takotsubo, acute heart failure, PE, sepsis, kidney failure (chronic mild elevation), endurance exercise. Trajectory matters more than single value.",
+      "low_means": "Negative result (below 99th percentile cutoff). Combined with low-risk clinical score, very high negative predictive value for MI within 1-2h.",
+      "unit_notes": "Sex-specific 99th percentile cutoffs: M ≤19, F ≤11 ng/L (vendor-dependent). Delta between serial draws is diagnostic — a rise/fall pattern with at least one value above 99th = acute injury."
+    },
+    {
+      "id": "ige_total",
+      "pt_name": "Imunoglobulina E Total",
+      "aliases": [
+        "IgE Total",
+        "IgE",
+        "Total IgE"
+      ],
+      "loinc": "19113-0",
+      "section": "Imunologia",
+      "subsection": "Doenças Atópicas",
+      "panel": "atopy",
+      "expected_units": [
+        "UI/ml"
+      ],
+      "range_grammar": [
+        "age_stratified"
+      ],
+      "method_annotation": "Ensaio Enzimoimunofluorimétrico",
+      "age_strata": [
+        [
+          "0d",
+          [
+            null,
+            0.94
+          ]
+        ],
+        [
+          "6w",
+          [
+            null,
+            6.1
+          ]
+        ],
+        [
+          "3m",
+          [
+            null,
+            3.8
+          ]
+        ],
+        [
+          "6m",
+          [
+            null,
+            12.3
+          ]
+        ],
+        [
+          "9m",
+          [
+            null,
+            7.3
+          ]
+        ],
+        [
+          "1y",
+          [
+            null,
+            15.2
+          ]
+        ],
+        [
+          "2y",
+          [
+            null,
+            29.5
+          ]
+        ],
+        [
+          "3y",
+          [
+            null,
+            16.9
+          ]
+        ],
+        [
+          "4y",
+          [
+            null,
+            68.9
+          ]
+        ],
+        [
+          "7y",
+          [
+            null,
+            161.3
+          ]
+        ],
+        [
+          "10y",
+          [
+            null,
+            570.6
+          ]
+        ],
+        [
+          "14y",
+          [
+            null,
+            195
+          ]
+        ],
+        [
+          "adult",
+          [
+            null,
+            120
+          ]
+        ]
+      ],
+      "default_ref": {
+        "all": [
+          0,
+          120
+        ]
+      },
+      "categorical_tiers": [
+        {
+          "label": "Normal (adulto)",
+          "max": 120
+        },
+        {
+          "label": "Levemente elevado",
+          "min": 120,
+          "max": 300
+        },
+        {
+          "label": "Moderadamente elevado",
+          "min": 300,
+          "max": 1000
+        },
+        {
+          "label": "Marcadamente elevado",
+          "min": 1000
+        }
+      ],
+      "description": "Total Immunoglobulin E — antibody class involved in allergic reactions and parasitic infections. Adult normal is generally <120 UI/mL but reference ranges are heavily age-stratified (children much lower).",
+      "high_means": "Allergic disease (asthma, atopic dermatitis, allergic rhinitis), parasitic infections, hyper-IgE syndromes, certain immunodeficiencies, allergic bronchopulmonary aspergillosis. Very high (>1000) raises concern for these specific conditions.",
+      "low_means": "Common variable immunodeficiency, hypogammaglobulinemia, ataxia-telangiectasia. Often clinically insignificant when isolated.",
+      "unit_notes": "Adult reference <120 UI/mL. Pediatric reference rises with age (newborn ~<1, 7y ~<160, 10y ~<570). To convert: 1 UI/mL = 2.4 ng/mL."
+    },
+    {
+      "id": "ige_inalantes_multiplo",
+      "pt_name": "IgE espec., Múltiplo Inalantes",
+      "aliases": [
+        "IgE Inalantes",
+        "Phadiatop"
+      ],
+      "section": "Imunologia",
+      "subsection": "Doenças Atópicas I",
+      "panel": "atopy",
+      "is_qualitative": true,
+      "range_grammar": [
+        "qualitative"
+      ],
+      "method_annotation": "Ensaio Enzimoimunofluorimétrico",
+      "description": "Screening test for IgE-mediated sensitization to common airborne allergens (dust mites, animal dander, cockroach, fungal spores, pollens). Returns Positivo/Negativo. Positivity does NOT confirm clinical allergy — requires symptom correlation.",
+      "high_means": "Positivo: IgE antibodies present against ≥1 of the panel allergens. Suggests atopic predisposition; pair with clinical history and consider component-resolved testing to identify the specific allergen.",
+      "low_means": "Negativo: no detectable inhalant allergen sensitization. Effectively rules out IgE-mediated inhalant allergy as the symptom driver.",
+      "unit_notes": "Qualitative — no numeric reference range. Positivo flag is informational; clinical correlation required."
+    },
+    {
+      "id": "vsg",
+      "pt_name": "Velocidade de Sedimentação",
+      "aliases": [
+        "VS",
+        "ESR",
+        "Velocidade de Sedimentação Eritrocitária",
+        "Sedimentation Rate"
+      ],
+      "loinc": "30341-2",
+      "section": "Hematologia",
+      "expected_units": [
+        "mm/h",
+        "mm/hr"
+      ],
+      "range_grammar": [
+        "lt",
+        "sex_stratified"
+      ],
+      "sex_dependent": true,
+      "default_ref": {
+        "m": [
+          null,
+          15
+        ],
+        "f": [
+          null,
+          20
+        ]
+      },
+      "description": "Rate at which red blood cells settle in 1 hour — a non-specific marker of inflammation. Cheap, slow to change, retains relevance for diagnosing temporal arteritis (often >50) and tracking RA / PMR activity.",
+      "high_means": "Inflammation (any cause), infection, malignancy (especially myeloma — can be very high), pregnancy, anemia, kidney failure, advanced age. Very high (>100) raises concern for myeloma, temporal arteritis, occult cancer.",
+      "low_means": "Polycythemia, sickle cell, severe heart failure, hypofibrinogenemia, microcytosis. Rarely the primary clinical clue.",
+      "unit_notes": "Sex- and age-dependent. Westergren reference m <15, f <20 mm/hr <50y; older patients can be ~age/2. CRP rises and falls faster — pair them."
+    },
+    {
+      "id": "reticulocitos",
+      "pt_name": "Reticulócitos",
+      "aliases": [
+        "Reticulocytes",
+        "RET%"
+      ],
+      "loinc": "4679-7",
+      "section": "Hematologia",
+      "subsection": "Eritrograma",
+      "expected_units": [
+        "%",
+        "x 10^9/L"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          0.5,
+          2.5
+        ]
+      },
+      "description": "Young, immature red blood cells — a measure of marrow erythropoietic response. Calculate the corrected reticulocyte count or reticulocyte production index in anemia to distinguish under-production from blood loss / hemolysis.",
+      "high_means": "Brisk marrow response: hemolysis, acute blood loss, iron / B12 / folate replacement, EPO therapy.",
+      "low_means": "Marrow under-production: iron / B12 / folate deficiency (untreated), aplastic anemia, kidney disease (low EPO), marrow infiltration, chemotherapy.",
+      "unit_notes": "Reference 0.5–2.5%. Absolute count more useful in anemia: <50,000/µL = inadequate response, >100,000/µL = adequate."
+    },
+    {
+      "id": "tp_inr",
+      "pt_name": "Tempo de Protrombina (INR)",
+      "aliases": [
+        "INR",
+        "PT",
+        "Prothrombin Time",
+        "Tempo de Protrombina"
+      ],
+      "loinc": "6301-6",
+      "section": "Hematologia",
+      "subsection": "Fibrinólise",
+      "expected_units": [
+        "s",
+        ""
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          0.8,
+          1.2
+        ]
+      },
+      "description": "Extrinsic + common coagulation pathway. INR (International Normalized Ratio) standardizes PT across labs/reagents. Standard for warfarin monitoring and screening for liver-synthesized factor deficiency.",
+      "high_means": "Warfarin therapy (target 2–3 most indications, 2.5–3.5 mechanical valves), liver disease, vitamin K deficiency, DIC, factor II/VII/IX/X deficiency, lupus anticoagulant. INR >5 = bleeding risk.",
+      "low_means": "Hypercoagulability is rarely diagnosed by low INR. Recent vitamin K intake. Generally not a flagged finding.",
+      "unit_notes": "Reference INR 0.8–1.2 (untreated). Therapeutic warfarin: 2.0–3.0 (most), 2.5–3.5 (mechanical aortic / mitral valve)."
+    },
+    {
+      "id": "aptt",
+      "pt_name": "Tempo de Tromboplastina Parcial Ativada (aPTT)",
+      "aliases": [
+        "APTT",
+        "PTT",
+        "aPTT"
+      ],
+      "loinc": "14979-9",
+      "section": "Hematologia",
+      "subsection": "Fibrinólise",
+      "expected_units": [
+        "s"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          25,
+          35
+        ]
+      },
+      "description": "Intrinsic + common coagulation pathway. Used to monitor unfractionated heparin and screen for factor VIII / IX / XI / XII deficiencies and lupus anticoagulant.",
+      "high_means": "Heparin therapy (target ~1.5–2.5× control), hemophilia A/B, vWD, DIC, severe liver disease, lupus anticoagulant (paradoxical — pro-thrombotic), high-dose direct oral anticoagulants.",
+      "low_means": "Acute-phase elevations of factor VIII can shorten aPTT — non-specific.",
+      "unit_notes": "Reference 25–35 seconds (lab-dependent). Therapeutic UFH 1.5–2.5× upper limit."
+    },
+    {
+      "id": "fibrinogenio",
+      "pt_name": "Fibrinogénio",
+      "aliases": [
+        "Fibrinogen",
+        "Fbg"
+      ],
+      "loinc": "3255-7",
+      "section": "Hematologia",
+      "subsection": "Fibrinólise",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          200,
+          400
+        ]
+      },
+      "description": "Coagulation factor I — precursor to fibrin. Acute-phase reactant. Low values indicate consumption (DIC, severe liver disease) or genetic deficiency; high values are non-specific inflammation marker.",
+      "high_means": "Inflammation, infection, malignancy, pregnancy, oral contraceptives, smoking. Very high (>700) associated with thrombotic risk.",
+      "low_means": "DIC (consumed), severe liver disease (under-produced), congenital afibrinogenemia / dysfibrinogenemia, thrombolytic therapy. <100 mg/dL = bleeding risk."
+    },
+    {
+      "id": "ferro_serico",
+      "pt_name": "Ferro Sérico",
+      "aliases": [
+        "Iron",
+        "Serum Iron",
+        "Sideremia",
+        "Fe"
+      ],
+      "loinc": "2498-4",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo do Ferro",
+      "panel": "iron",
+      "expected_units": [
+        "µg/dL",
+        "ug/dL"
+      ],
+      "range_grammar": [
+        "a_b",
+        "sex_stratified"
+      ],
+      "sex_dependent": true,
+      "default_ref": {
+        "m": [
+          60,
+          170
+        ],
+        "f": [
+          50,
+          170
+        ]
+      },
+      "description": "Serum iron — circulating transferrin-bound iron. Highly variable (diurnal, post-meal, inflammation), so always interpreted with transferrin / TSAT / ferritin.",
+      "high_means": "Iron overload (hemochromatosis, transfusional), iron supplementation, hemolysis, liver disease, lead poisoning. Single high value alone rarely actionable.",
+      "low_means": "Iron deficiency, chronic disease (functional iron block), recent bleeding. Pair with transferrin (high) and ferritin (low) to distinguish from anemia of chronic inflammation."
+    },
+    {
+      "id": "transferrina",
+      "pt_name": "Transferrina",
+      "aliases": [
+        "Transferrin",
+        "TRF"
+      ],
+      "loinc": "3034-6",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo do Ferro",
+      "panel": "iron",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          200,
+          360
+        ]
+      },
+      "description": "Iron-transport protein synthesized by liver. Inversely regulated by iron stores — rises in iron deficiency, falls in inflammation/liver failure/malnutrition.",
+      "high_means": "Iron deficiency (most common), pregnancy, oral contraceptives.",
+      "low_means": "Anemia of chronic disease (inflammation suppresses synthesis), severe liver disease, malnutrition, nephrotic syndrome (urinary loss)."
+    },
+    {
+      "id": "saturacao_transferrina",
+      "pt_name": "Saturação da Transferrina",
+      "aliases": [
+        "TSAT",
+        "Transferrin Saturation",
+        "Sat. Transferrina"
+      ],
+      "loinc": "2502-3",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo do Ferro",
+      "panel": "iron",
+      "expected_units": [
+        "%"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "is_derived": true,
+      "default_ref": {
+        "all": [
+          20,
+          50
+        ]
+      },
+      "description": "Iron / TIBC × 100. The single best screen for iron status alongside ferritin: low in iron deficiency (<20%, often <10%), high in iron overload (>45% suggestive, >55% in females / >60% in males = hemochromatosis screen positive).",
+      "high_means": "Hereditary hemochromatosis (>55% f / >60% m repeated), transfusional overload, supplementation, hemolysis, liver disease.",
+      "low_means": "Iron deficiency. Together with low ferritin, virtually diagnostic. Anemia of chronic disease usually has low TSAT but normal/high ferritin."
+    },
+    {
+      "id": "tibc",
+      "pt_name": "Capacidade Total de Fixação do Ferro (TIBC)",
+      "aliases": [
+        "TIBC",
+        "CTFF",
+        "Capacidade Total Fixação Ferro"
+      ],
+      "loinc": "2500-7",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo do Ferro",
+      "panel": "iron",
+      "expected_units": [
+        "µg/dL",
+        "ug/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          240,
+          450
+        ]
+      },
+      "description": "Total iron-binding capacity — proxy for transferrin (≈ transferrin × 1.4). High in iron deficiency, low in chronic disease / liver failure / malnutrition.",
+      "high_means": "Iron deficiency, late pregnancy, oral contraceptives.",
+      "low_means": "Anemia of chronic disease, malnutrition, severe liver / kidney disease, inflammatory states."
+    },
+    {
+      "id": "bilirrubina_direta",
+      "pt_name": "Bilirrubina Direta",
+      "aliases": [
+        "Direct Bilirubin",
+        "BIL Direta",
+        "Bilirrubina Conjugada"
+      ],
+      "loinc": "1968-7",
+      "section": "Patologia Química",
+      "subsection": "Função Hepato-Biliar",
+      "panel": "hepatic",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b",
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          0,
+          0.3
+        ]
+      },
+      "description": "Conjugated bilirubin — water-soluble, processed by the liver and excreted in bile. Elevation indicates hepatocellular dysfunction or biliary obstruction.",
+      "high_means": "Cholestasis, biliary obstruction, hepatitis, drug-induced liver injury, Dubin-Johnson / Rotor syndrome (rare).",
+      "low_means": "Not clinically significant when low.",
+      "unit_notes": "Reference <0.3 mg/dL. Direct fraction >50% of total bilirubin = post-hepatic / cholestatic pattern."
+    },
+    {
+      "id": "bilirrubina_indireta",
+      "pt_name": "Bilirrubina Indireta",
+      "aliases": [
+        "Indirect Bilirubin",
+        "BIL Indireta",
+        "Bilirrubina Não Conjugada"
+      ],
+      "loinc": "1971-1",
+      "section": "Patologia Química",
+      "subsection": "Função Hepato-Biliar",
+      "panel": "hepatic",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "is_derived": true,
+      "default_ref": {
+        "all": [
+          0.1,
+          1
+        ]
+      },
+      "description": "Unconjugated bilirubin — heme breakdown product before liver processing. Calculated as Total − Direct.",
+      "high_means": "Hemolysis (most common), Gilbert syndrome (very common, benign), Crigler-Najjar (rare), hematoma resorption, ineffective erythropoiesis.",
+      "low_means": "Not clinically significant."
+    },
+    {
+      "id": "amilase",
+      "pt_name": "Amílase",
+      "aliases": [
+        "Amylase",
+        "AMY"
+      ],
+      "loinc": "1798-8",
+      "section": "Patologia Química",
+      "subsection": "Enzimologia",
+      "expected_units": [
+        "U/l"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          25,
+          125
+        ]
+      },
+      "description": "Pancreatic + salivary enzyme that hydrolyzes carbohydrates. Classical pancreatitis marker — rises 6–12h, peaks 24–48h, falls in 3–5 days. Less specific than lipase.",
+      "high_means": "Acute pancreatitis (often >3× upper limit), pancreatic cancer, salivary disease (mumps, parotitis), bowel obstruction / perforation, ectopic pregnancy, kidney failure (reduced clearance), macroamylasemia (benign).",
+      "low_means": "Chronic pancreatitis with significant pancreatic destruction, severe liver disease, cystic fibrosis."
+    },
+    {
+      "id": "lipase",
+      "pt_name": "Lípase",
+      "aliases": [
+        "Lipase",
+        "LIP"
+      ],
+      "loinc": "3040-3",
+      "section": "Patologia Química",
+      "subsection": "Enzimologia",
+      "expected_units": [
+        "U/l"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          10,
+          140
+        ]
+      },
+      "description": "Pancreatic-specific lipid-hydrolyzing enzyme. More sensitive AND more specific than amylase for pancreatitis. Rises 4–8h, peaks 24h, persists 8–14 days.",
+      "high_means": "Acute / chronic pancreatitis (>3× ULN diagnostic), pancreatic cancer, bowel obstruction / perforation, kidney failure, opioid use.",
+      "low_means": "Chronic pancreatitis with extensive damage, cystic fibrosis."
+    },
+    {
+      "id": "haptoglobina",
+      "pt_name": "Haptoglobina",
+      "aliases": [
+        "Haptoglobin",
+        "HP"
+      ],
+      "loinc": "4542-7",
+      "section": "Patologia Química",
+      "subsection": "Proteínas",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          30,
+          200
+        ]
+      },
+      "description": "Acute-phase protein that binds free hemoglobin. The single most useful test for intravascular hemolysis: consumed when free Hb is released (low or undetectable).",
+      "high_means": "Inflammation, infection, malignancy, glucocorticoid therapy. Acute-phase rise.",
+      "low_means": "Hemolysis (intravascular > extravascular), severe liver disease, congenital ahaptoglobinemia (~4% of population).",
+      "unit_notes": "Reference 30–200 mg/dL. Pair with LDH (high), indirect bilirubin (high), reticulocytes (high), and peripheral smear in suspected hemolysis."
+    },
+    {
+      "id": "nt_probnp",
+      "pt_name": "NT-proBNP",
+      "aliases": [
+        "NT-proBNP",
+        "ProBNP",
+        "N-Terminal proBNP"
+      ],
+      "loinc": "33762-6",
+      "section": "Patologia Química",
+      "subsection": "Biomarcadores Cardíacos",
+      "panel": "cardiac",
+      "expected_units": [
+        "pg/mL",
+        "ng/L"
+      ],
+      "range_grammar": [
+        "lt",
+        "age_stratified"
+      ],
+      "age_dependent": true,
+      "default_ref": {
+        "all": [
+          null,
+          125
+        ]
+      },
+      "description": "Cleaved fragment of pro-B-type natriuretic peptide, released from cardiac myocytes in response to ventricular wall stretch. Standard rule-out test for heart failure in dyspnea workup.",
+      "high_means": "Acute decompensated heart failure (>900 in <50y, >1800 in 50-75y, >1800 in >75y typically), chronic HF, MI, atrial fibrillation, kidney failure, advanced age. Higher with reduced EF more than preserved.",
+      "low_means": "Heart failure essentially excluded in symptomatic outpatient (<125 pg/mL) or acute setting (<300 pg/mL).",
+      "unit_notes": "Age-stratified rule-in cutoffs: <50y >450, 50-75y >900, >75y >1800 pg/mL. Obesity lowers values; kidney disease raises them."
+    },
+    {
+      "id": "ck_mb",
+      "pt_name": "CK-MB",
+      "aliases": [
+        "CK-MB",
+        "CKMB",
+        "Creatine Kinase MB"
+      ],
+      "loinc": "13969-1",
+      "section": "Patologia Química",
+      "subsection": "Biomarcadores Cardíacos",
+      "panel": "cardiac",
+      "expected_units": [
+        "ng/mL",
+        "U/l"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          5
+        ]
+      },
+      "description": "Heart-enriched isoenzyme of creatine kinase. Now largely superseded by troponin for MI diagnosis but still used to detect re-infarction (clears in 36–48h) and quantify perioperative cardiac injury.",
+      "high_means": "Myocardial infarction (rises 4–6h, peaks 12–24h), myocarditis, cardiac surgery, severe muscle injury (skeletal CK-MB ~1–3% of total CK).",
+      "low_means": "Not clinically significant."
+    },
+    {
+      "id": "mioglobina",
+      "pt_name": "Mioglobina",
+      "aliases": [
+        "Myoglobin",
+        "MGB"
+      ],
+      "loinc": "2639-3",
+      "section": "Patologia Química",
+      "subsection": "Biomarcadores Cardíacos",
+      "panel": "cardiac",
+      "expected_units": [
+        "ng/mL",
+        "µg/L"
+      ],
+      "range_grammar": [
+        "lt",
+        "sex_stratified"
+      ],
+      "sex_dependent": true,
+      "default_ref": {
+        "m": [
+          null,
+          90
+        ],
+        "f": [
+          null,
+          70
+        ]
+      },
+      "description": "Heme protein in skeletal and cardiac muscle. Earliest cardiac marker (rises 1–3h post-injury) but very non-specific — any muscle injury raises it. Largely replaced by hs-troponin.",
+      "high_means": "MI (early), rhabdomyolysis (very high — risk of pigment nephropathy), trauma, muscular dystrophy, heavy exercise, IM injection, alcohol abuse.",
+      "low_means": "Not clinically significant."
+    },
+    {
+      "id": "cistatina_c",
+      "pt_name": "Cistatina C",
+      "aliases": [
+        "Cystatin C",
+        "CysC"
+      ],
+      "loinc": "33863-2",
+      "section": "Patologia Química",
+      "subsection": "Função Renal",
+      "panel": "renal",
+      "expected_units": [
+        "mg/L"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          0.6,
+          1
+        ]
+      },
+      "description": "Low-molecular-weight protein freely filtered at the glomerulus and reabsorbed by tubular cells. Independent of muscle mass — better GFR estimator than creatinine in elderly, frail, or muscular patients.",
+      "high_means": "Reduced glomerular filtration. Less affected by muscle, diet, race than creatinine. Used in CKD-EPI cystatin and combined creatinine-cystatin equations for refined GFR.",
+      "low_means": "Generally not flagged.",
+      "unit_notes": "Reference 0.6–1.0 mg/L (assay-dependent). Rises with kidney injury; also slight increases with steroids, hyperthyroidism."
+    },
+    {
+      "id": "microalbuminuria",
+      "pt_name": "Microalbuminúria (urina 24h)",
+      "aliases": [
+        "Microalbumin",
+        "Albumina Urinária 24h"
+      ],
+      "loinc": "1754-1",
+      "section": "Patologia Química",
+      "subsection": "Função Renal",
+      "expected_units": [
+        "mg/24h"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          30
+        ]
+      },
+      "description": "Urinary albumin excretion — the earliest detectable sign of diabetic / hypertensive kidney disease. Spot albumin/creatinine ratio (ACR) is preferred (no 24h collection needed).",
+      "high_means": "Diabetic nephropathy, hypertensive kidney disease, glomerulonephritis, preeclampsia. 30–300 mg/24h = moderately increased (formerly microalbuminuria); >300 = severely increased (overt proteinuria).",
+      "low_means": "Normal — kidney barrier intact."
+    },
+    {
+      "id": "rac",
+      "pt_name": "Razão Albumina/Creatinina urinária (RAC)",
+      "aliases": [
+        "ACR",
+        "UACR",
+        "Urine Albumin Creatinine Ratio",
+        "RAC"
+      ],
+      "loinc": "9318-7",
+      "section": "Patologia Química",
+      "subsection": "Função Renal",
+      "expected_units": [
+        "mg/g"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "is_derived": true,
+      "default_ref": {
+        "all": [
+          null,
+          30
+        ]
+      },
+      "description": "Spot urine albumin / creatinine ratio — preferred over 24-hour collection for albuminuria screening and CKD staging (KDIGO A1/A2/A3 thresholds: <30 / 30–300 / >300 mg/g).",
+      "high_means": "A2 (30–300): early diabetic / hypertensive nephropathy. A3 (>300): overt nephropathy, glomerular disease.",
+      "low_means": "A1 (<30): normal albuminuria — no kidney damage detected."
+    },
+    {
+      "id": "t3_total",
+      "pt_name": "Triiodotironina Total (T3)",
+      "aliases": [
+        "T3",
+        "Total T3",
+        "Triiodothyronine"
+      ],
+      "loinc": "3053-6",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Tiroideu",
+      "panel": "thyroid",
+      "expected_units": [
+        "ng/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          80,
+          200
+        ]
+      },
+      "description": "Total (bound + free) triiodothyronine — the active thyroid hormone. Less commonly ordered than FT3 because total measures are heavily influenced by binding-protein changes.",
+      "high_means": "Hyperthyroidism (Graves', toxic nodule), T3-toxicosis, exogenous T3 therapy, pregnancy/estrogens (TBG up), some malignancies.",
+      "low_means": "Hypothyroidism (overt), severe non-thyroidal illness (low T3 syndrome — most common), starvation, drugs (amiodarone, glucocorticoids)."
+    },
+    {
+      "id": "ft3",
+      "pt_name": "Triiodotironina Livre (FT3)",
+      "aliases": [
+        "FT3",
+        "T3 Livre",
+        "Free T3",
+        "Free Triiodothyronine"
+      ],
+      "loinc": "3051-0",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Tiroideu",
+      "panel": "thyroid",
+      "expected_units": [
+        "pg/mL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          2.3,
+          4.2
+        ]
+      },
+      "description": "Free, biologically active T3. Used to confirm hyperthyroidism (especially T3-toxicosis where FT4 may be normal) and monitor T3-replacement therapy.",
+      "high_means": "Overt hyperthyroidism (Graves'), T3-predominant Graves', toxic nodule, factitious thyrotoxicosis (T3 ingestion).",
+      "low_means": "Hypothyroidism (overt), low-T3 syndrome (sick euthyroid), hospitalization / critical illness."
+    },
+    {
+      "id": "t4_total",
+      "pt_name": "Tiroxina Total (T4)",
+      "aliases": [
+        "T4",
+        "Total T4",
+        "Total Thyroxine"
+      ],
+      "loinc": "3026-2",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Tiroideu",
+      "panel": "thyroid",
+      "expected_units": [
+        "µg/dL",
+        "ug/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          4.5,
+          12
+        ]
+      },
+      "description": "Total (bound + free) thyroxine. Largely superseded by FT4 — total values are confounded by changes in TBG (estrogens, pregnancy, liver disease).",
+      "high_means": "Hyperthyroidism, pregnancy / estrogens (TBG up), familial dysalbuminemic hyperthyroxinemia, acute psychiatric admission (transient).",
+      "low_means": "Hypothyroidism, severe illness, nephrotic syndrome (TBG low)."
+    },
+    {
+      "id": "anti_tpo",
+      "pt_name": "Anti-TPO",
+      "aliases": [
+        "Anti-Tireoperoxidase",
+        "TPO Ab",
+        "Anti-Thyroid Peroxidase",
+        "Anti-Microsomal"
+      ],
+      "loinc": "8099-6",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Tiroideu",
+      "panel": "thyroid",
+      "expected_units": [
+        "UI/mL",
+        "IU/mL"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          35
+        ]
+      },
+      "description": "Antibodies against thyroid peroxidase — present in 90%+ of Hashimoto's thyroiditis and ~75% of Graves'. Strongest predictor of progression from subclinical to overt hypothyroidism.",
+      "high_means": "Hashimoto's thyroiditis (autoimmune hypothyroidism), Graves' disease, postpartum thyroiditis, type 1 diabetes (associated). High titer + subclinical hypothyroidism strongly predicts progression to overt disease.",
+      "low_means": "Negative — autoimmune thyroid disease unlikely (but doesn't rule out).",
+      "unit_notes": "Reference <35 UI/mL (assay-dependent — also reported as <60 in some methods). Titer correlates with disease activity in Hashimoto's."
+    },
+    {
+      "id": "anti_tg",
+      "pt_name": "Anti-Tireoglobulina",
+      "aliases": [
+        "Anti-TG",
+        "TG Ab",
+        "Anti-Thyroglobulin"
+      ],
+      "loinc": "5384-3",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Tiroideu",
+      "panel": "thyroid",
+      "expected_units": [
+        "UI/mL"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          40
+        ]
+      },
+      "description": "Antibodies against thyroglobulin — co-marker for autoimmune thyroid disease. Most useful in monitoring differentiated thyroid cancer post-thyroidectomy: presence interferes with TG measurement.",
+      "high_means": "Hashimoto's, Graves', autoimmune thyroid disease. In treated thyroid cancer: presence interferes with thyroglobulin assay (must be reported alongside).",
+      "low_means": "Negative — not actively interfering with thyroglobulin tumor-marker tracking."
+    },
+    {
+      "id": "tireoglobulina",
+      "pt_name": "Tireoglobulina",
+      "aliases": [
+        "Thyroglobulin",
+        "TG"
+      ],
+      "loinc": "3060-1",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Tiroideu",
+      "panel": "thyroid",
+      "expected_units": [
+        "ng/mL"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          55
+        ]
+      },
+      "description": "Glycoprotein produced exclusively by thyroid follicular cells. Primary tumor marker for differentiated thyroid cancer follow-up post-thyroidectomy + radioiodine ablation.",
+      "high_means": "Post-thyroidectomy: residual / recurrent / metastatic differentiated thyroid cancer. Pre-treatment: any thyroid pathology (non-specific) — not used as diagnostic for cancer.",
+      "low_means": "After total thyroidectomy + ablation: undetectable means no functional thyroid tissue (ideally <0.2 ng/mL). Indicates remission.",
+      "unit_notes": "Always order with anti-TG antibody (interferes with assay if positive)."
+    },
+    {
+      "id": "pth",
+      "pt_name": "Paratormona (PTH)",
+      "aliases": [
+        "PTH",
+        "Parathyroid Hormone",
+        "Paratormona Intacta"
+      ],
+      "loinc": "2731-8",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo Fosfo-Cálcico",
+      "panel": "phospho_calcium",
+      "expected_units": [
+        "pg/mL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          15,
+          65
+        ]
+      },
+      "description": "Parathyroid hormone — primary regulator of calcium / phosphate / vitamin D. Always interpreted with simultaneous calcium and vitamin D.",
+      "high_means": "Primary hyperparathyroidism (high Ca, high PTH, low P), secondary hyperparathyroidism (CKD, vit D deficiency — low/normal Ca, high PTH), tertiary (autonomous after long-standing secondary).",
+      "low_means": "Hypoparathyroidism (low Ca + low PTH = appropriate response failed), hypercalcemia of malignancy (high Ca, suppressed PTH), hypomagnesemia.",
+      "unit_notes": "Reference 15–65 pg/mL (intact PTH assay). Diurnal variation — collect AM ideally."
+    },
+    {
+      "id": "insulina",
+      "pt_name": "Insulina Basal",
+      "aliases": [
+        "Insulin",
+        "INS"
+      ],
+      "loinc": "1558-6",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo dos Hidratos de Carbono",
+      "panel": "carbs",
+      "expected_units": [
+        "µUI/mL",
+        "uUI/mL",
+        "mUI/L"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          3,
+          25
+        ]
+      },
+      "description": "Pancreatic β-cell hormone. Used to evaluate hypoglycemia (insulinoma), insulin resistance (HOMA-IR), and rare β-cell tumors. Fasting state interpretation only.",
+      "high_means": "Insulin resistance, type 2 diabetes (early — high insulin + high glucose), insulinoma (high insulin + low glucose), exogenous insulin (elevated proinsulin distinguishes), Cushing's, acromegaly, obesity.",
+      "low_means": "Type 1 diabetes (β-cell destruction), late type 2 (β-cell exhaustion), pancreatectomy, severe pancreatitis."
+    },
+    {
+      "id": "homa_ir",
+      "pt_name": "HOMA-IR",
+      "aliases": [
+        "HOMA",
+        "HOMA Index",
+        "HOMA-IR Index"
+      ],
+      "loinc": "75443-2",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo dos Hidratos de Carbono",
+      "panel": "carbs",
+      "expected_units": [
+        ""
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "is_derived": true,
+      "default_ref": {
+        "all": [
+          null,
+          2.5
+        ]
+      },
+      "description": "Homeostatic Model Assessment of Insulin Resistance: (fasting insulin × fasting glucose) / 405. Quick, validated proxy for insulin sensitivity in metabolic / PCOS / NAFLD workup.",
+      "high_means": "Insulin resistance: <1.0 normal, 1.0–2.5 borderline, >2.5 resistant, >5 severe. PCOS, metabolic syndrome, type 2 diabetes, NAFLD.",
+      "low_means": "Highly insulin-sensitive (athletic) or β-cell failure (type 1, late type 2 with low insulin)."
+    },
+    {
+      "id": "c_peptideo",
+      "pt_name": "Péptido C",
+      "aliases": [
+        "C-Peptide",
+        "C Peptide",
+        "Peptídeo C"
+      ],
+      "loinc": "1986-9",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo dos Hidratos de Carbono",
+      "panel": "carbs",
+      "expected_units": [
+        "ng/mL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          0.9,
+          7.1
+        ]
+      },
+      "description": "Cleaved from proinsulin in 1:1 ratio with insulin. Reflects endogenous insulin production (unlike measured insulin which can include exogenous). Distinguishes type 1 (low) from type 2 (normal/high) diabetes and detects factitious hypoglycemia.",
+      "high_means": "Insulin resistance / type 2 diabetes, insulinoma, sulfonylurea use (raises both insulin and C-peptide), kidney failure (reduced clearance).",
+      "low_means": "Type 1 diabetes (β-cell destruction), late type 2, pancreatectomy. Factitious hypoglycemia from exogenous insulin: low C-peptide + high insulin."
+    },
+    {
+      "id": "progesterona",
+      "pt_name": "Progesterona",
+      "aliases": [
+        "Progesterone",
+        "P4"
+      ],
+      "loinc": "2839-9",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Gonadal",
+      "panel": "gonadal",
+      "expected_units": [
+        "ng/mL"
+      ],
+      "range_grammar": [
+        "a_b",
+        "cycle_phase",
+        "sex_stratified"
+      ],
+      "sex_dependent": true,
+      "cycle_dependent": true,
+      "default_ref": {
+        "m": [
+          0.2,
+          1.4
+        ],
+        "f": [
+          0.2,
+          30
+        ]
+      },
+      "cycle_phases": {
+        "follicular": [
+          0.2,
+          1.5
+        ],
+        "ovulation": [
+          0.8,
+          3
+        ],
+        "luteal": [
+          1.7,
+          27
+        ],
+        "postmenopause": [
+          0.1,
+          0.8
+        ]
+      },
+      "description": "Progestational hormone. Confirms ovulation (mid-luteal >3 ng/mL), monitors fertility treatment, supports early pregnancy diagnosis (>20 = viable).",
+      "high_means": "Ovulation (mid-luteal peak), pregnancy (rises with gestational age), congenital adrenal hyperplasia (21-hydroxylase deficiency).",
+      "low_means": "Anovulation (no luteal rise), luteal phase defect, menopause, exogenous estrogen / GnRH agonists.",
+      "unit_notes": "Cycle-phase dependent. Mid-luteal (~day 21 of 28d cycle) peak >3 ng/mL confirms ovulation; >10 = robust luteal function."
+    },
+    {
+      "id": "amh",
+      "pt_name": "Hormona Anti-Mülleriana (AMH)",
+      "aliases": [
+        "AMH",
+        "Anti-Mullerian Hormone",
+        "Müllerian Inhibiting Substance"
+      ],
+      "loinc": "38476-8",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Gonadal",
+      "panel": "gonadal",
+      "expected_units": [
+        "ng/mL"
+      ],
+      "range_grammar": [
+        "a_b",
+        "sex_stratified",
+        "age_stratified"
+      ],
+      "sex_dependent": true,
+      "age_dependent": true,
+      "default_ref": {
+        "m": [
+          1.5,
+          15
+        ],
+        "f": [
+          1,
+          9
+        ]
+      },
+      "description": "Granulosa-cell hormone — best single marker of female ovarian reserve. Stable across menstrual cycle (unlike FSH). Used in IVF planning and PCOS workup.",
+      "high_means": "PCOS (often >5–8), granulosa cell tumor (rare). Higher AMH = more antral follicles available.",
+      "low_means": "Diminished ovarian reserve, menopause approach, post-chemo / radiotherapy, ovarian surgery. <0.5 = very low reserve, IVF response likely poor.",
+      "unit_notes": "Reproductive-age female 1.0–9.0 ng/mL; age-dependent decline (drops ~50% per decade after 30). Postmenopausal: undetectable."
+    },
+    {
+      "id": "beta_hcg",
+      "pt_name": "β-HCG",
+      "aliases": [
+        "Beta HCG",
+        "HCG",
+        "β-hCG",
+        "Gonadotrofina Coriónica"
+      ],
+      "loinc": "2106-3",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Gonadal",
+      "panel": "gonadal",
+      "expected_units": [
+        "mUI/mL",
+        "UI/L"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          5
+        ]
+      },
+      "description": "Pregnancy hormone produced by trophoblast — also a tumor marker for germ-cell and trophoblastic disease. Doubles every ~48h in early viable pregnancy.",
+      "high_means": "Pregnancy (rising), molar pregnancy / choriocarcinoma (very high), germ-cell tumors (testicular non-seminoma), some non-trophoblastic malignancies. Falling values in early pregnancy: miscarriage / ectopic.",
+      "low_means": "Non-pregnant or post-pregnancy. <5 mUI/mL excludes pregnancy in most contexts.",
+      "unit_notes": "Non-pregnant <5. Quantitative serum more sensitive than urine. Doubling time 48–72h in viable pregnancy <8 weeks."
+    },
+    {
+      "id": "dhea_s",
+      "pt_name": "DHEA-S",
+      "aliases": [
+        "DHEAS",
+        "Sulfato de Desidroepiandrosterona",
+        "Dehydroepiandrosterone Sulfate"
+      ],
+      "loinc": "2191-5",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Corto-Supra-Renal",
+      "panel": "adrenal",
+      "expected_units": [
+        "µg/dL",
+        "ug/dL"
+      ],
+      "range_grammar": [
+        "a_b",
+        "sex_stratified",
+        "age_stratified"
+      ],
+      "sex_dependent": true,
+      "age_dependent": true,
+      "default_ref": {
+        "m": [
+          80,
+          560
+        ],
+        "f": [
+          35,
+          430
+        ]
+      },
+      "description": "Sulfated form of DHEA — adrenal androgen produced almost exclusively by the adrenal cortex (zona reticularis). Stable (long t½), so single measurement reflects adrenal androgen output.",
+      "high_means": "Congenital adrenal hyperplasia (21-OH or 11-OH), adrenal tumor (very high — virilization), Cushing's, PCOS (mild), exogenous DHEA supplementation.",
+      "low_means": "Adrenal insufficiency, hypopituitarism, glucocorticoid therapy (suppression), age-related decline ('adrenopause' — falls ~10%/decade after 30).",
+      "unit_notes": "Strongly age- and sex-dependent. Female peak 25y ~430, post-menopause ~50. Male peak ~30y ~560, decline thereafter."
+    },
+    {
+      "id": "_17_oh_progesterona",
+      "pt_name": "17-OH-Progesterona",
+      "aliases": [
+        "17-OHP",
+        "17-Hidroxiprogesterona",
+        "17 Hydroxyprogesterone"
+      ],
+      "loinc": "1668-3",
+      "section": "Patologia Química",
+      "subsection": "Eixo Hipófiso-Corto-Supra-Renal",
+      "panel": "adrenal",
+      "expected_units": [
+        "ng/mL"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          2
+        ]
+      },
+      "description": "Steroid intermediate in cortisol synthesis. Screening test for 21-hydroxylase-deficiency congenital adrenal hyperplasia (most common form).",
+      "high_means": "Classic CAH (very high, often >100 in newborn), late-onset CAH (mildly elevated, ACTH-stim test confirms), adrenal tumor.",
+      "low_means": "Generally not significant.",
+      "unit_notes": "Reference <2.0 ng/mL (200 ng/dL). >10 ng/mL suggests CAH; ACTH-stim diagnostic test follows."
+    },
+    {
+      "id": "iga",
+      "pt_name": "Imunoglobulina A (IgA)",
+      "aliases": [
+        "IgA",
+        "Immunoglobulin A"
+      ],
+      "loinc": "2458-8",
+      "section": "Imunologia",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          70,
+          400
+        ]
+      },
+      "description": "Predominant mucosal-surface immunoglobulin (gut, respiratory, GU) and secretions. Selective IgA deficiency is the most common primary immunodeficiency (1:300 — often asymptomatic; can complicate transfusions and serologic testing of celiac with anti-tTG IgA).",
+      "high_means": "Multiple myeloma (IgA type), liver disease, chronic infection, autoimmune disease, IgA nephropathy.",
+      "low_means": "Selective IgA deficiency (most common — often incidental), CVID, immunosuppression. If checking celiac anti-tTG IgA, must rule out IgA deficiency first."
+    },
+    {
+      "id": "igg",
+      "pt_name": "Imunoglobulina G (IgG)",
+      "aliases": [
+        "IgG",
+        "Immunoglobulin G"
+      ],
+      "loinc": "2465-3",
+      "section": "Imunologia",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          700,
+          1600
+        ]
+      },
+      "description": "Most abundant serum immunoglobulin — mediates secondary immune response and crosses placenta. Quantitative IgG used in immunodeficiency workup, monoclonal gammopathy detection, and monitoring replacement therapy.",
+      "high_means": "Polyclonal: chronic infection, autoimmune disease, chronic liver disease. Monoclonal: multiple myeloma, MGUS, Waldenström. IgG4-related disease (IgG4 subclass).",
+      "low_means": "CVID, Bruton's agammaglobulinemia, immunosuppressive therapy, nephrotic syndrome, severe protein-losing enteropathy. Recurrent encapsulated-bacteria infections."
+    },
+    {
+      "id": "igm",
+      "pt_name": "Imunoglobulina M (IgM)",
+      "aliases": [
+        "IgM",
+        "Immunoglobulin M"
+      ],
+      "loinc": "2472-9",
+      "section": "Imunologia",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          40,
+          230
+        ]
+      },
+      "description": "First antibody produced in primary immune response. Pentameric structure — agglutinates effectively. Acute infection serology detects IgM as evidence of recent exposure.",
+      "high_means": "Acute / recent infection, Waldenström macroglobulinemia (very high), primary biliary cholangitis (typically high), some chronic infections.",
+      "low_means": "Hyper-IgM syndrome (failure of class-switching), CVID, light-chain amyloidosis."
+    },
+    {
+      "id": "c3",
+      "pt_name": "Complemento C3",
+      "aliases": [
+        "C3",
+        "Complement C3"
+      ],
+      "loinc": "4485-9",
+      "section": "Imunologia",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          90,
+          180
+        ]
+      },
+      "description": "Central complement component, consumed by classical and alternative pathway activation. Low C3 + low C4 = active SLE; isolated C3 low suggests post-infectious GN, atypical HUS, MPGN.",
+      "high_means": "Acute-phase reactant: inflammation, infection, malignancy. Rarely the primary clue.",
+      "low_means": "Active SLE flare, post-streptococcal GN, MPGN, atypical HUS, cryoglobulinemia, congenital deficiency. Low C3 + normal C4: alternative-pathway activation."
+    },
+    {
+      "id": "c4",
+      "pt_name": "Complemento C4",
+      "aliases": [
+        "C4",
+        "Complement C4"
+      ],
+      "loinc": "4498-2",
+      "section": "Imunologia",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          10,
+          40
+        ]
+      },
+      "description": "Classical pathway complement component. Low C4 + low C3 = SLE flare or hereditary angioedema; isolated C4 low suggests cryoglobulinemia or HAE.",
+      "high_means": "Acute-phase reactant.",
+      "low_means": "SLE (active), hereditary angioedema (very low — diagnostic with low C1-INH function), acquired C1-INH deficiency, cryoglobulinemia, congenital deficiency."
+    },
+    {
+      "id": "ana",
+      "pt_name": "Anticorpos Anti-Nucleares (ANA)",
+      "aliases": [
+        "ANA",
+        "Anti-Nuclear Antibodies",
+        "FAN"
+      ],
+      "loinc": "5048-4",
+      "section": "Imunologia",
+      "expected_units": [
+        "titer"
+      ],
+      "range_grammar": [
+        "titer",
+        "qualitative"
+      ],
+      "is_qualitative": true,
+      "default_ref": null,
+      "description": "Indirect immunofluorescence on Hep-2 cells — screening test for systemic autoimmune disease (SLE, Sjögren's, scleroderma, MCTD, polymyositis). High sensitivity, low specificity (5–15% of healthy population positive low-titer).",
+      "high_means": "Titer + pattern guide further workup: ≥1:80 with relevant symptoms warrants dsDNA, Sm, RNP, SSA/B, Scl-70, etc. Higher titer = more clinically meaningful.",
+      "low_means": "Negative — autoimmune disease not excluded clinically but immune-mediated etiology less likely.",
+      "unit_notes": "Reported as titer + pattern (homogeneous, speckled, nucleolar, centromere, etc.). 1:40 weakly positive, 1:80–160 borderline, ≥1:320 high titer."
+    },
+    {
+      "id": "factor_reumatoide",
+      "pt_name": "Factor Reumatóide",
+      "aliases": [
+        "FR",
+        "RF",
+        "Rheumatoid Factor"
+      ],
+      "loinc": "11572-5",
+      "section": "Imunologia",
+      "expected_units": [
+        "UI/mL"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          14
+        ]
+      },
+      "description": "Auto-antibody (typically IgM) against the Fc portion of IgG. Sensitive but not specific for rheumatoid arthritis (~70-80% sens, 80% spec). Also rises in Sjögren's, hepatitis C, chronic infections, healthy elderly.",
+      "high_means": "Rheumatoid arthritis (high titer = more aggressive disease), Sjögren's, mixed connective tissue disease, cryoglobulinemia, chronic hepatitis C, endocarditis, healthy elderly (~5-10%).",
+      "low_means": "RA not excluded — consider anti-CCP (more specific). Seronegative RA exists."
+    },
+    {
+      "id": "anti_ccp",
+      "pt_name": "Anti-CCP",
+      "aliases": [
+        "Anti-CCP",
+        "ACPA",
+        "Anti-Citrullinated Peptide",
+        "Anti-CCP2"
+      ],
+      "loinc": "32781-7",
+      "section": "Imunologia",
+      "expected_units": [
+        "U/mL"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          20
+        ]
+      },
+      "description": "Antibodies against cyclic citrullinated peptides — the most specific (~95%) and sensitive (~70%) serologic marker for rheumatoid arthritis. Predicts erosive / aggressive disease.",
+      "high_means": "Rheumatoid arthritis (high titer = aggressive, erosive). May predate clinical disease by years.",
+      "low_means": "RA much less likely. Anti-CCP-negative RA exists but is milder."
+    },
+    {
+      "id": "psa_total",
+      "pt_name": "PSA Total",
+      "aliases": [
+        "PSA",
+        "Prostate Specific Antigen",
+        "Antígeno Prostático Específico"
+      ],
+      "loinc": "2857-1",
+      "section": "Patologia Química",
+      "subsection": "Marcadores Tumorais",
+      "expected_units": [
+        "ng/mL"
+      ],
+      "range_grammar": [
+        "lt",
+        "age_stratified"
+      ],
+      "age_dependent": true,
+      "default_ref": {
+        "all": [
+          null,
+          4
+        ]
+      },
+      "description": "Prostate-specific glycoprotein. Screening / monitoring marker for prostate cancer; also rises in BPH, prostatitis, recent ejaculation, instrumentation.",
+      "high_means": "Prostate cancer, BPH, prostatitis, recent biopsy / catheterization / ejaculation, advanced age. Velocity (>0.75 ng/mL/year) and density (PSA / prostate volume) refine cancer suspicion.",
+      "low_means": "Lower cancer probability. Suppressed by 5α-reductase inhibitors (finasteride / dutasteride — actual values × 2 to compare).",
+      "unit_notes": "Age-adjusted: <2.5 (40-49), <3.5 (50-59), <4.5 (60-69), <6.5 (70-79). Free/total PSA ratio refines BPH vs cancer (low ratio = cancer concern)."
+    },
+    {
+      "id": "psa_livre",
+      "pt_name": "PSA Livre",
+      "aliases": [
+        "Free PSA",
+        "fPSA",
+        "PSA Livre"
+      ],
+      "loinc": "10886-0",
+      "section": "Patologia Química",
+      "subsection": "Marcadores Tumorais",
+      "expected_units": [
+        "ng/mL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": null,
+      "description": "Unbound (free) fraction of PSA. Used as ratio (free/total %) when total PSA is 4–10 ng/mL to discriminate BPH (high free%) from cancer (low free%).",
+      "high_means": "Higher free fraction → more likely BPH.",
+      "low_means": "Free / total ratio <10% strongly suggests cancer; 10–25% intermediate; >25% favors BPH."
+    },
+    {
+      "id": "afp",
+      "pt_name": "Alfa-fetoproteína",
+      "aliases": [
+        "AFP",
+        "Alpha-Fetoprotein"
+      ],
+      "loinc": "1834-1",
+      "section": "Patologia Química",
+      "subsection": "Marcadores Tumorais",
+      "expected_units": [
+        "ng/mL"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          10
+        ]
+      },
+      "description": "Fetal liver protein — primary tumor marker for hepatocellular carcinoma (HCC) and yolk-sac / mixed germ-cell tumors. Used in HCC surveillance in cirrhosis, monitoring testicular cancer.",
+      "high_means": "HCC (often >400 in advanced; can be normal in early), germ-cell tumors (non-seminoma), hepatitis / cirrhosis (modest), pregnancy (very high — physiologic). Rising trend > absolute value matters in surveillance.",
+      "low_means": "Normal in non-pregnant adult. <10 ng/mL excludes most germ-cell tumors but not HCC alone."
+    },
+    {
+      "id": "cea",
+      "pt_name": "Antígeno Carcinoembrionário (CEA)",
+      "aliases": [
+        "CEA",
+        "Carcinoembryonic Antigen",
+        "Antígeno Carcinoembriónico"
+      ],
+      "loinc": "2039-6",
+      "section": "Patologia Química",
+      "subsection": "Marcadores Tumorais",
+      "expected_units": [
+        "ng/mL"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          5
+        ]
+      },
+      "description": "Glycoprotein expressed in fetal gut and many adenocarcinomas. Most useful for monitoring (not screening) colorectal cancer post-resection — rising values suggest recurrence.",
+      "high_means": "Colorectal, gastric, pancreatic, lung, breast, medullary thyroid carcinoma. Smoker (~5–10), inflammatory bowel disease, pancreatitis, COPD, hypothyroidism, liver disease.",
+      "low_means": "Normal — does not exclude malignancy.",
+      "unit_notes": "Reference <5 ng/mL non-smoker, <10 smoker. Trend over time more useful than absolute."
+    },
+    {
+      "id": "ca_19_9",
+      "pt_name": "CA 19-9",
+      "aliases": [
+        "CA 19-9",
+        "CA19-9",
+        "Carbohydrate Antigen 19-9"
+      ],
+      "loinc": "24108-3",
+      "section": "Patologia Química",
+      "subsection": "Marcadores Tumorais",
+      "expected_units": [
+        "U/mL"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          37
+        ]
+      },
+      "description": "Sialylated Lewis-a antigen. Primary tumor marker for pancreatic cancer; also rises in cholangiocarcinoma, biliary obstruction (any cause). 5–10% of population is Lewis-negative — won't make CA 19-9 even with cancer.",
+      "high_means": "Pancreatic adenocarcinoma (often very high — >1000 advanced), cholangiocarcinoma, gastric / colorectal cancer, biliary obstruction (any), pancreatitis, cirrhosis.",
+      "low_means": "Lower cancer probability. Lewis-negative individuals false-low."
+    },
+    {
+      "id": "ca_125",
+      "pt_name": "CA 125",
+      "aliases": [
+        "CA 125",
+        "CA125",
+        "MUC16"
+      ],
+      "loinc": "10334-1",
+      "section": "Patologia Química",
+      "subsection": "Marcadores Tumorais",
+      "expected_units": [
+        "U/mL"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          35
+        ]
+      },
+      "description": "Mucinous glycoprotein. Primary tumor marker for epithelial ovarian cancer surveillance and treatment response. Many false positives in benign gynecological conditions.",
+      "high_means": "Epithelial ovarian cancer, endometrial cancer, peritoneal / pleural / pericardial inflammation (effusion of any cause), endometriosis, fibroids, pregnancy 1st trimester, menstruation, pancreatitis.",
+      "low_means": "Normal — does not exclude ovarian cancer (especially early-stage).",
+      "unit_notes": "Reference <35 U/mL. Use trend over time for surveillance. ROMA / RMI scores combine with HE4 / ultrasound for adnexal mass risk."
+    },
+    {
+      "id": "ca_15_3",
+      "pt_name": "CA 15-3",
+      "aliases": [
+        "CA 15-3",
+        "CA15-3",
+        "MUC1"
+      ],
+      "loinc": "6875-9",
+      "section": "Patologia Química",
+      "subsection": "Marcadores Tumorais",
+      "expected_units": [
+        "U/mL"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          28
+        ]
+      },
+      "description": "Breast cancer surveillance marker (not screening). Rises in ~75% of metastatic breast cancer; less reliable in early disease.",
+      "high_means": "Metastatic breast cancer, other adenocarcinomas, benign breast / liver / lung disease.",
+      "low_means": "Normal — does not exclude breast cancer."
+    },
+    {
+      "id": "ctx",
+      "pt_name": "β-CrossLaps (CTX)",
+      "aliases": [
+        "CTX",
+        "β-CTX",
+        "Beta-CrossLaps",
+        "C-Telopeptide"
+      ],
+      "loinc": "73674-4",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo Fosfo-Cálcico",
+      "expected_units": [
+        "pg/mL",
+        "ng/L"
+      ],
+      "range_grammar": [
+        "a_b",
+        "sex_stratified"
+      ],
+      "sex_dependent": true,
+      "default_ref": {
+        "m": [
+          100,
+          650
+        ],
+        "f": [
+          100,
+          580
+        ]
+      },
+      "description": "Bone-resorption marker — degradation product of type I collagen released by osteoclast activity. Used to monitor anti-resorptive therapy (bisphosphonates, denosumab) — drops 30–70% within 3 months on effective therapy.",
+      "high_means": "High bone turnover: untreated osteoporosis, hyperthyroidism, hyperparathyroidism, Paget's disease, malignancy (bone metastases), recent fracture.",
+      "low_means": "Effective anti-resorptive therapy, hypoparathyroidism. Suppressed CTX (<150 pg/mL) on bisphosphonates correlates with elevated atypical-fracture risk during prolonged use.",
+      "unit_notes": "Diurnal variation (morning peak), fasting collection preferred. Pre/post-therapy comparison most useful."
+    },
+    {
+      "id": "p1np",
+      "pt_name": "P1NP",
+      "aliases": [
+        "P1NP",
+        "Procollagen Type 1 N-Terminal Propeptide",
+        "Total P1NP"
+      ],
+      "loinc": "55096-7",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo Fosfo-Cálcico",
+      "expected_units": [
+        "ng/mL",
+        "µg/L"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          15,
+          80
+        ]
+      },
+      "description": "Bone-formation marker — released during type I collagen synthesis by osteoblasts. Used to monitor anabolic therapy (teriparatide, abaloparatide, romosozumab) where it should rise within 1–3 months.",
+      "high_means": "Bone formation: anabolic agents, recent fracture healing, Paget's disease, hyperparathyroidism, growth (children).",
+      "low_means": "Glucocorticoid use, post-anti-resorptive therapy (some), hypoparathyroidism."
+    },
+    {
+      "id": "osteocalcina",
+      "pt_name": "Osteocalcina",
+      "aliases": [
+        "Osteocalcin",
+        "BGP",
+        "Bone Gla Protein"
+      ],
+      "loinc": "5803-2",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo Fosfo-Cálcico",
+      "expected_units": [
+        "ng/mL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          11,
+          43
+        ]
+      },
+      "description": "Bone-formation marker — non-collagenous protein synthesized by osteoblasts. Vitamin K-dependent. Used as research / second-line marker for bone turnover assessment.",
+      "high_means": "High bone turnover: hyperparathyroidism, hyperthyroidism, Paget's, osteomalacia, kidney failure (impaired clearance).",
+      "low_means": "Glucocorticoid therapy, hypothyroidism, hypoparathyroidism."
+    },
+    {
+      "id": "vitamina_a",
+      "pt_name": "Vitamina A (Retinol)",
+      "aliases": [
+        "Vitamin A",
+        "Retinol"
+      ],
+      "loinc": "2923-1",
+      "section": "Patologia Química",
+      "expected_units": [
+        "µg/dL",
+        "ug/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          30,
+          80
+        ]
+      },
+      "description": "Fat-soluble vitamin essential for vision (rhodopsin), immune function, epithelial integrity, and embryonic development.",
+      "high_means": "Hypervitaminosis A: chronic excess intake (supplements / liver), hepatotoxicity. Acute toxicity (>200) — pseudotumor cerebri, peeling skin, teratogenic.",
+      "low_means": "Malabsorption (cystic fibrosis, IBD, post-bariatric), severe protein malnutrition, alcoholism. Causes night blindness, xerophthalmia, increased infection risk."
+    },
+    {
+      "id": "vitamina_e",
+      "pt_name": "Vitamina E (Tocoferol)",
+      "aliases": [
+        "Vitamin E",
+        "Alpha-Tocopherol"
+      ],
+      "loinc": "1823-2",
+      "section": "Patologia Química",
+      "expected_units": [
+        "mg/L"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          5.5,
+          17
+        ]
+      },
+      "description": "Fat-soluble antioxidant — protects cell membranes from lipid peroxidation. Deficiency rare in well-nourished adults; clinically relevant in fat malabsorption disorders.",
+      "high_means": "Excessive supplementation. May increase bleeding risk on warfarin.",
+      "low_means": "Fat malabsorption (CF, abetalipoproteinemia, cholestasis), severe malnutrition. Causes neuropathy (spinocerebellar ataxia, areflexia), hemolytic anemia."
+    },
+    {
+      "id": "vitamina_b1",
+      "pt_name": "Vitamina B1 (Tiamina)",
+      "aliases": [
+        "Vitamin B1",
+        "Thiamine",
+        "Tiamina"
+      ],
+      "loinc": "29572-5",
+      "section": "Patologia Química",
+      "subsection": "Maturação Megaloblástica",
+      "expected_units": [
+        "nmol/L",
+        "µg/L"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          70,
+          180
+        ]
+      },
+      "description": "Cofactor for carbohydrate metabolism (pyruvate dehydrogenase, transketolase). Deficiency: beriberi (wet — heart failure; dry — neuropathy), Wernicke-Korsakoff in alcoholics.",
+      "high_means": "Excessive supplementation. Rarely toxic.",
+      "low_means": "Alcoholism (most common), malnutrition, hyperemesis gravidarum, post-bariatric, refeeding syndrome (consumed). Always replete before glucose in suspected deficiency."
+    },
+    {
+      "id": "vitamina_b6",
+      "pt_name": "Vitamina B6 (Piridoxal)",
+      "aliases": [
+        "Vitamin B6",
+        "PLP",
+        "Pyridoxal-5-Phosphate",
+        "Piridoxina"
+      ],
+      "loinc": "2284-8",
+      "section": "Patologia Química",
+      "subsection": "Maturação Megaloblástica",
+      "expected_units": [
+        "nmol/L",
+        "µg/L"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          20,
+          125
+        ]
+      },
+      "description": "Cofactor for amino acid metabolism, neurotransmitter synthesis, hemoglobin synthesis. PLP is the active coenzyme form.",
+      "high_means": "Supplementation toxicity (>1000 nmol/L) — paradoxical sensory neuropathy.",
+      "low_means": "Alcoholism, isoniazid / hydralazine / penicillamine therapy, kidney dialysis, malabsorption. Causes sideroblastic anemia, dermatitis, glossitis, peripheral neuropathy."
+    },
+    {
+      "id": "zinco",
+      "pt_name": "Zinco Sérico",
+      "aliases": [
+        "Zn",
+        "Zinc",
+        "Sideremia de Zinco"
+      ],
+      "loinc": "5763-8",
+      "section": "Patologia Química",
+      "expected_units": [
+        "µg/dL",
+        "ug/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          70,
+          120
+        ]
+      },
+      "description": "Essential trace element — cofactor for >300 enzymes. Required for immune function, wound healing, growth, taste/smell. Variable serum levels (acute-phase, fasting state, hemolysis).",
+      "high_means": "Acute-phase from inflammation (rare), supplementation, hemolysis (artifactual — RBCs rich in Zn).",
+      "low_means": "Acrodermatitis enteropathica (genetic), malabsorption, alcoholism, pregnancy, sickle cell, chronic illness, parenteral nutrition without supplementation. Causes hair loss, skin rash, taste disturbance, immune dysfunction."
+    },
+    {
+      "id": "cobre",
+      "pt_name": "Cobre Sérico",
+      "aliases": [
+        "Cu",
+        "Copper",
+        "Cuprémia"
+      ],
+      "loinc": "5631-7",
+      "section": "Patologia Química",
+      "expected_units": [
+        "µg/dL",
+        "ug/dL"
+      ],
+      "range_grammar": [
+        "a_b",
+        "sex_stratified"
+      ],
+      "sex_dependent": true,
+      "default_ref": {
+        "m": [
+          70,
+          140
+        ],
+        "f": [
+          80,
+          155
+        ]
+      },
+      "description": "Essential trace element — cofactor for ceruloplasmin, cytochrome c oxidase, lysyl oxidase, dopamine β-hydroxylase. Wilson disease workup primary indication.",
+      "high_means": "Pregnancy / oral contraceptives (estrogen raises ceruloplasmin), inflammation, hyperthyroidism. Wilson disease has variable serum copper (often normal — needs ceruloplasmin + 24h urinary copper).",
+      "low_means": "Wilson disease (typically), Menkes disease (genetic), malnutrition, malabsorption, excess zinc supplementation, parenteral nutrition without copper. Causes anemia, neutropenia, neurodegeneration."
+    },
+    {
+      "id": "ceruloplasmina",
+      "pt_name": "Ceruloplasmina",
+      "aliases": [
+        "Ceruloplasmin",
+        "CP"
+      ],
+      "loinc": "1751-7",
+      "section": "Patologia Química",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          20,
+          60
+        ]
+      },
+      "description": "Copper-carrying acute-phase reactant. Low ceruloplasmin + high urinary copper + low serum copper = Wilson disease.",
+      "high_means": "Inflammation, infection, pregnancy / estrogens, malignancy.",
+      "low_means": "Wilson disease (often <10), Menkes, severe protein malnutrition, nephrotic syndrome."
+    },
+    {
+      "id": "apo_b",
+      "pt_name": "Apolipoproteína B",
+      "aliases": [
+        "ApoB",
+        "Apo B",
+        "Apolipoprotein B"
+      ],
+      "loinc": "1884-6",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo Lípidico",
+      "panel": "lipid",
+      "expected_units": [
+        "mg/dL"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          90
+        ]
+      },
+      "description": "Structural protein on every atherogenic lipoprotein particle (LDL, VLDL, IDL, Lp(a)). Counts every potentially atherogenic particle 1:1, regardless of cholesterol content. Increasingly preferred over LDL-C for CV risk assessment.",
+      "high_means": "Increased atherogenic particle count: familial hypercholesterolemia, type 2 diabetes / metabolic syndrome (small-dense LDL), hypothyroidism, nephrotic syndrome.",
+      "low_means": "Statin / PCSK9 / ezetimibe therapy (target), hyperthyroidism, severe liver disease, abetalipoproteinemia (genetic).",
+      "unit_notes": "Targets: <100 primary prevention, <80 high-risk, <65 secondary prevention. ApoB / LDL-C discordance suggests sdLDL pattern."
+    },
+    {
+      "id": "lp_a",
+      "pt_name": "Lipoproteína (a)",
+      "aliases": [
+        "Lp(a)",
+        "Lipoprotein(a)",
+        "LPA"
+      ],
+      "loinc": "10835-7",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo Lípidico",
+      "panel": "lipid",
+      "expected_units": [
+        "mg/dL",
+        "nmol/L"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          30
+        ]
+      },
+      "description": "Genetically determined LDL-like particle covalently linked to apolipoprotein(a). Independent CV risk factor, especially aortic stenosis. Once-in-a-lifetime measurement recommended.",
+      "high_means": "Genetic — independent CV / aortic stenosis risk. >50 mg/dL (>125 nmol/L) elevated; >90 mg/dL high. Statins do NOT lower it; lipoprotein apheresis or specific therapies (under development) needed.",
+      "low_means": "Lower CV risk from this pathway."
+    },
+    {
+      "id": "frutosamina",
+      "pt_name": "Frutosamina",
+      "aliases": [
+        "Fructosamine",
+        "Glycated Albumin"
+      ],
+      "loinc": "1775-2",
+      "section": "Patologia Química",
+      "subsection": "Metabolismo dos Hidratos de Carbono",
+      "panel": "carbs",
+      "expected_units": [
+        "µmol/L",
+        "umol/L"
+      ],
+      "range_grammar": [
+        "a_b"
+      ],
+      "default_ref": {
+        "all": [
+          205,
+          285
+        ]
+      },
+      "description": "Glycated serum proteins (mostly albumin) — reflects average glucose over the prior 2–3 weeks. Useful when HbA1c unreliable: hemoglobinopathies, recent transfusion, hemolytic anemia, end-stage renal disease, pregnancy.",
+      "high_means": "Hyperglycemia in last 2–3 weeks. Levels: 205–285 normal, 286–320 well-controlled diabetes, 321–370 borderline, >370 poor control.",
+      "low_means": "Hypoalbuminemia (nephrotic syndrome, severe liver disease, malnutrition — falsely low), hyperthyroidism."
+    },
+    {
+      "id": "procalcitonina",
+      "pt_name": "Procalcitonina (PCT)",
+      "aliases": [
+        "PCT",
+        "Procalcitonin"
+      ],
+      "loinc": "33959-8",
+      "section": "Imunologia",
+      "expected_units": [
+        "ng/mL"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          0.5
+        ]
+      },
+      "description": "Calcitonin precursor released specifically by bacterial infection (induced by endotoxin / IL-6 / TNF-α). Faster-rising and more bacterial-specific than CRP. Used to discriminate bacterial vs viral / inflammatory etiology and to guide antibiotic stewardship.",
+      "high_means": "Bacterial sepsis (>2 = high risk, >10 = severe sepsis / septic shock), bacterial pneumonia. Also: medullary thyroid carcinoma, paraneoplastic, recent surgery / trauma / burns, kidney failure (mild).",
+      "low_means": "Viral infection or non-infectious inflammation likely. Useful negative predictive value for bacterial sepsis at <0.25 ng/mL.",
+      "unit_notes": "<0.25 bacterial infection unlikely · 0.25–0.5 possible · 0.5–2 likely · >2 high risk sepsis."
+    },
+    {
+      "id": "calprotectina_fecal",
+      "pt_name": "Calprotectina Fecal",
+      "aliases": [
+        "Fecal Calprotectin",
+        "Calprotectin",
+        "Calprotectina"
+      ],
+      "loinc": "38445-3",
+      "section": "Imunologia",
+      "expected_units": [
+        "µg/g",
+        "mg/kg"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          50
+        ]
+      },
+      "description": "Neutrophil-derived protein released into bowel lumen during intestinal inflammation. Discriminates inflammatory bowel disease from irritable bowel syndrome and tracks IBD activity / treatment response.",
+      "high_means": "IBD active (>250 strongly suggests active disease), bacterial gastroenteritis, NSAID enteropathy, colorectal cancer (modest), polyps. Trend more useful than absolute.",
+      "low_means": "<50 µg/g virtually rules out IBD activity — IBS the more likely explanation for chronic GI symptoms.",
+      "unit_notes": "<50 normal · 50–250 borderline (recheck) · >250 likely active inflammation."
+    },
+    {
+      "id": "homocisteina",
+      "pt_name": "Homocisteína",
+      "aliases": [
+        "Homocysteine",
+        "HCy"
+      ],
+      "loinc": "13965-9",
+      "section": "Patologia Química",
+      "expected_units": [
+        "µmol/L",
+        "umol/L"
+      ],
+      "range_grammar": [
+        "lt"
+      ],
+      "default_ref": {
+        "all": [
+          null,
+          15
+        ]
+      },
+      "description": "Sulfur-containing amino acid in methionine metabolism. Elevated levels are an independent CV / thrombotic risk factor. Reflects B12 / folate / B6 status.",
+      "high_means": "B12 / folate / B6 deficiency, kidney failure, hypothyroidism, methotrexate, MTHFR polymorphisms. Severe (>100): homocystinuria (genetic — early atherosclerosis, lens dislocation).",
+      "low_means": "Generally not flagged.",
+      "unit_notes": "Reference <15 µmol/L. Treat first by repleting B vitamins; supplementation lowers levels but CV outcome trials neutral."
+    }
+  ],
+  "range_examples": {
+    "a_b": [
+      "13.0 - 17.0",
+      "4.50 - 5.50",
+      "0.350 - 5.500",
+      "241.0 - 827.0",
+      "11.54 - 54.49"
+    ],
+    "lt": [
+      "< 50",
+      "< 190",
+      "< 115",
+      "< 32.0",
+      "< 500.00",
+      "< 19",
+      "< 34",
+      "< 73",
+      "< 42",
+      "< 38"
+    ],
+    "lte": [],
+    "gt": [
+      "> 5.4"
+    ],
+    "gte": [
+      ">= 60"
+    ],
+    "categorical": [
+      "Deficiência: <10\nInsuficiência: 10 - 30\nSuficiência: 30 - 100\nToxicidade: >100",
+      "Baixo ou moderado: < 115 mg/dL\nElevado: <100 mg/dL\nMuito elevado: < 70 mg/dL"
+    ],
+    "age_stratified": [
+      "0 dias 0.34 / 6 semanas 0.7 / 3 meses 0.8 / Adultos 14.0 (IgE Total)",
+      "< 1 mês 1.5 - 31.0 pg/mL\n6 - 9 anos 0.1 - 3.2 pg/mL\nAdultos 20-50 anos 8.69 - 54.69 pg/mL"
+    ],
+    "sex_stratified": [
+      "Hemoglobina male 13.0 - 17.0 vs female 12.0 - 15.0",
+      "GGT male <73 vs female <38"
+    ],
+    "cycle_phase": [
+      "Fase folicular (-12 d) 11.0 - 69.0",
+      "Ovulação (-1d) 146.0 - 526.0",
+      "Pós-Menopausa 0 - 37.0"
+    ],
+    "gestational": [
+      "1º Trimestre: 0.1 - 2.5 mU/L",
+      "2º Trimestre: 0.2 - 3.0 mU/L",
+      "3º Trimestre: 0.3 - 3.0 mU/L"
+    ],
+    "qualitative": [
+      "Positivo",
+      "Negativo",
+      "Não detectado",
+      "Reactivo",
+      "Não Reactivo"
+    ],
+    "titer": [
+      "1:80",
+      "1:160"
+    ],
+    "none": [
+      "(no reference range printed)"
+    ]
+  },
+  "unit_variants": {
+    "g/dl": [
+      "g/dl",
+      "g/dL"
+    ],
+    "mg/dL": [
+      "mg/dL",
+      "mg/dl"
+    ],
+    "x 10^6/µl": [
+      "x 10^6/µl",
+      "x 106/µl",
+      "× 10⁶/µL",
+      "x 10^6/uL"
+    ],
+    "x 10^3/µl": [
+      "x 10^3/µl",
+      "x 103/µl",
+      "× 10³/µL",
+      "x 10^3/uL",
+      "x 10^3/"
+    ],
+    "fl": [
+      "fl",
+      "fL"
+    ],
+    "pg": [
+      "pg"
+    ],
+    "%": [
+      "%"
+    ],
+    "mmol/l": [
+      "mmol/l",
+      "mmol/L"
+    ],
+    "mmol/mol": [
+      "mmol/mol"
+    ],
+    "mUI/l": [
+      "mUI/l",
+      "mUI/L",
+      "mU/L",
+      "uIU/mL"
+    ],
+    "mUI/ml": [
+      "mUI/ml",
+      "mUI/mL",
+      "mIU/mL"
+    ],
+    "U/l": [
+      "U/l",
+      "U/L",
+      "UI/l"
+    ],
+    "UI/ml": [
+      "UI/ml",
+      "UI/mL",
+      "IU/mL"
+    ],
+    "ng/dl": [
+      "ng/dl",
+      "ng/dL"
+    ],
+    "ng/ml": [
+      "ng/ml",
+      "ng/mL"
+    ],
+    "ng/l": [
+      "ng/l",
+      "ng/L"
+    ],
+    "pg/ml": [
+      "pg/ml",
+      "pg/mL"
+    ],
+    "µg/dl": [
+      "µg/dl",
+      "ug/dL",
+      "µg/dL"
+    ],
+    "nmol/l": [
+      "nmol/l",
+      "nmol/L"
+    ],
+    "ml/min/1,73 m2": [
+      "ml/min/1,73 m2",
+      "mL/min/1.73 m²",
+      "ml/min/1.73m2"
+    ],
+    "µl": [
+      "µl",
+      "uL",
+      "ul",
+      "µL"
+    ]
+  },
+  "parser_hazards": {
+    "leucograma_paired_values": "Neutrófilos / Eosinófilos / Basófilos / Linfócitos / Monócitos rows print TWO values per row: percentage and absolute count. Absolute count's unit prints as 'x 10^3/' (truncated; µl implied from Leucócitos parent). Reference range column applies to the percentage.",
+    "a1c_dual_reporting": "A1c reported in NGSP (%), IFCC (mmol/mol), plus derived eAG (mg/dL). Three rows, second and third are sub-rows under NGSP.",
+    "categorical_inline_after_numeric": "Vit D, Ferritina, and LDL print a multi-tier categorical interpretation table after the numeric reference. Treat numeric a_b/lt as primary, table as supplementary classification.",
+    "cycle_phase_for_female_estradiol": "For female patients, Estradiol prints a menstrual phase table instead of the male '< 32.0' threshold.",
+    "tsh_gestational_addendum": "TSH on female reports prints 1º/2º/3º trimestre ranges as a footnote.",
+    "lab_ref_range_drift_2025": "GGT, AST, and Creatininémia female ref ranges changed between 2025-07-01 and 2025-08-19 reports — always trust the printed range from the report itself, never derive from defaults.",
+    "method_annotation_position": "Method renders in italic parentheses immediately under the analyte name, optionally with a device suffix in brackets (e.g., '(Quimioluminescência [Liaison])').",
+    "inline_priors_first_appears": "2023-05-13 onward; the 2022-02-09 report has no 'Resultados anteriores' columns.",
+    "name_diacritic_dots": "Acronym analytes use periods between letters: V.G.M. / H.G.M. / C.M.H.G. / R.D.W. — keep the printed form as raw_analyte_text and the dotless form as alias."
+  }
+}

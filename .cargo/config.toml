@@ -1,0 +1,7 @@
+# Force the release MSVC runtime even in debug builds for any C/C++ that
+# cmake-rs / cc-rs build on our behalf (e.g., llama-cpp-sys, OpenSSL). The debug
+# CRT (`VCRUNTIME140D.dll`, `ucrtbased.dll`) is NOT redistributable — its
+# absence on the user's machine produces STATUS_DLL_NOT_FOUND (0xc0000135).
+# `MultiThreadedDLL` = release multi-threaded DLL CRT (msvcp140.dll family).
+[env]
+CMAKE_MSVC_RUNTIME_LIBRARY = "MultiThreadedDLL"

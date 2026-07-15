@@ -1,0 +1,67 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "blevel-tracker",
+  "version": "0.1.0",
+  "identifier": "com.blevel.tracker",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "blevel-tracker",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1100,
+        "minHeight": 720,
+        "resizable": true,
+        "decorations": true,
+        "transparent": false,
+        "fullscreen": false,
+        "center": true,
+        "theme": null,
+        "visible": true,
+        "backgroundColor": "#0b0d10"
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self' 'unsafe-inline'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' data: blob: asset: http://asset.localhost",
+        "font-src": "'self' data:",
+        "connect-src": "'self' ipc: http://ipc.localhost",
+        "frame-src": "'self' asset: http://asset.localhost"
+      },
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$APPDATA/blevel-tracker/**", "$APPLOCALDATA/blevel-tracker/**"]
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "nsis"],
+    "category": "Healthcare",
+    "shortDescription": "Local-only clinical lab-PDF tracker",
+    "longDescription": "Ingests clinical pathology PDFs and presents longitudinal analyte trends, deltas, and reference bands. Fully local; encrypted at rest.",
+    "publisher": "blevel-tracker",
+    "copyright": "© 2026 blevel-tracker",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "resources": ["../ontology/*.json", "binaries/*"],
+    "windows": {
+      "wix": { "language": "en-US" },
+      "nsis": { "installerIcon": "icons/icon.ico" }
+    }
+  }
+}
