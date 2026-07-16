@@ -7,7 +7,7 @@
   import { AppError } from '$api/errors';
   import { toasts } from '../../lib/toasts/store.svelte';
   import { formatDate } from '$format/dates';
-  import PatientPickerDialog from '$components/PatientPickerDialog.svelte';
+  import PatientPickerDialog from '$components/patient-picker-dialog.svelte';
 
   type ReportGroup = {
     key: string;
@@ -224,7 +224,7 @@
       if (r.failed.length === 0) {
         toasts.success(
           'Re-parse complete',
-          `${r.succeeded}/${r.total} reports · ${r.total_rows_after} total rows`
+          `${r.succeeded}/${r.total} reports · ${r.total_rows_after} total rows · ${r.total_parse_audit_entries} diagnostics`
         );
       } else {
         toasts.warn(

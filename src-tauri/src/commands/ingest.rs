@@ -5,10 +5,10 @@ use serde::Serialize;
 use serde_json::json;
 use tauri::{AppHandle, Emitter, State};
 
-use crate::commands::audit;
+use crate::commands::{audit, parse_audit};
 use crate::error::{AppError, AppErrorPayload, AppResult, ContextExt};
 use crate::parse::{
-    canonical::AnalyteRegistry, header, preprocess, sections::SectionContext, rows::parse_row,
+    canonical::AnalyteRegistry, header, preprocess, rows::parse_row, sections::SectionContext,
     ParsedRow,
 };
 use crate::pdf;
@@ -32,7 +32,7 @@ const STAGE_ERROR: &str = "error";
 pub struct IngestProgress {
     pub path: String,
     pub stage: &'static str,
-    pub progress: f32,           // 0.0 .. 1.0 within this file
+    pub progress: f32, // 0.0 .. 1.0 within this file
     pub message: Option<String>,
     pub elapsed_ms: u64,
     pub pages: Option<usize>,
@@ -133,7 +133,13 @@ pub async fn ingest_pdfs(
         match ingest_one(&app, &state, path, started).await {
             Ok(r) => {
                 completed += 1;
-                outcomes.push(IngestOutcome { path: path.clone(), index: i, ok: true, error: None, result: Some(r) });
+                outcomes.push(IngestOutcome {
+                    path: path.clone(),
+                    index: i,
+                    ok: true,
+                    error: None,
+                    result: Some(r),
+                });
             }
             Err(e) => {
                 failed += 1;
@@ -195,7 +201,7 @@ async fn ingest_one(
     // pdfium is FFI; an unexpected library issue can panic. spawn_blocking
     // turns a panic into a typed error rather than killing the IPC channel.
     let pdf_path_for_blocking = pdf_path.clone();
-    let extracted = tokio::task::spawn_blocking(move || pdf::extract(&pdf_path_for_blocking))
+    let mut extracted = tokio::task::spawn_blocking(move || pdf::extract(&pdf_path_for_blocking))
         .await
         .map_err(|join_err| {
             if join_err.is_panic() {
@@ -210,7 +216,9 @@ async fn ingest_one(
         .stage("extracting_pdf")
         .path(path_str)
         .hint("Confirm the file is a valid PDF (not corrupted or password-protected).")
-        .hint("If pdfium reports it's missing, rebuild — `build.rs` downloads it on first build.")?;
+        .hint(
+            "If pdfium reports it's missing, rebuild — `build.rs` downloads it on first build.",
+        )?;
 
     {
         let guard = state.db.lock().await;
@@ -269,14 +277,92 @@ async fn ingest_one(
         p.pages = Some(extracted.page_count);
         let _ = app.emit(EVT_PROGRESS, &p);
     }
+
+    let mut ingest_tier = 1_i64;
+    let mut ocr_mean_confidence: Option<f32> = None;
+    let tesseract_setting = read_json_setting(state, "tesseract")
+        .await
+        .stage("loading_tesseract_settings")
+        .path(path_str)?;
+    let tesseract_config = crate::ocr::config_from_settings(&tesseract_setting);
+
+    if crate::ocr::should_fallback_to_ocr(&extracted.combined_text, extracted.page_count) {
+        if tesseract_config.enabled && crate::ocr::is_available() {
+            {
+                let mut p = IngestProgress::new(path_str, STAGE_EXTRACTING, 0.30, started);
+                p.bytes = Some(extracted.byte_count);
+                p.pages = Some(extracted.page_count);
+                p.message = Some("embedded PDF text is sparse; running Tesseract OCR".to_string());
+                let _ = app.emit(EVT_PROGRESS, &p);
+            }
+
+            let pdf_path_for_ocr = pdf_path.clone();
+            let ocr_config_for_blocking = tesseract_config.clone();
+            let ocr_output = tokio::task::spawn_blocking(move || {
+                let pages = pdf::render_pages_for_ocr(&pdf_path_for_ocr)?;
+                crate::ocr::recognize_pages(&pages, &ocr_config_for_blocking)
+            })
+            .await
+            .map_err(|join_err| {
+                if join_err.is_panic() {
+                    AppError::Pdf(format!(
+                        "Tesseract OCR task panicked: {:?}",
+                        join_err.into_panic()
+                    ))
+                } else {
+                    AppError::Internal(format!("tesseract OCR task: {join_err}"))
+                }
+            })?
+            .stage("tesseract_ocr")
+            .path(path_str)
+            .hint("Tesseract OCR requires the tesseract executable and tessdata for the configured languages at runtime.")?;
+
+            if !ocr_output.text.trim().is_empty() {
+                extracted.combined_text = ocr_output.text;
+                ingest_tier = 2;
+                ocr_mean_confidence = ocr_output.mean_confidence;
+
+                let mut p = IngestProgress::new(path_str, STAGE_EXTRACTING, 0.38, started);
+                p.bytes = Some(extracted.byte_count);
+                p.pages = Some(extracted.page_count);
+                p.doc_confidence = ocr_mean_confidence;
+                p.message = Some(format!(
+                    "Tesseract OCR extracted {} chars from {} pages{}",
+                    extracted.combined_text.len(),
+                    ocr_output.page_count,
+                    format_confidence_suffix(ocr_mean_confidence)
+                ));
+                let _ = app.emit(EVT_PROGRESS, &p);
+            } else {
+                tracing::warn!(
+                    "Tesseract OCR returned no text for sparse-text PDF {}",
+                    path_str
+                );
+            }
+        } else {
+            let mut p = IngestProgress::new(path_str, STAGE_EXTRACTING, 0.30, started);
+            p.bytes = Some(extracted.byte_count);
+            p.pages = Some(extracted.page_count);
+            p.message = Some(
+                "embedded PDF text is sparse; Tesseract OCR is not compiled or enabled".to_string(),
+            );
+            let _ = app.emit(EVT_PROGRESS, &p);
+        }
+    }
+
     {
         let mut p = IngestProgress::new(path_str, STAGE_EXTRACTED, 0.40, started);
         p.bytes = Some(extracted.byte_count);
         p.pages = Some(extracted.page_count);
         p.message = Some(format!(
-            "{} pages, {} chars",
+            "{} pages, {} chars{}",
             extracted.page_count,
-            extracted.combined_text.len()
+            extracted.combined_text.len(),
+            if ingest_tier == 2 {
+                " (Tesseract OCR)"
+            } else {
+                ""
+            }
         ));
         let _ = app.emit(EVT_PROGRESS, &p);
     }
@@ -316,13 +402,18 @@ async fn ingest_one(
         .ok_or_else(|| AppError::BadRequest("could not extract patient name".into()))
         .stage("parsing_header")
         .path(path_str)
-        .hint("Expected the patient name on the line immediately after 'Exmo Sr.' / 'Exma Sra.'.")?;
+        .hint(
+            "Expected the patient name on the line immediately after 'Exmo Sr.' / 'Exma Sra.'.",
+        )?;
     let patient_id = patient_slug(&patient_name);
 
     // ── Row parsing with incremental progress (50% → 85%) ─────────────────
     let registry = {
         let guard = state.db.lock().await;
-        let db = guard.as_ref().ok_or(AppError::Locked).stage("loading_registry")?;
+        let db = guard
+            .as_ref()
+            .ok_or(AppError::Locked)
+            .stage("loading_registry")?;
         AnalyteRegistry::load_from_db(&db.conn)
             .stage("loading_registry")
             .hint("If the analytes table is empty, restart the app to re-seed the ontology.")?
@@ -338,9 +429,7 @@ async fn ingest_one(
     let normalized_text = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         preprocess::normalize(&raw_text_for_preprocess)
     }))
-    .map_err(|panic| {
-        AppError::Internal(format!("preprocess panicked: {}", describe_panic(&panic)))
-    })
+    .map_err(|panic| AppError::Internal(format!("preprocess panicked: {}", describe_panic(&panic))))
     .stage("preprocess")
     .path(path_str)?;
     let lines: Vec<&str> = normalized_text.lines().collect();
@@ -391,7 +480,9 @@ async fn ingest_one(
     let doc_confidence = if rows.is_empty() {
         0.0
     } else {
-        rows.iter().map(|r| r.confidence).fold(f32::INFINITY, f32::min)
+        rows.iter()
+            .map(|r| r.confidence)
+            .fold(f32::INFINITY, f32::min)
     };
 
     {
@@ -416,7 +507,7 @@ async fn ingest_one(
 
     let pdf_dest_dir = state.pdf_dir();
     std::fs::create_dir_all(&pdf_dest_dir)?;
-    let pdf_dest = pdf_dest_dir.join(format!("{}.pdf", &extracted.sha256_hex));
+    let pdf_dest = pdf_dest_dir.join(format!("{}.pdf", extracted.sha256_hex));
     std::fs::copy(&pdf_path, &pdf_dest)?;
     let pdf_dest_str = pdf_dest.to_string_lossy().to_string();
 
@@ -435,7 +526,11 @@ async fn ingest_one(
     emit_simple(app, path_str, STAGE_WRITING, 0.90, started);
 
     let guard = state.db.lock().await;
-    let db = guard.as_ref().ok_or(AppError::Locked).stage("writing_db").path(path_str)?;
+    let db = guard
+        .as_ref()
+        .ok_or(AppError::Locked)
+        .stage("writing_db")
+        .path(path_str)?;
 
     // Defensive: clear any leaked transaction state from a prior failure.
     // `unchecked_transaction` will fail with "cannot start a transaction within
@@ -502,7 +597,7 @@ async fn ingest_one(
                 emission_date_iso, age_at_collection, lab_entity, requesting_physician,
                 inscription_id, process_id, origin_id, ingest_tier, parse_version,
                 doc_confidence, raw_text, raw_pdf_path, created_at)
-         VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 1, ?13, ?14, ?15, ?16, ?17)",
+         VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
         rusqlite::params![
             report_id,
             patient_id,
@@ -516,6 +611,7 @@ async fn ingest_one(
             h_insc,
             h_proc,
             h_origin,
+            ingest_tier,
             "0.1.0",
             doc_confidence as f64,
             raw_text_blob,
@@ -588,6 +684,14 @@ async fn ingest_one(
         }
     }
 
+    let parse_audit_entries = parse_audit::replace_report_diagnostics(
+        &tx,
+        &report_id,
+        &rows,
+        ingest_tier,
+        parse_audit::DEFAULT_LOW_CONFIDENCE_THRESHOLD,
+    )?;
+
     // Explicit rollback on commit failure: if commit fails, the Transaction is
     // consumed and Drop won't run, so we must clean up manually so the next
     // ingest call doesn't see a leaked transaction.
@@ -600,6 +704,8 @@ async fn ingest_one(
             .patient(&patient_name)
             .hint("Commit failed; transaction was rolled back and DB is clean.");
     }
+
+    audit_model_tier_escalation_candidates(&db.conn, &report_id, path_str, doc_confidence);
 
     audit::log(
         &db.conn,
@@ -617,6 +723,9 @@ async fn ingest_one(
             "rows_unmatched": rows_unmatched,
             "inline_priors": inline_priors_emitted,
             "doc_confidence": doc_confidence,
+            "ingest_tier": ingest_tier,
+            "ocr_mean_confidence": ocr_mean_confidence,
+            "parse_audit_entries": parse_audit_entries,
             "source_path": path_str,
             "sha256": extracted.sha256_hex,
         })),
@@ -651,15 +760,54 @@ fn emit_simple(app: &AppHandle, path: &str, stage: &'static str, progress: f32, 
     let _ = app.emit(EVT_PROGRESS, &p);
 }
 
+async fn read_json_setting(state: &State<'_, AppState>, key: &str) -> AppResult<serde_json::Value> {
+    let guard = state.db.lock().await;
+    let db = guard.as_ref().ok_or(AppError::Locked)?;
+    let raw: Option<String> = db
+        .conn
+        .query_row(
+            "SELECT value_json FROM settings WHERE key = ?1",
+            [key],
+            |r| r.get::<_, String>(0),
+        )
+        .ok();
+    match raw {
+        Some(s) => Ok(serde_json::from_str(&s)?),
+        None => Ok(serde_json::json!({})),
+    }
+}
+
+fn format_confidence_suffix(confidence: Option<f32>) -> String {
+    confidence
+        .map(|c| format!(" (mean confidence {:.0}%)", c * 100.0))
+        .unwrap_or_default()
+}
+
 fn derive_flag(v: f64, low: Option<f64>, high: Option<f64>) -> Option<&'static str> {
     match (low, high) {
         (Some(lo), Some(hi)) => {
-            if v < lo { Some("low") }
-            else if v > hi { Some("high") }
-            else { Some("normal") }
+            if v < lo {
+                Some("low")
+            } else if v > hi {
+                Some("high")
+            } else {
+                Some("normal")
+            }
         }
-        (Some(lo), None) => if v < lo { Some("low") } else { Some("normal") },
-        (None, Some(hi)) => if v > hi { Some("high") } else { Some("normal") },
+        (Some(lo), None) => {
+            if v < lo {
+                Some("low")
+            } else {
+                Some("normal")
+            }
+        }
+        (None, Some(hi)) => {
+            if v > hi {
+                Some("high")
+            } else {
+                Some("normal")
+            }
+        }
         _ => None,
     }
 }
@@ -698,4 +846,96 @@ fn now_secs() -> i64 {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
         .unwrap_or(0)
+}
+
+fn audit_model_tier_escalation_candidates(
+    conn: &rusqlite::Connection,
+    report_id: &str,
+    source_path: &str,
+    doc_confidence: f32,
+) {
+    let thresholds = read_setting_json(conn, "tier_thresholds");
+    let olmocr = read_setting_json(conn, "olmocr");
+    let llm = read_setting_json(conn, "llm");
+
+    let olmocr_threshold = setting_f32(
+        &olmocr,
+        "trigger_below_tesseract_confidence",
+        setting_f32(&thresholds, "escalate_to_olmocr_below", 0.55),
+    );
+    let llm_threshold = setting_f32(
+        &llm,
+        "trigger_below_confidence",
+        setting_f32(&thresholds, "escalate_to_llm_repair_below", 0.7),
+    );
+
+    let olmocr_path = olmocr.get("model_path").and_then(|v| v.as_str());
+    let llm_path = llm.get("model_path").and_then(|v| v.as_str());
+    let mut candidates = Vec::new();
+
+    if setting_enabled(&olmocr) && doc_confidence < olmocr_threshold {
+        candidates.push(json!({
+            "tier": "embedded-ocr-vision",
+            "threshold": olmocr_threshold,
+            "model_present": crate::ocr_vision::model_present(olmocr_path),
+            "loading": crate::ocr_vision::is_loading(),
+            "loaded": crate::ocr_vision::is_loaded(),
+        }));
+    }
+
+    if setting_enabled(&llm) && doc_confidence < llm_threshold {
+        candidates.push(json!({
+            "tier": "embedded-llm",
+            "threshold": llm_threshold,
+            "model_present": crate::llm::model_present(llm_path),
+            "loading": crate::llm::is_loading(),
+            "loaded": crate::llm::is_loaded(),
+        }));
+    }
+
+    if candidates.is_empty() {
+        return;
+    }
+
+    audit::log(
+        conn,
+        "tier_escalation_candidate",
+        "report",
+        Some(report_id),
+        &format!("Low-confidence ingest ({doc_confidence:.2}) met model-tier escalation criteria"),
+        Some(&json!({
+            "report_id": report_id,
+            "source_path": source_path,
+            "doc_confidence": doc_confidence,
+            "candidates": candidates,
+            "output_modified": false,
+        })),
+    );
+}
+
+fn read_setting_json(conn: &rusqlite::Connection, key: &str) -> serde_json::Value {
+    let raw: Option<String> = conn
+        .query_row(
+            "SELECT value_json FROM settings WHERE key = ?1",
+            [key],
+            |r| r.get::<_, String>(0),
+        )
+        .ok();
+    raw.and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_else(|| json!({}))
+}
+
+fn setting_enabled(setting: &serde_json::Value) -> bool {
+    setting
+        .get("enabled")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+}
+
+fn setting_f32(setting: &serde_json::Value, key: &str, fallback: f32) -> f32 {
+    setting
+        .get(key)
+        .and_then(|v| v.as_f64())
+        .map(|v| v as f32)
+        .unwrap_or(fallback)
 }

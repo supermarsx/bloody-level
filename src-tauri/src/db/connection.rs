@@ -42,8 +42,12 @@ impl Database {
     }
 
     pub fn ensure_ontology(&self, seed_path: Option<&Path>) -> AppResult<usize> {
-        let Some(path) = seed_path else { return Ok(0); };
-        if !path.exists() { return Ok(0); }
+        let Some(path) = seed_path else {
+            return Ok(0);
+        };
+        if !path.exists() {
+            return Ok(0);
+        }
         let seed: OntologySeed = crate::ontology::load(path)?;
         match install_into_db(&seed, &self.conn) {
             Ok(n) => Ok(n),

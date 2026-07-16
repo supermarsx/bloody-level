@@ -66,6 +66,7 @@ pub struct AuditListResult {
 
 /// Paginated + filterable audit query. Empty filters mean "no constraint".
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn list_audit_entries(
     state: State<'_, AppState>,
     action: Option<String>,
@@ -80,7 +81,7 @@ pub async fn list_audit_entries(
     let guard = state.db.lock().await;
     let db = guard.as_ref().ok_or(AppError::Locked)?;
 
-    let limit  = limit.unwrap_or(100).clamp(1, 1000);
+    let limit = limit.unwrap_or(100).clamp(1, 1000);
     let offset = offset.unwrap_or(0).max(0);
 
     // We compose dynamic WHERE clauses with bound params to keep the query
@@ -172,7 +173,12 @@ pub async fn list_audit_entries(
         .query_map([], |r| r.get(0))?
         .collect::<Result<Vec<_>, _>>()?;
 
-    Ok(AuditListResult { entries, total, distinct_actions, distinct_entity_types })
+    Ok(AuditListResult {
+        entries,
+        total,
+        distinct_actions,
+        distinct_entity_types,
+    })
 }
 
 #[derive(Serialize)]

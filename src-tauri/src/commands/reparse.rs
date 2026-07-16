@@ -6,7 +6,7 @@ use serde::Serialize;
 use serde_json::json;
 use tauri::State;
 
-use crate::commands::audit;
+use crate::commands::{audit, parse_audit};
 use crate::error::{AppError, AppResult};
 use crate::parse::{
     canonical::AnalyteRegistry, preprocess, rows::parse_row, sections::SectionContext, ParsedRow,
@@ -22,6 +22,7 @@ pub struct ReparseResult {
     pub rows_after: usize,
     pub rows_unmatched: usize,
     pub inline_priors_emitted: usize,
+    pub parse_audit_entries: usize,
     pub doc_confidence: f32,
     pub parse_version: &'static str,
 }
@@ -32,6 +33,7 @@ pub struct ReparseBatchResult {
     pub succeeded: usize,
     pub failed: Vec<(String, String)>,
     pub total_rows_after: usize,
+    pub total_parse_audit_entries: usize,
 }
 
 const PARSE_VERSION: &str = "0.1.0";
@@ -58,6 +60,7 @@ pub async fn reparse_report(
             "rows_after": result.rows_after,
             "rows_unmatched": result.rows_unmatched,
             "inline_priors": result.inline_priors_emitted,
+            "parse_audit_entries": result.parse_audit_entries,
             "doc_confidence": result.doc_confidence,
             "parse_version": result.parse_version,
         })),
@@ -88,6 +91,7 @@ pub async fn reparse_all_reports(state: State<'_, AppState>) -> AppResult<Repars
     let total = report_ids.len();
     let mut succeeded = 0usize;
     let mut total_rows_after = 0usize;
+    let mut total_parse_audit_entries = 0usize;
     let mut failed = Vec::new();
 
     for id in report_ids {
@@ -95,6 +99,7 @@ pub async fn reparse_all_reports(state: State<'_, AppState>) -> AppResult<Repars
             Ok(r) => {
                 succeeded += 1;
                 total_rows_after += r.rows_after;
+                total_parse_audit_entries += r.parse_audit_entries;
             }
             Err(e) => {
                 failed.push((id, e.to_string()));
@@ -116,6 +121,7 @@ pub async fn reparse_all_reports(state: State<'_, AppState>) -> AppResult<Repars
             "succeeded": succeeded,
             "failed_count": failed.len(),
             "total_rows_after": total_rows_after,
+            "total_parse_audit_entries": total_parse_audit_entries,
             "parse_version": PARSE_VERSION,
         })),
     );
@@ -124,18 +130,24 @@ pub async fn reparse_all_reports(state: State<'_, AppState>) -> AppResult<Repars
         succeeded,
         failed,
         total_rows_after,
+        total_parse_audit_entries,
     })
 }
 
 fn reparse_one(conn: &rusqlite::Connection, report_id: &str) -> AppResult<ReparseResult> {
     // Fetch raw text + headline metadata.
-    let (patient_name, collection_date_iso, raw_text_blob): (String, String, Vec<u8>) = conn
+    let (patient_name, collection_date_iso, raw_text_blob, ingest_tier): (
+        String,
+        String,
+        Vec<u8>,
+        i64,
+    ) = conn
         .query_row(
-            "SELECT p.display_name, r.collection_date_iso, r.raw_text
+            "SELECT p.display_name, r.collection_date_iso, r.raw_text, r.ingest_tier
              FROM reports r JOIN patients p ON p.id = r.patient_id
              WHERE r.id = ?1",
             [report_id],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
         )
         .map_err(|e| match e {
             rusqlite::Error::QueryReturnedNoRows => {
@@ -169,7 +181,9 @@ fn reparse_one(conn: &rusqlite::Connection, report_id: &str) -> AppResult<Repars
     let doc_confidence = if rows.is_empty() {
         0.0
     } else {
-        rows.iter().map(|r| r.confidence).fold(f32::INFINITY, f32::min)
+        rows.iter()
+            .map(|r| r.confidence)
+            .fold(f32::INFINITY, f32::min)
     };
 
     if !conn.is_autocommit() {
@@ -237,6 +251,14 @@ fn reparse_one(conn: &rusqlite::Connection, report_id: &str) -> AppResult<Repars
         }
     }
 
+    let parse_audit_entries = parse_audit::replace_report_diagnostics(
+        &tx,
+        report_id,
+        &rows,
+        ingest_tier,
+        parse_audit::DEFAULT_LOW_CONFIDENCE_THRESHOLD,
+    )?;
+
     tx.execute(
         "UPDATE reports SET parse_version = ?1, doc_confidence = ?2 WHERE id = ?3",
         rusqlite::params![PARSE_VERSION, doc_confidence as f64, report_id],
@@ -261,6 +283,7 @@ fn reparse_one(conn: &rusqlite::Connection, report_id: &str) -> AppResult<Repars
         rows_after: rows_after_total as usize,
         rows_unmatched,
         inline_priors_emitted,
+        parse_audit_entries,
         doc_confidence,
         parse_version: PARSE_VERSION,
     })
@@ -269,12 +292,28 @@ fn reparse_one(conn: &rusqlite::Connection, report_id: &str) -> AppResult<Repars
 fn derive_flag(v: f64, low: Option<f64>, high: Option<f64>) -> Option<&'static str> {
     match (low, high) {
         (Some(lo), Some(hi)) => {
-            if v < lo { Some("low") }
-            else if v > hi { Some("high") }
-            else { Some("normal") }
+            if v < lo {
+                Some("low")
+            } else if v > hi {
+                Some("high")
+            } else {
+                Some("normal")
+            }
         }
-        (Some(lo), None) => if v < lo { Some("low") } else { Some("normal") },
-        (None, Some(hi)) => if v > hi { Some("high") } else { Some("normal") },
+        (Some(lo), None) => {
+            if v < lo {
+                Some("low")
+            } else {
+                Some("normal")
+            }
+        }
+        (None, Some(hi)) => {
+            if v > hi {
+                Some("high")
+            } else {
+                Some("normal")
+            }
+        }
         _ => None,
     }
 }

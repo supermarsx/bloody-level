@@ -4,6 +4,7 @@ pub mod audit;
 pub mod auth;
 pub mod export;
 pub mod ingest;
+pub(crate) mod parse_audit;
 pub mod records_admin;
 pub mod reparse;
 pub mod report_detail;

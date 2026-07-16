@@ -233,21 +233,27 @@ impl<T> ContextExt for Result<T, AppError> {
     fn stage(self, s: &str) -> Self {
         self.map_err(|e| {
             let (src, mut ctx) = ensure_ctx(e);
-            if ctx.stage.is_none() { ctx.stage = Some(s.into()); }
+            if ctx.stage.is_none() {
+                ctx.stage = Some(s.into());
+            }
             AppError::Context { source: src, ctx }
         })
     }
     fn path<P: AsRef<str>>(self, s: P) -> Self {
         self.map_err(|e| {
             let (src, mut ctx) = ensure_ctx(e);
-            if ctx.path.is_none() { ctx.path = Some(s.as_ref().to_string()); }
+            if ctx.path.is_none() {
+                ctx.path = Some(s.as_ref().to_string());
+            }
             AppError::Context { source: src, ctx }
         })
     }
     fn patient<S: AsRef<str>>(self, s: S) -> Self {
         self.map_err(|e| {
             let (src, mut ctx) = ensure_ctx(e);
-            if ctx.patient.is_none() { ctx.patient = Some(s.as_ref().to_string()); }
+            if ctx.patient.is_none() {
+                ctx.patient = Some(s.as_ref().to_string());
+            }
             AppError::Context { source: src, ctx }
         })
     }

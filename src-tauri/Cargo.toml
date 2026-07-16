@@ -66,7 +66,6 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
 # --- Optional tiers (disabled by default; enabled per cargo feature) -------
-tesseract = { version = "0.15", optional = true }
 llama-cpp-2 = { version = "0.1", optional = true }
 
 [features]
@@ -77,11 +76,11 @@ llama-cpp-2 = { version = "0.1", optional = true }
 #   --features embedded-llm         Phi-4-mini-reasoning via llama.cpp
 #                                   (~5 min first build, requires MSVC + CMake)
 #   --features embedded-ocr-vision  olmOCR-2 vision OCR (same llama.cpp runtime)
-#   --features tesseract-ocr        Tesseract OCR; needs vcpkg + libtesseract
-#                                   on the build host.
+#   --features tesseract-ocr        Tesseract OCR via the local tesseract CLI;
+#                                   needs tesseract + tessdata at runtime.
 default = []
 
-tesseract-ocr        = ["dep:tesseract"]
+tesseract-ocr        = []
 embedded-llm         = ["dep:llama-cpp-2"]
 embedded-ocr-vision  = ["dep:llama-cpp-2"]
 

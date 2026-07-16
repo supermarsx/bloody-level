@@ -22,6 +22,18 @@ pub struct ExtractedPdf {
     pub page_count: usize,
 }
 
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct RenderedPdfPageImage {
+    pub page_index: usize,
+    pub width: i32,
+    pub height: i32,
+    pub bytes_per_pixel: i32,
+    pub bytes_per_line: i32,
+    pub source_resolution: i32,
+    pub bytes: Vec<u8>,
+}
+
 /// Locate and bind to pdfium.
 fn build_pdfium() -> AppResult<Pdfium> {
     let mut tried: Vec<String> = Vec::new();
@@ -131,6 +143,54 @@ pub fn extract_bytes(bytes: &[u8], sha256_hex: String) -> AppResult<ExtractedPdf
         combined_text: combined,
         page_count,
     })
+}
+
+pub fn render_pages_for_ocr(path: &Path) -> AppResult<Vec<RenderedPdfPageImage>> {
+    let bytes = std::fs::read(path)?;
+    render_pages_for_ocr_bytes(&bytes)
+}
+
+pub fn render_pages_for_ocr_bytes(bytes: &[u8]) -> AppResult<Vec<RenderedPdfPageImage>> {
+    const TARGET_WIDTH_PX: i32 = 2480;
+    const MAX_HEIGHT_PX: i32 = 3508;
+    const SOURCE_RESOLUTION_DPI: i32 = 300;
+
+    let pdfium = build_pdfium()?;
+    let doc = pdfium
+        .load_pdf_from_byte_slice(bytes, None)
+        .map_err(|e| AppError::Pdf(format!("could not open document for OCR rendering: {e}")))?;
+
+    let render_config = PdfRenderConfig::new()
+        .set_target_width(TARGET_WIDTH_PX)
+        .set_maximum_height(MAX_HEIGHT_PX)
+        .use_grayscale_rendering(true)
+        .use_print_quality(true)
+        .render_annotations(false)
+        .render_form_data(true);
+
+    let mut pages = Vec::new();
+    for (idx, page) in doc.pages().iter().enumerate() {
+        let image = page
+            .render_with_config(&render_config)
+            .map_err(|e| AppError::Pdf(format!("OCR render (page {idx}): {e}")))?
+            .as_image()
+            .into_luma8();
+        let width = i32::try_from(image.width())
+            .map_err(|_| AppError::Pdf(format!("OCR render (page {idx}) width exceeds i32")))?;
+        let height = i32::try_from(image.height())
+            .map_err(|_| AppError::Pdf(format!("OCR render (page {idx}) height exceeds i32")))?;
+        pages.push(RenderedPdfPageImage {
+            page_index: idx,
+            width,
+            height,
+            bytes_per_pixel: 1,
+            bytes_per_line: width,
+            source_resolution: SOURCE_RESOLUTION_DPI,
+            bytes: image.into_raw(),
+        });
+    }
+
+    Ok(pages)
 }
 
 fn hex_lower(bytes: &[u8]) -> String {

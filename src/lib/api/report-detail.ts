@@ -1,4 +1,4 @@
-import { invoke } from './index';
+import { invoke } from "./index";
 
 export interface ReportMeta {
   id: string;
@@ -68,9 +68,19 @@ export interface ReportStats {
   avg_confidence: number;
 }
 
+export interface ReportParseAudit {
+  row_index: number;
+  diagnostic: string;
+  parse_method: string | null;
+  confidence: number | null;
+  llm_repaired: boolean;
+  ocr_tier: number;
+}
+
 export interface ReportDetail {
   report: ReportMeta;
   rows: ReportRow[];
+  parse_audit: ReportParseAudit[];
   unmatched_analytes: string[];
   stats: ReportStats;
   prev_report_id: string | null;
@@ -78,5 +88,5 @@ export interface ReportDetail {
 }
 
 export async function get(reportId: string): Promise<ReportDetail> {
-  return invoke<ReportDetail>('report_detail', { reportId });
+  return invoke<ReportDetail>("report_detail", { reportId });
 }

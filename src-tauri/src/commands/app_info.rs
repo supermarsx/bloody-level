@@ -106,12 +106,20 @@ pub async fn app_info(state: State<'_, AppState>) -> AppResult<AppInfo> {
         })
         .unwrap_or_default();
     let pdf_count = pdf_files.len() as u64;
-    let pdf_size_bytes = if pdf_files.is_empty() { None } else { Some(pdf_files.iter().sum()) };
+    let pdf_size_bytes = if pdf_files.is_empty() {
+        None
+    } else {
+        Some(pdf_files.iter().sum())
+    };
 
     let models_dir = state.models_dir();
     let models_size_bytes = dir_size(&models_dir);
     let models_count = std::fs::read_dir(&models_dir)
-        .map(|it| it.filter_map(Result::ok).filter(|e| e.metadata().map(|m| m.is_file()).unwrap_or(false)).count() as u64)
+        .map(|it| {
+            it.filter_map(Result::ok)
+                .filter(|e| e.metadata().map(|m| m.is_file()).unwrap_or(false))
+                .count() as u64
+        })
         .unwrap_or(0);
 
     let data_dir_size_bytes = dir_size(&state.data_dir);
@@ -123,7 +131,11 @@ pub async fn app_info(state: State<'_, AppState>) -> AppResult<AppInfo> {
     Ok(AppInfo {
         name: env!("CARGO_PKG_NAME"),
         version: env!("CARGO_PKG_VERSION"),
-        build_profile: if cfg!(debug_assertions) { "debug" } else { "release" },
+        build_profile: if cfg!(debug_assertions) {
+            "debug"
+        } else {
+            "release"
+        },
         target_triple: env!("TARGET_TRIPLE"),
         data_dir: state.data_dir.to_string_lossy().into(),
         data_dir_size_bytes,
@@ -154,7 +166,9 @@ pub async fn app_info(state: State<'_, AppState>) -> AppResult<AppInfo> {
 /// exist (vs. `Some(0)` for an empty directory). Best-effort: silently
 /// skips entries that can't be stat'd.
 fn dir_size(path: &Path) -> Option<u64> {
-    if !path.exists() { return None; }
+    if !path.exists() {
+        return None;
+    }
     fn walk(p: &Path) -> u64 {
         let mut total = 0u64;
         if let Ok(rd) = std::fs::read_dir(p) {
@@ -179,25 +193,32 @@ async fn collect_db_stats(state: &State<'_, AppState>) -> Option<DbStats> {
     let conn = &db.conn;
 
     let q_i64 = |sql: &str| -> Option<i64> {
-        conn.query_row(sql, [], |r| r.get::<_, i64>(0)).optional().ok().flatten()
+        conn.query_row(sql, [], |r| r.get::<_, i64>(0))
+            .optional()
+            .ok()
+            .flatten()
     };
     let q_str = |sql: &str| -> Option<String> {
-        conn.query_row(sql, [], |r| r.get::<_, String>(0)).optional().ok().flatten()
+        conn.query_row(sql, [], |r| r.get::<_, String>(0))
+            .optional()
+            .ok()
+            .flatten()
     };
     Some(DbStats {
-        patient_count:        q_i64("SELECT COUNT(*) FROM patients").unwrap_or(0),
-        report_count:         q_i64("SELECT COUNT(*) FROM reports").unwrap_or(0),
-        result_count:         q_i64("SELECT COUNT(*) FROM results WHERE inline_prior_pdf = 0").unwrap_or(0),
-        inline_prior_count:   q_i64("SELECT COUNT(*) FROM results WHERE inline_prior_pdf = 1").unwrap_or(0),
-        analyte_count:        q_i64("SELECT COUNT(*) FROM analytes").unwrap_or(0),
-        alias_count:          q_i64("SELECT COUNT(*) FROM analyte_aliases").unwrap_or(0),
-        audit_count:          q_i64("SELECT COUNT(*) FROM audit_log").unwrap_or(0),
+        patient_count: q_i64("SELECT COUNT(*) FROM patients").unwrap_or(0),
+        report_count: q_i64("SELECT COUNT(*) FROM reports").unwrap_or(0),
+        result_count: q_i64("SELECT COUNT(*) FROM results WHERE inline_prior_pdf = 0").unwrap_or(0),
+        inline_prior_count: q_i64("SELECT COUNT(*) FROM results WHERE inline_prior_pdf = 1")
+            .unwrap_or(0),
+        analyte_count: q_i64("SELECT COUNT(*) FROM analytes").unwrap_or(0),
+        alias_count: q_i64("SELECT COUNT(*) FROM analyte_aliases").unwrap_or(0),
+        audit_count: q_i64("SELECT COUNT(*) FROM audit_log").unwrap_or(0),
         earliest_collection_date_iso: q_str("SELECT MIN(collection_date_iso) FROM reports"),
-        latest_collection_date_iso:   q_str("SELECT MAX(collection_date_iso) FROM reports"),
-        journal_mode:         q_str("PRAGMA journal_mode"),
-        page_size:            q_i64("PRAGMA page_size"),
-        page_count:           q_i64("PRAGMA page_count"),
-        sqlcipher_version:    q_str("PRAGMA cipher_version"),
+        latest_collection_date_iso: q_str("SELECT MAX(collection_date_iso) FROM reports"),
+        journal_mode: q_str("PRAGMA journal_mode"),
+        page_size: q_i64("PRAGMA page_size"),
+        page_count: q_i64("PRAGMA page_count"),
+        sqlcipher_version: q_str("PRAGMA cipher_version"),
     })
 }
 
@@ -257,8 +278,11 @@ pub async fn export_vault(
         "bytes_copied":    bytes_copied,
         "source_data_dir": state.data_dir.to_string_lossy(),
     });
-    std::fs::write(&manifest_path, serde_json::to_vec_pretty(&manifest).unwrap_or_default())
-        .map_err(|e| AppError::Internal(format!("write manifest: {e}")))?;
+    std::fs::write(
+        &manifest_path,
+        serde_json::to_vec_pretty(&manifest).unwrap_or_default(),
+    )
+    .map_err(|e| AppError::Internal(format!("write manifest: {e}")))?;
 
     // Audit-trail the export. Best-effort — does not abort if the audit
     // table can't be written (e.g. just-locked vault).
@@ -307,10 +331,7 @@ pub struct ImportResult {
 /// handle would otherwise pin the old DB and corrupt the swap on
 /// Windows.
 #[tauri::command]
-pub async fn import_vault(
-    state: State<'_, AppState>,
-    source: String,
-) -> AppResult<ImportResult> {
+pub async fn import_vault(state: State<'_, AppState>, source: String) -> AppResult<ImportResult> {
     {
         let guard = state.db.lock().await;
         if guard.is_some() {
@@ -339,13 +360,17 @@ pub async fn import_vault(
     let backup_dir = state
         .data_dir
         .parent()
-        .map(|p| p.join(format!(
-            "{}.backup-{}",
-            state.data_dir.file_name()
-                .and_then(|s| s.to_str())
-                .unwrap_or("data"),
-            unix_timestamp()
-        )))
+        .map(|p| {
+            p.join(format!(
+                "{}.backup-{}",
+                state
+                    .data_dir
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("data"),
+                unix_timestamp()
+            ))
+        })
         .ok_or_else(|| AppError::Internal("data_dir has no parent".into()))?;
     if state.data_dir.exists() {
         std::fs::rename(&state.data_dir, &backup_dir)

@@ -42,8 +42,12 @@ impl AnalyteRegistry {
 
     pub fn resolve(&self, raw: &str) -> Option<&str> {
         let key = fold(raw);
-        if let Some(id) = self.canonical_pt.get(&key) { return Some(id.as_str()); }
-        if let Some(id) = self.aliases.get(&key) { return Some(id.as_str()); }
+        if let Some(id) = self.canonical_pt.get(&key) {
+            return Some(id.as_str());
+        }
+        if let Some(id) = self.aliases.get(&key) {
+            return Some(id.as_str());
+        }
 
         // Methodology-suffix fallback: many lab printouts append a standard
         // / equation name in square brackets (e.g., "TFGe [CKD-EPI 2009]",
@@ -52,8 +56,12 @@ impl AnalyteRegistry {
         let stripped = strip_method_brackets(raw);
         if stripped != raw {
             let key2 = fold(&stripped);
-            if let Some(id) = self.canonical_pt.get(&key2) { return Some(id.as_str()); }
-            if let Some(id) = self.aliases.get(&key2) { return Some(id.as_str()); }
+            if let Some(id) = self.canonical_pt.get(&key2) {
+                return Some(id.as_str());
+            }
+            if let Some(id) = self.aliases.get(&key2) {
+                return Some(id.as_str());
+            }
         }
 
         // Fuzzy fallback (>= 0.92 normalized Levenshtein) against canonical names.
@@ -123,7 +131,10 @@ mod tests {
     #[test]
     fn strips_methodology_brackets() {
         assert_eq!(strip_method_brackets("TFGe [CKD-EPI 2009]"), "TFGe");
-        assert_eq!(strip_method_brackets("Hemoglobina Glicada (A1c) [NGSP]"), "Hemoglobina Glicada (A1c)");
+        assert_eq!(
+            strip_method_brackets("Hemoglobina Glicada (A1c) [NGSP]"),
+            "Hemoglobina Glicada (A1c)"
+        );
         assert_eq!(strip_method_brackets("Plain Name"), "Plain Name");
         assert_eq!(strip_method_brackets("Foo [m1] [m2]"), "Foo");
     }

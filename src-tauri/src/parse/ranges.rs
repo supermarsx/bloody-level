@@ -14,16 +14,25 @@ pub struct ParsedRange {
 
 impl ParsedRange {
     pub fn unparsed(raw: impl Into<String>) -> Self {
-        Self { low: None, high: None, grammar: RangeGrammar::Unparsed, raw: raw.into() }
+        Self {
+            low: None,
+            high: None,
+            grammar: RangeGrammar::Unparsed,
+            raw: raw.into(),
+        }
     }
     pub fn none(raw: impl Into<String>) -> Self {
-        Self { low: None, high: None, grammar: RangeGrammar::None, raw: raw.into() }
+        Self {
+            low: None,
+            high: None,
+            grammar: RangeGrammar::None,
+            raw: raw.into(),
+        }
     }
 }
 
-static RE_AB: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^\s*(-?\d+(?:[.,]\d+)?)\s*[-–—]\s*(-?\d+(?:[.,]\d+)?)\s*$").unwrap()
-});
+static RE_AB: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^\s*(-?\d+(?:[.,]\d+)?)\s*[-–—]\s*(-?\d+(?:[.,]\d+)?)\s*$").unwrap());
 static RE_LTE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*<=\s*(-?\d+(?:[.,]\d+)?)\s*$").unwrap());
 static RE_GTE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*>=\s*(-?\d+(?:[.,]\d+)?)\s*$").unwrap());
 static RE_LT: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*<\s*(-?\d+(?:[.,]\d+)?)\s*$").unwrap());
@@ -65,38 +74,69 @@ pub fn parse_range_a_b(s: &str) -> Option<ParsedRange> {
     let cap = RE_AB.captures(s)?;
     let lo = parse_numeric_decimal(&cap[1])?;
     let hi = parse_numeric_decimal(&cap[2])?;
-    Some(ParsedRange { low: Some(lo), high: Some(hi), grammar: RangeGrammar::AB, raw: s.into() })
+    Some(ParsedRange {
+        low: Some(lo),
+        high: Some(hi),
+        grammar: RangeGrammar::AB,
+        raw: s.into(),
+    })
 }
 
 pub fn parse_range_lt(s: &str) -> Option<ParsedRange> {
     let cap = RE_LT.captures(s)?;
     let v = parse_numeric_decimal(&cap[1])?;
-    Some(ParsedRange { low: None, high: Some(v), grammar: RangeGrammar::Lt, raw: s.into() })
+    Some(ParsedRange {
+        low: None,
+        high: Some(v),
+        grammar: RangeGrammar::Lt,
+        raw: s.into(),
+    })
 }
 
 pub fn parse_range_lte(s: &str) -> Option<ParsedRange> {
     let cap = RE_LTE.captures(s)?;
     let v = parse_numeric_decimal(&cap[1])?;
-    Some(ParsedRange { low: None, high: Some(v), grammar: RangeGrammar::Lte, raw: s.into() })
+    Some(ParsedRange {
+        low: None,
+        high: Some(v),
+        grammar: RangeGrammar::Lte,
+        raw: s.into(),
+    })
 }
 
 pub fn parse_range_gt(s: &str) -> Option<ParsedRange> {
     let cap = RE_GT.captures(s)?;
     let v = parse_numeric_decimal(&cap[1])?;
-    Some(ParsedRange { low: Some(v), high: None, grammar: RangeGrammar::Gt, raw: s.into() })
+    Some(ParsedRange {
+        low: Some(v),
+        high: None,
+        grammar: RangeGrammar::Gt,
+        raw: s.into(),
+    })
 }
 
 pub fn parse_range_gte(s: &str) -> Option<ParsedRange> {
     let cap = RE_GTE.captures(s)?;
     let v = parse_numeric_decimal(&cap[1])?;
-    Some(ParsedRange { low: Some(v), high: None, grammar: RangeGrammar::Gte, raw: s.into() })
+    Some(ParsedRange {
+        low: Some(v),
+        high: None,
+        grammar: RangeGrammar::Gte,
+        raw: s.into(),
+    })
 }
 
 fn parse_range_categorical(s: &str) -> Option<ParsedRange> {
     let folded = fold_for_match(s);
-    if CATEGORICAL_KEYWORDS_FOLDED.iter().any(|k| folded.contains(k)) {
+    if CATEGORICAL_KEYWORDS_FOLDED
+        .iter()
+        .any(|k| folded.contains(k))
+    {
         return Some(ParsedRange {
-            low: None, high: None, grammar: RangeGrammar::Categorical, raw: s.into(),
+            low: None,
+            high: None,
+            grammar: RangeGrammar::Categorical,
+            raw: s.into(),
         });
     }
     None
@@ -106,40 +146,85 @@ fn parse_range_age_stratified(s: &str) -> Option<ParsedRange> {
     let needles = ["Adultos", "anos", "meses", "semanas", "dias"];
     let hits = needles.iter().filter(|n| s.contains(*n)).count();
     if hits >= 2 {
-        Some(ParsedRange { low: None, high: None, grammar: RangeGrammar::AgeStrat, raw: s.into() })
-    } else { None }
+        Some(ParsedRange {
+            low: None,
+            high: None,
+            grammar: RangeGrammar::AgeStrat,
+            raw: s.into(),
+        })
+    } else {
+        None
+    }
 }
 
 fn parse_range_sex_stratified(s: &str) -> Option<ParsedRange> {
     let needles = ["Homens", "Mulheres", "Sexo masculino", "Sexo feminino"];
     if needles.iter().any(|n| s.contains(n)) {
-        Some(ParsedRange { low: None, high: None, grammar: RangeGrammar::SexStrat, raw: s.into() })
-    } else { None }
+        Some(ParsedRange {
+            low: None,
+            high: None,
+            grammar: RangeGrammar::SexStrat,
+            raw: s.into(),
+        })
+    } else {
+        None
+    }
 }
 
 fn parse_range_cycle_phase(s: &str) -> Option<ParsedRange> {
     let folded = fold_for_match(s);
-    if CYCLE_PHASE_KEYWORDS_FOLDED.iter().any(|k| folded.contains(k)) {
-        Some(ParsedRange { low: None, high: None, grammar: RangeGrammar::CyclePhase, raw: s.into() })
-    } else { None }
+    if CYCLE_PHASE_KEYWORDS_FOLDED
+        .iter()
+        .any(|k| folded.contains(k))
+    {
+        Some(ParsedRange {
+            low: None,
+            high: None,
+            grammar: RangeGrammar::CyclePhase,
+            raw: s.into(),
+        })
+    } else {
+        None
+    }
 }
 
 fn parse_range_gestational(s: &str) -> Option<ParsedRange> {
     if s.contains("Trimestre") {
-        Some(ParsedRange { low: None, high: None, grammar: RangeGrammar::Gestational, raw: s.into() })
-    } else { None }
+        Some(ParsedRange {
+            low: None,
+            high: None,
+            grammar: RangeGrammar::Gestational,
+            raw: s.into(),
+        })
+    } else {
+        None
+    }
 }
 
 fn parse_range_qualitative(s: &str) -> Option<ParsedRange> {
     if super::values::parse_qualitative_value(s.trim()).is_some() {
-        Some(ParsedRange { low: None, high: None, grammar: RangeGrammar::Qualitative, raw: s.into() })
-    } else { None }
+        Some(ParsedRange {
+            low: None,
+            high: None,
+            grammar: RangeGrammar::Qualitative,
+            raw: s.into(),
+        })
+    } else {
+        None
+    }
 }
 
 fn parse_range_titer(s: &str) -> Option<ParsedRange> {
     if RE_TITER.is_match(s) {
-        Some(ParsedRange { low: None, high: None, grammar: RangeGrammar::Titer, raw: s.into() })
-    } else { None }
+        Some(ParsedRange {
+            low: None,
+            high: None,
+            grammar: RangeGrammar::Titer,
+            raw: s.into(),
+        })
+    } else {
+        None
+    }
 }
 
 pub fn try_parse_any(s: &str) -> ParsedRange {
@@ -147,18 +232,42 @@ pub fn try_parse_any(s: &str) -> ParsedRange {
     if trimmed.is_empty() {
         return ParsedRange::none("");
     }
-    if let Some(r) = parse_range_lte(trimmed) { return r; }
-    if let Some(r) = parse_range_gte(trimmed) { return r; }
-    if let Some(r) = parse_range_a_b(trimmed) { return r; }
-    if let Some(r) = parse_range_lt(trimmed) { return r; }
-    if let Some(r) = parse_range_gt(trimmed) { return r; }
-    if let Some(r) = parse_range_titer(trimmed) { return r; }
-    if let Some(r) = parse_range_qualitative(trimmed) { return r; }
-    if let Some(r) = parse_range_categorical(trimmed) { return r; }
-    if let Some(r) = parse_range_cycle_phase(trimmed) { return r; }
-    if let Some(r) = parse_range_gestational(trimmed) { return r; }
-    if let Some(r) = parse_range_age_stratified(trimmed) { return r; }
-    if let Some(r) = parse_range_sex_stratified(trimmed) { return r; }
+    if let Some(r) = parse_range_lte(trimmed) {
+        return r;
+    }
+    if let Some(r) = parse_range_gte(trimmed) {
+        return r;
+    }
+    if let Some(r) = parse_range_a_b(trimmed) {
+        return r;
+    }
+    if let Some(r) = parse_range_lt(trimmed) {
+        return r;
+    }
+    if let Some(r) = parse_range_gt(trimmed) {
+        return r;
+    }
+    if let Some(r) = parse_range_titer(trimmed) {
+        return r;
+    }
+    if let Some(r) = parse_range_qualitative(trimmed) {
+        return r;
+    }
+    if let Some(r) = parse_range_categorical(trimmed) {
+        return r;
+    }
+    if let Some(r) = parse_range_cycle_phase(trimmed) {
+        return r;
+    }
+    if let Some(r) = parse_range_gestational(trimmed) {
+        return r;
+    }
+    if let Some(r) = parse_range_age_stratified(trimmed) {
+        return r;
+    }
+    if let Some(r) = parse_range_sex_stratified(trimmed) {
+        return r;
+    }
     ParsedRange::unparsed(trimmed)
 }
 
@@ -166,14 +275,52 @@ pub fn try_parse_any(s: &str) -> ParsedRange {
 mod tests {
     use super::*;
 
-    #[test] fn ab()    { let r = parse_range_a_b("13.0 - 17.0").unwrap(); assert_eq!(r.low, Some(13.0)); assert_eq!(r.high, Some(17.0)); }
-    #[test] fn ab_pt() { let r = parse_range_a_b("11,54 - 54,49").unwrap(); assert_eq!(r.high, Some(54.49)); }
-    #[test] fn lt()    { assert_eq!(parse_range_lt("< 190").unwrap().high, Some(190.0)); }
-    #[test] fn gte()   { assert_eq!(parse_range_gte(">= 60").unwrap().low, Some(60.0)); }
-    #[test] fn cat()   { assert_eq!(parse_range_categorical("Deficiência: <10").unwrap().grammar, RangeGrammar::Categorical); }
-    #[test] fn cycle() { assert_eq!(parse_range_cycle_phase("Fase folicular (-12 d)").unwrap().grammar, RangeGrammar::CyclePhase); }
-    #[test] fn ges()   { assert_eq!(parse_range_gestational("1º Trimestre").unwrap().grammar, RangeGrammar::Gestational); }
-    #[test] fn ord()   { assert_eq!(try_parse_any("13.0 - 17.0").grammar, RangeGrammar::AB); }
+    #[test]
+    fn ab() {
+        let r = parse_range_a_b("13.0 - 17.0").unwrap();
+        assert_eq!(r.low, Some(13.0));
+        assert_eq!(r.high, Some(17.0));
+    }
+    #[test]
+    fn ab_pt() {
+        let r = parse_range_a_b("11,54 - 54,49").unwrap();
+        assert_eq!(r.high, Some(54.49));
+    }
+    #[test]
+    fn lt() {
+        assert_eq!(parse_range_lt("< 190").unwrap().high, Some(190.0));
+    }
+    #[test]
+    fn gte() {
+        assert_eq!(parse_range_gte(">= 60").unwrap().low, Some(60.0));
+    }
+    #[test]
+    fn cat() {
+        assert_eq!(
+            parse_range_categorical("Deficiência: <10").unwrap().grammar,
+            RangeGrammar::Categorical
+        );
+    }
+    #[test]
+    fn cycle() {
+        assert_eq!(
+            parse_range_cycle_phase("Fase folicular (-12 d)")
+                .unwrap()
+                .grammar,
+            RangeGrammar::CyclePhase
+        );
+    }
+    #[test]
+    fn ges() {
+        assert_eq!(
+            parse_range_gestational("1º Trimestre").unwrap().grammar,
+            RangeGrammar::Gestational
+        );
+    }
+    #[test]
+    fn ord() {
+        assert_eq!(try_parse_any("13.0 - 17.0").grammar, RangeGrammar::AB);
+    }
 
     // ───── A-B range edge cases ─────────────────────────────────────────
 
@@ -271,7 +418,10 @@ mod tests {
 
     #[test]
     fn titer_with_spaces() {
-        assert_eq!(parse_range_titer("1 : 80").unwrap().grammar, RangeGrammar::Titer);
+        assert_eq!(
+            parse_range_titer("1 : 80").unwrap().grammar,
+            RangeGrammar::Titer
+        );
     }
 
     #[test]
@@ -323,7 +473,9 @@ mod tests {
     #[test]
     fn cycle_phase_lutein() {
         assert_eq!(
-            parse_range_cycle_phase("Fase luteínica (+8 d)").unwrap().grammar,
+            parse_range_cycle_phase("Fase luteínica (+8 d)")
+                .unwrap()
+                .grammar,
             RangeGrammar::CyclePhase
         );
     }

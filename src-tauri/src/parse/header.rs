@@ -24,8 +24,7 @@ pub struct ReportHeader {
     pub dob_confidence: Option<&'static str>, // "exact" | "approximate"
 }
 
-static RE_DATE_DMY: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\b(\d{2})/(\d{2})/(\d{4})\b").unwrap());
+static RE_DATE_DMY: Lazy<Regex> = Lazy::new(|| Regex::new(r"\b(\d{2})/(\d{2})/(\d{4})\b").unwrap());
 static RE_AGE: Lazy<Regex> = Lazy::new(|| Regex::new(r"Idade\s+(\d{1,3})\s+Anos").unwrap());
 
 pub fn extract(text: &str) -> ReportHeader {
@@ -159,11 +158,14 @@ fn extract_patient_dob(text: &str, h: &mut ReportHeader) {
 /// return YYYY-01-01 of the resulting year. Year-resolution only — we
 /// deliberately drop month/day because the report's age field doesn't carry
 /// them. Returns None if the input collection date is malformed.
-pub(crate) fn approximate_dob_from_age(age_years: u32, collection_date_iso: &str) -> Option<String> {
+pub(crate) fn approximate_dob_from_age(
+    age_years: u32,
+    collection_date_iso: &str,
+) -> Option<String> {
     let year_str = collection_date_iso.get(0..4)?;
     let year: i32 = year_str.parse().ok()?;
     let dob_year = year.checked_sub(age_years as i32)?;
-    if dob_year < 1900 || dob_year > 2200 {
+    if !(1900..=2200).contains(&dob_year) {
         return None;
     }
     Some(format!("{dob_year:04}-01-01"))
@@ -200,16 +202,24 @@ fn extract_requesting_physician(text: &str, h: &mut ReportHeader) {
 fn capture_after(text: &str, anchor: &str, span: usize) -> Option<String> {
     let idx = text.find(anchor)?;
     let start = idx + anchor.len();
-    if start > text.len() { return None; }
+    if start > text.len() {
+        return None;
+    }
     let end = snap_boundary(text, start + span);
-    if start > end { return None; }
+    if start > end {
+        return None;
+    }
     let chunk = text[start..end].trim_start();
     let token: String = chunk
         .chars()
         .take_while(|c| !c.is_control() && *c != '\n' && *c != '\r')
         .collect();
     let token = token.trim();
-    if token.is_empty() { None } else { Some(token.to_string()) }
+    if token.is_empty() {
+        None
+    } else {
+        Some(token.to_string())
+    }
 }
 
 #[cfg(test)]

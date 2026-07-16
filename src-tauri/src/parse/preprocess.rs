@@ -49,15 +49,15 @@ fn fix_misordered_value_line(line: &str) -> String {
         // Leading digits glued to an uppercase letter (Latin + PT diacritics).
         Regex::new(r"^(\d+)([A-ZÀ-Ý])").unwrap()
     });
-    let Some(cap) = RE_PREFIX.captures(line) else { return line.to_string(); };
+    let Some(cap) = RE_PREFIX.captures(line) else {
+        return line.to_string();
+    };
     let leading = cap[1].to_string();
     let prefix_end = cap.get(1).unwrap().end();
     let rest = &line[prefix_end..];
 
     // (a) decimal-fragment case: "0Creatininémia .83 …" → "Creatininémia 0.83 …"
-    static RE_DEC_FRAG: Lazy<Regex> = Lazy::new(|| {
-        Regex::new(r"\s(\.\d+)(\s|$)").unwrap()
-    });
+    static RE_DEC_FRAG: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s(\.\d+)(\s|$)").unwrap());
     if let Some(dec_cap) = RE_DEC_FRAG.captures(rest) {
         let decimal = &dec_cap[1];
         let dec_start = dec_cap.get(1).unwrap().start();
@@ -87,9 +87,7 @@ fn fix_misordered_value_line(line: &str) -> String {
 
 /// Joins `x N\n/` patterns into `x N/`, handling whitespace on either side.
 pub fn join_unit_breaks(text: &str) -> String {
-    static RE: Lazy<Regex> = Lazy::new(|| {
-        Regex::new(r"(x\s*10\^?\d+)\s*\n\s*(/)").unwrap()
-    });
+    static RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(x\s*10\^?\d+)\s*\n\s*(/)").unwrap());
     RE.replace_all(text, "$1$2").into_owned()
 }
 
@@ -144,7 +142,10 @@ mod tests {
     fn merges_slash_ul_continuation() {
         let input = "Eritrócitos 4.19 x 106\n/µl 3.80 - 4.80 4.02 4.13 4.06";
         let out = normalize(input);
-        assert!(out.contains("x 106 /µl 3.80") || out.contains("x 106/µl 3.80"), "got: {out}");
+        assert!(
+            out.contains("x 106 /µl 3.80") || out.contains("x 106/µl 3.80"),
+            "got: {out}"
+        );
     }
 
     #[test]
@@ -183,10 +184,14 @@ mod tests {
 
     #[test]
     fn full_normalize_covers_all_three() {
-        let input = "0Creatininémia .83 mg/dL 0.50 - 1.10\n94TFGe [CKD-EPI 2009] ml/min/1,73 m2 >= 60";
+        let input =
+            "0Creatininémia .83 mg/dL 0.50 - 1.10\n94TFGe [CKD-EPI 2009] ml/min/1,73 m2 >= 60";
         let out = normalize(input);
         assert!(out.contains("Creatininémia 0.83 mg/dL"), "got: {out}");
-        assert!(out.contains("TFGe [CKD-EPI 2009] 94 ml/min/1,73 m2"), "got: {out}");
+        assert!(
+            out.contains("TFGe [CKD-EPI 2009] 94 ml/min/1,73 m2"),
+            "got: {out}"
+        );
     }
 
     // ───── Empty / pathological inputs ──────────────────────────────────

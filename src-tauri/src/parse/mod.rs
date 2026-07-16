@@ -7,6 +7,9 @@ pub mod sections;
 pub mod units;
 pub mod values;
 
+#[cfg(test)]
+mod acceptance;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

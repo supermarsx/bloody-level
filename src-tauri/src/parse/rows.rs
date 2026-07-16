@@ -12,16 +12,50 @@ use super::values::{parse_inequality_value, parse_numeric_decimal, parse_qualita
 use super::{ParsedRow, ParsedValue, RangeGrammar};
 
 const KNOWN_UNITS: &[&str] = &[
-    "g/dl", "g/dL", "mg/dl", "mg/dL", "mmol/l", "mmol/L", "mmol/mol",
-    "U/l", "U/L", "UI/ml", "UI/mL", "ng/dl", "ng/dL", "ng/ml", "ng/mL",
-    "ng/l", "ng/L", "pg/ml", "pg/mL", "pg", "fl", "fL",
-    "%", "µl", "uL", "µL", "mUI/l", "mUI/ml", "mUI/L", "mUI/mL",
-    "µg/dl", "µg/dL", "ug/dL", "nmol/l", "nmol/L",
+    "g/dl",
+    "g/dL",
+    "mg/dl",
+    "mg/dL",
+    "mmol/l",
+    "mmol/L",
+    "mmol/mol",
+    "U/l",
+    "U/L",
+    "UI/ml",
+    "UI/mL",
+    "ng/dl",
+    "ng/dL",
+    "ng/ml",
+    "ng/mL",
+    "ng/l",
+    "ng/L",
+    "pg/ml",
+    "pg/mL",
+    "pg",
+    "fl",
+    "fL",
+    "%",
+    "µl",
+    "uL",
+    "µL",
+    "mUI/l",
+    "mUI/ml",
+    "mUI/L",
+    "mUI/mL",
+    "µg/dl",
+    "µg/dL",
+    "ug/dL",
+    "nmol/l",
+    "nmol/L",
     // x 10^N/µl variants — pdfium drops the caret, so we list both forms.
     // Order doesn't matter because find_first_unit picks the *earliest position*
     // in the line (with longer-wins on ties), not the longest registered unit.
-    "x 10^3/µl", "x 103/µl", "x 10^6/µl", "x 106/µl",
-    "x 10^3/",   "x 103/",
+    "x 10^3/µl",
+    "x 103/µl",
+    "x 10^6/µl",
+    "x 106/µl",
+    "x 10^3/",
+    "x 103/",
     "ml/min/1,73 m2",
 ];
 
@@ -33,7 +67,9 @@ pub fn parse_row(line: &str, ctx: &SectionContext, reg: &AnalyteRegistry) -> Opt
 
     if let Some(q) = parse_qualitative_value(extract_last_token(raw)) {
         let name = strip_trailing_token(raw, q).trim().to_string();
-        if name.is_empty() { return None; }
+        if name.is_empty() {
+            return None;
+        }
         let analyte_id = reg.resolve(&name).map(String::from);
         // Qualitative rows have no numeric value or unit — those slots aren't
         // applicable, not missing. Confidence reflects only what's relevant:
@@ -93,7 +129,7 @@ fn try_parse_numeric_row(
 
     let prior_values: Vec<f64> = after_range
         .split_whitespace()
-        .filter_map(|t| parse_numeric_decimal(t))
+        .filter_map(parse_numeric_decimal)
         .collect();
     let inline_priors: Vec<(String, f64)> = prior_values
         .into_iter()
@@ -208,14 +244,19 @@ fn find_first_unit(s: &str) -> Option<UnitHit> {
             let before_ok = idx == 0
                 || s.as_bytes()
                     .get(idx - 1)
-                    .map_or(false, |b| (*b as char).is_whitespace());
-            if !before_ok { continue; }
+                    .is_some_and(|b| (*b as char).is_whitespace());
+            if !before_ok {
+                continue;
+            }
             let is_better = match earliest {
                 None => true,
                 Some(h) => idx < h.start || (idx == h.start && u.len() > h.token.len()),
             };
             if is_better {
-                earliest = Some(UnitHit { start: idx, token: u });
+                earliest = Some(UnitHit {
+                    start: idx,
+                    token: u,
+                });
             }
         }
     }
@@ -295,12 +336,28 @@ fn derive_flag(value: Option<f64>, low: Option<f64>, high: Option<f64>) -> Optio
     let v = value?;
     match (low, high) {
         (Some(lo), Some(hi)) => {
-            if v < lo { Some("low") }
-            else if v > hi { Some("high") }
-            else { Some("normal") }
+            if v < lo {
+                Some("low")
+            } else if v > hi {
+                Some("high")
+            } else {
+                Some("normal")
+            }
         }
-        (Some(lo), None) => if v < lo { Some("low") } else { Some("normal") },
-        (None, Some(hi)) => if v > hi { Some("high") } else { Some("normal") },
+        (Some(lo), None) => {
+            if v < lo {
+                Some("low")
+            } else {
+                Some("normal")
+            }
+        }
+        (None, Some(hi)) => {
+            if v > hi {
+                Some("high")
+            } else {
+                Some("normal")
+            }
+        }
         _ => None,
     }
 }
@@ -324,7 +381,13 @@ fn compute_confidence(
     // anchoring the row), so we still discount it then.
     let s_range: f32 = match range.grammar {
         RangeGrammar::Unparsed => 0.0,
-        RangeGrammar::None => if resolved { 1.0 } else { 0.6 },
+        RangeGrammar::None => {
+            if resolved {
+                1.0
+            } else {
+                0.6
+            }
+        }
         _ => 1.0,
     };
     let s_unit: f32 = if has_unit { 1.0 } else { 0.6 };
@@ -335,9 +398,16 @@ fn compute_confidence(
 fn is_layout_chrome(s: &str) -> bool {
     // Lab-letterhead / page chrome.
     const CHROME: &[&str] = &[
-        "Pólo Tecnológico", "GERMANO DE SOUSA", "CENTRO DE MEDICINA",
-        "LABORATÓRIO CERTIFICADO", "Pág.", "Resultados anteriores",
-        "Nº Inscrição", "Data de colheita", "Data de emissão", "Data ",
+        "Pólo Tecnológico",
+        "GERMANO DE SOUSA",
+        "CENTRO DE MEDICINA",
+        "LABORATÓRIO CERTIFICADO",
+        "Pág.",
+        "Resultados anteriores",
+        "Nº Inscrição",
+        "Data de colheita",
+        "Data de emissão",
+        "Data ",
     ];
     if CHROME.iter().any(|n| s.contains(*n)) {
         return true;
@@ -352,29 +422,50 @@ fn is_layout_chrome(s: &str) -> bool {
 
     // For prefix matching, also strip leading bullet decorations like
     // "- Se Troponina …" so the prefix list catches the underlying form.
-    let after_bullet = trimmed.trim_start_matches(|c: char| c == '-' || c == '·' || c == '•' || c.is_whitespace());
+    let after_bullet =
+        trimmed.trim_start_matches(|c: char| c == '-' || c == '·' || c == '•' || c.is_whitespace());
 
     // Categorical-tier sub-table labels — these are reference-range commentary
     // on the *previous* analyte (e.g., LDL risk tiers, Vit D deficiency tiers,
     // ferritin iron-deficiency tiers). Without this filter they get parsed as
     // bogus analyte rows like "Baixo ou moderado: 115 mg/dL".
     const TIER_LABEL_PREFIXES: &[&str] = &[
-        "Baixo ou moderado", "Elevado:", "Muito elevado",
-        "Deficiência:", "Insuficiência:", "Suficiência:", "Toxicidade:",
-        "Ferropénia Absoluta", "Ferropénia Funcional",
-        "Pacientes com", "Doentes com factores", "Doentes com",
+        "Baixo ou moderado",
+        "Elevado:",
+        "Muito elevado",
+        "Deficiência:",
+        "Insuficiência:",
+        "Suficiência:",
+        "Toxicidade:",
+        "Ferropénia Absoluta",
+        "Ferropénia Funcional",
+        "Pacientes com",
+        "Doentes com factores",
+        "Doentes com",
         "Colesterol LDL recomendado",
-        "Glicémia média estimada",  // derived value, not a measured analyte
-        "Nota:", "Nota :", "Notas:",
-        "Ref. Bibliográfica", "[Ref. Bibliográfica",
-        "Se aplicável", "Recomenda-se",
+        "Glicémia média estimada", // derived value, not a measured analyte
+        "Nota:",
+        "Nota :",
+        "Notas:",
+        "Ref. Bibliográfica",
+        "[Ref. Bibliográfica",
+        "Se aplicável",
+        "Recomenda-se",
         // Clinical decision-rule prefixes — these are interpretation rules for
         // the *previous* analyte (e.g., Troponin algorithms), not measurements.
-        "Se Troponina", "Se cTn", "Se Tn",
-        "VPN:", "VPP:",
-        "1.", "2.", "3.",  // numbered footnote bullets
+        "Se Troponina",
+        "Se cTn",
+        "Se Tn",
+        "VPN:",
+        "VPP:",
+        "1.",
+        "2.",
+        "3.", // numbered footnote bullets
     ];
-    if TIER_LABEL_PREFIXES.iter().any(|p| after_bullet.starts_with(p)) {
+    if TIER_LABEL_PREFIXES
+        .iter()
+        .any(|p| after_bullet.starts_with(p))
+    {
         return true;
     }
 
@@ -399,12 +490,10 @@ fn is_layout_chrome(s: &str) -> bool {
 /// range, and a unit. All three must be present so we don't accidentally
 /// filter measurement lines that happen to contain "anos" elsewhere.
 fn is_age_tier_line(s: &str) -> bool {
-    static RE_AGE_WORD: Lazy<Regex> = Lazy::new(|| {
-        Regex::new(r"(?i)\b(?:m[eê]s|meses|anos?|dias?|sem(?:anas?)?)\b").unwrap()
-    });
-    static RE_RANGE: Lazy<Regex> = Lazy::new(|| {
-        Regex::new(r"\d+(?:[.,]\d+)?\s*-\s*\d+(?:[.,]\d+)?").unwrap()
-    });
+    static RE_AGE_WORD: Lazy<Regex> =
+        Lazy::new(|| Regex::new(r"(?i)\b(?:m[eê]s|meses|anos?|dias?|sem(?:anas?)?)\b").unwrap());
+    static RE_RANGE: Lazy<Regex> =
+        Lazy::new(|| Regex::new(r"\d+(?:[.,]\d+)?\s*-\s*\d+(?:[.,]\d+)?").unwrap());
     static RE_UNIT: Lazy<Regex> = Lazy::new(|| {
         Regex::new(
             r"\b(?:pg/m[lL]|ng/m[lL]|ng/d[lL]|ng/[lL]|UI/m[lL]|mUI/m[lL]|[µu]g/d[lL]|nmol/[lL]|mmol/[lL]|mIU/m[lL]|U/[lL])\b"
@@ -429,8 +518,9 @@ fn is_threshold_definition_line(s: &str) -> bool {
             (?:mg/d[lL]|g/d[lL]|ng/m[lL]|ng/d[lL]|ng/[lL]|pg/m[lL]
               |U/[lL]|UI/m[lL]|mUI/[mlL]+|mmol/[lL]|mmol/mol|nmol/[lL]
               |[µu]?g/d[lL]|µ[lL]|%|fL|fl|pg)
-            "
-        ).unwrap()
+            ",
+        )
+        .unwrap()
     });
     RE_THRESHOLD.is_match(s)
 }
@@ -501,9 +591,18 @@ mod tests {
     #[test]
     fn captures_inline_priors() {
         let mut ctx = SectionContext::default();
-        ctx.prior_dates = vec!["2025-07-01".into(), "2025-04-05".into(), "2025-01-13".into()];
+        ctx.prior_dates = vec![
+            "2025-07-01".into(),
+            "2025-04-05".into(),
+            "2025-01-13".into(),
+        ];
         let reg = empty_reg();
-        let row = parse_row("Hemoglobina 13.4 g/dl 12.0 - 15.0 12.6 12.9 12.7", &ctx, &reg).unwrap();
+        let row = parse_row(
+            "Hemoglobina 13.4 g/dl 12.0 - 15.0 12.6 12.9 12.7",
+            &ctx,
+            &reg,
+        )
+        .unwrap();
         assert_eq!(row.value.numeric, Some(13.4));
         assert_eq!(row.ref_low, Some(12.0));
         assert_eq!(row.ref_high, Some(15.0));
@@ -544,15 +643,24 @@ mod tests {
         // `x 10^3/` (absolute count). We want the PERCENT value as the primary,
         // not the absolute count.
         let mut ctx = SectionContext::default();
-        ctx.prior_dates = vec!["2025-04-05".into(), "2025-01-13".into(), "2024-10-04".into()];
+        ctx.prior_dates = vec![
+            "2025-04-05".into(),
+            "2025-01-13".into(),
+            "2024-10-04".into(),
+        ];
         let reg = empty_reg();
 
         let row = parse_row(
             "Neutrófilos 61.3 % 5.02 x 103/ 40.00 - 80.00 60.5 61.4 60.0",
-            &ctx, &reg,
-        ).unwrap();
-        assert_eq!(row.value.numeric, Some(61.3),
-            "value should be the percent (61.3), not the absolute count (5.02)");
+            &ctx,
+            &reg,
+        )
+        .unwrap();
+        assert_eq!(
+            row.value.numeric,
+            Some(61.3),
+            "value should be the percent (61.3), not the absolute count (5.02)"
+        );
         assert_eq!(row.unit.as_deref(), Some("%"));
         assert_eq!(row.ref_low, Some(40.0));
         assert_eq!(row.ref_high, Some(80.0));
@@ -564,10 +672,7 @@ mod tests {
     fn leucograma_paired_value_with_caret_unit() {
         let ctx = SectionContext::default();
         let reg = empty_reg();
-        let row = parse_row(
-            "Eosinófilos 1.0 % 0.08 x 10^3/ 1.00 - 6.00",
-            &ctx, &reg,
-        ).unwrap();
+        let row = parse_row("Eosinófilos 1.0 % 0.08 x 10^3/ 1.00 - 6.00", &ctx, &reg).unwrap();
         assert_eq!(row.value.numeric, Some(1.0));
         assert_eq!(row.unit.as_deref(), Some("%"));
         assert_eq!(row.ref_low, Some(1.0));
@@ -578,12 +683,18 @@ mod tests {
     fn eritrocytes_with_pdfium_no_caret_unit() {
         // Eritrócitos uses x 10^6/µl but pdfium drops the caret → "x 106/µl".
         let mut ctx = SectionContext::default();
-        ctx.prior_dates = vec!["2025-07-01".into(), "2025-04-05".into(), "2025-01-13".into()];
+        ctx.prior_dates = vec![
+            "2025-07-01".into(),
+            "2025-04-05".into(),
+            "2025-01-13".into(),
+        ];
         let reg = empty_reg();
         let row = parse_row(
             "Eritrócitos 4.19 x 106/µl 3.80 - 4.80 4.02 4.13 4.06",
-            &ctx, &reg,
-        ).unwrap();
+            &ctx,
+            &reg,
+        )
+        .unwrap();
         assert_eq!(row.value.numeric, Some(4.19));
         assert_eq!(row.unit.as_deref(), Some("x 10^6/µL"));
         assert_eq!(row.ref_low, Some(3.80));
@@ -597,10 +708,7 @@ mod tests {
         // skip must NOT misfire here.
         let ctx = SectionContext::default();
         let reg = empty_reg();
-        let row = parse_row(
-            "Hematócrito 38.3 % 36.0 - 46.0 36.3 37.2 37.9",
-            &ctx, &reg,
-        ).unwrap();
+        let row = parse_row("Hematócrito 38.3 % 36.0 - 46.0 36.3 37.2 37.9", &ctx, &reg).unwrap();
         assert_eq!(row.value.numeric, Some(38.3));
         assert_eq!(row.unit.as_deref(), Some("%"));
         assert_eq!(row.ref_low, Some(36.0));
@@ -665,8 +773,11 @@ mod tests {
         let ctx = SectionContext::default();
         let reg = empty_reg();
         let row = parse_row("Albumina 62.6 % 4.5 g/dl 3.5 - 5.0", &ctx, &reg).unwrap();
-        assert_eq!(row.value.numeric, Some(62.6),
-            "value should be the percent (62.6), not the absolute (4.5)");
+        assert_eq!(
+            row.value.numeric,
+            Some(62.6),
+            "value should be the percent (62.6), not the absolute (4.5)"
+        );
         assert_eq!(row.unit.as_deref(), Some("%"));
         assert_eq!(row.ref_low, Some(3.5));
         assert_eq!(row.ref_high, Some(5.0));

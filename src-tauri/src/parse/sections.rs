@@ -38,8 +38,7 @@ const SUBSECTIONS: &[&str] = &[
     "DOENÇAS ATÓPICAS I",
 ];
 
-static RE_DATE_DMY: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\b(\d{2})/(\d{2})/(\d{4})\b").unwrap());
+static RE_DATE_DMY: Lazy<Regex> = Lazy::new(|| Regex::new(r"\b(\d{2})/(\d{2})/(\d{4})\b").unwrap());
 
 pub fn detect_section(line: &str) -> Option<&'static str> {
     let t = line.trim();
@@ -126,7 +125,10 @@ mod tests {
     fn captures_prior_dates_inline() {
         let mut ctx = SectionContext::default();
         ctx.update("HEMATOLOGIA Resultado Valores de Referência Resultados anteriores 01/07/2025 05/04/2025 13/01/2025");
-        assert_eq!(ctx.prior_dates, vec!["2025-07-01", "2025-04-05", "2025-01-13"]);
+        assert_eq!(
+            ctx.prior_dates,
+            vec!["2025-07-01", "2025-04-05", "2025-01-13"]
+        );
     }
 
     #[test]

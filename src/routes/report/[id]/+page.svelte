@@ -7,9 +7,9 @@
   import * as reparse from '$api/reparse';
   import { AppError } from '$api/errors';
   import { toasts } from '../../../lib/toasts/store.svelte';
-  import FlagPill from '$charts/FlagPill.svelte';
+  import FlagPill from '$charts/flag-pill.svelte';
   import { chartPrefs } from '$charts/prefs.svelte';
-  import AnalyteLinkDialog from '$components/AnalyteLinkDialog.svelte';
+  import AnalyteLinkDialog from '$components/analyte-link-dialog.svelte';
   import { formatDate } from '$format/dates';
   import { formatNumber } from '$format/numbers';
   import { prettyUnit } from '$format/units';
@@ -21,7 +21,7 @@
   import { saveTextFile } from '$format/save';
   import { setReportCyclePhase, setReportNickname, setReportAnnotations, type CyclePhase } from '$api/records-admin';
   import { windowTitle, setPageTitle } from '$lib/title.svelte';
-  import BackButton from '$components/BackButton.svelte';
+  import BackButton from '$components/back-button.svelte';
   import { hrtMilestoneFor } from '$format/hrt-milestone';
   import { formatRelativeSpan } from '$format/dates';
 
@@ -140,6 +140,25 @@
     } catch (e) { toasts.error(e); }
   }
 
+  function diagnosticLabel(code: string): string {
+    switch (code) {
+      case 'analyte_unmatched':          return 'Unmatched analyte';
+      case 'reference_range_unparsed':   return 'Unparsed range';
+      case 'unit_unrecognized':          return 'Unit mismatch';
+      case 'value_missing':              return 'Missing value';
+      case 'low_confidence':             return 'Low confidence';
+      default:                           return code.replaceAll('_', ' ');
+    }
+  }
+
+  function diagnosticSummary(items: reportApi.ReportParseAudit[]): string {
+    const counts = new Map<string, number>();
+    for (const item of items) counts.set(item.diagnostic, (counts.get(item.diagnostic) ?? 0) + 1);
+    return [...counts.entries()]
+      .map(([code, count]) => `${diagnosticLabel(code)} ${count}`)
+      .join(' · ');
+  }
+
   let editingNickname = $state(false);
   let nicknameDraft = $state('');
 
@@ -210,7 +229,7 @@
       const sign = delta >= 0 ? '+' : '';
       toasts.success(
         'Re-parsed',
-        `${r.rows_after} rows (${sign}${delta} vs before), ${r.rows_unmatched} unmatched, conf ${(r.doc_confidence * 100).toFixed(0)}%`
+        `${r.rows_after} rows (${sign}${delta} vs before), ${r.rows_unmatched} unmatched, ${r.parse_audit_entries} diagnostics, conf ${(r.doc_confidence * 100).toFixed(0)}%`
       );
       await refresh();
     } catch (e) { toasts.error(e); }
@@ -457,6 +476,34 @@
         </p>
       {/if}
     </section>
+
+    {#if detail.parse_audit.length > 0}
+      <section class="card p-4 space-y-2 border-l-4 border-warn">
+        <div class="flex items-baseline justify-between gap-3">
+          <h2 class="text-sm font-semibold text-warn">
+            {detail.parse_audit.length} parse diagnostic{detail.parse_audit.length === 1 ? '' : 's'}
+          </h2>
+          <span class="text-[10px] text-fg3 font-mono">tier {detail.report.ingest_tier}</span>
+        </div>
+        <p class="text-xs text-fg2">{diagnosticSummary(detail.parse_audit)}</p>
+        <ul class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-xs">
+          {#each detail.parse_audit.slice(0, 8) as item}
+            <li class="flex items-center gap-2 min-w-0">
+              <span class="font-mono text-fg3 shrink-0">row {item.row_index + 1}</span>
+              <span class="text-fg1 truncate" title={diagnosticLabel(item.diagnostic)}>
+                {diagnosticLabel(item.diagnostic)}
+              </span>
+              {#if item.confidence != null}
+                <span class="text-fg3 shrink-0">{(item.confidence * 100).toFixed(0)}%</span>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+        {#if detail.parse_audit.length > 8}
+          <p class="text-[11px] text-fg3">Showing first 8 diagnostics; filter unmatched rows or re-parse after ontology fixes.</p>
+        {/if}
+      </section>
+    {/if}
 
     {#if detail.unmatched_analytes.length > 0}
       <section class="card p-4 space-y-2 border-l-4 border-warn">

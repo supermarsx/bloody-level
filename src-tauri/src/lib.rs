@@ -15,8 +15,7 @@ use tauri::Manager;
 pub fn run() {
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info".into()),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
         )
         .init();
 
@@ -25,10 +24,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_os::init())
         .setup(|app| {
-            let data_dir = app
-                .path()
-                .app_data_dir()
-                .expect("resolve app data dir");
+            let data_dir = app.path().app_data_dir().expect("resolve app data dir");
             std::fs::create_dir_all(&data_dir)?;
             std::fs::create_dir_all(data_dir.join("pdfs"))?;
             std::fs::create_dir_all(data_dir.join("models"))?;
@@ -63,7 +59,11 @@ pub fn run() {
             commands::reports::list_flagged_analytes,
             commands::tiers::tier_status_tesseract,
             commands::tiers::tier_status_llm,
+            commands::tiers::tier_load_llm,
+            commands::tiers::tier_unload_llm,
             commands::tiers::tier_status_olmocr,
+            commands::tiers::tier_load_olmocr,
+            commands::tiers::tier_unload_olmocr,
             commands::tiers::tier_status_pdfium,
             commands::app_info::app_info,
             commands::app_info::export_vault,

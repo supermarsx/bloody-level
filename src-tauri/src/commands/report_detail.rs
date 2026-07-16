@@ -9,6 +9,7 @@ use crate::state::AppState;
 pub struct ReportDetail {
     pub report: ReportMeta,
     pub rows: Vec<ReportRow>,
+    pub parse_audit: Vec<ReportParseAudit>,
     pub unmatched_analytes: Vec<String>,
     pub stats: ReportStats,
     /// Adjacent reports for the same patient, oldest→newest, so the UI can
@@ -89,6 +90,16 @@ pub struct ReportRow {
 }
 
 #[derive(Serialize)]
+pub struct ReportParseAudit {
+    pub row_index: i64,
+    pub diagnostic: String,
+    pub parse_method: Option<String>,
+    pub confidence: Option<f64>,
+    pub llm_repaired: bool,
+    pub ocr_tier: i64,
+}
+
+#[derive(Serialize)]
 pub struct ReportStats {
     pub total_rows: i64,
     pub matched_rows: i64,
@@ -101,7 +112,10 @@ pub struct ReportStats {
 }
 
 #[tauri::command]
-pub async fn report_detail(state: State<'_, AppState>, report_id: String) -> AppResult<ReportDetail> {
+pub async fn report_detail(
+    state: State<'_, AppState>,
+    report_id: String,
+) -> AppResult<ReportDetail> {
     let guard = state.db.lock().await;
     let db = guard.as_ref().ok_or(AppError::Locked)?;
 
@@ -199,16 +213,46 @@ pub async fn report_detail(state: State<'_, AppState>, report_id: String) -> App
         .into_iter()
         .collect();
 
+    let parse_audit: Vec<ReportParseAudit> = db
+        .conn
+        .prepare(
+            "SELECT row_index, diagnostic, parse_method, confidence, llm_repaired, ocr_tier
+             FROM parse_audit
+             WHERE report_id = ?1
+             ORDER BY row_index ASC, id ASC",
+        )?
+        .query_map([&report_id], |row| {
+            Ok(ReportParseAudit {
+                row_index: row.get(0)?,
+                diagnostic: row.get(1)?,
+                parse_method: row.get(2)?,
+                confidence: row.get(3)?,
+                llm_repaired: row.get::<_, i64>(4)? != 0,
+                ocr_tier: row.get(5)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+
     let total_rows = rows.len() as i64;
     let matched_rows = rows.iter().filter(|r| r.analyte_id.is_some()).count() as i64;
     let unmatched_rows = total_rows - matched_rows;
     let abnormal_rows = rows
         .iter()
-        .filter(|r| matches!(r.flag.as_deref(), Some("low") | Some("high") | Some("abnormal_qual")))
+        .filter(|r| {
+            matches!(
+                r.flag.as_deref(),
+                Some("low") | Some("high") | Some("abnormal_qual")
+            )
+        })
         .count() as i64;
     let critical_rows = rows
         .iter()
-        .filter(|r| matches!(r.flag.as_deref(), Some("critical_low") | Some("critical_high")))
+        .filter(|r| {
+            matches!(
+                r.flag.as_deref(),
+                Some("critical_low") | Some("critical_high")
+            )
+        })
         .count() as i64;
     let inline_prior_rows = rows.iter().filter(|r| r.inline_prior_pdf).count() as i64;
     let min_confidence = rows
@@ -251,6 +295,7 @@ pub async fn report_detail(state: State<'_, AppState>, report_id: String) -> App
     Ok(ReportDetail {
         report,
         rows,
+        parse_audit,
         unmatched_analytes,
         stats: ReportStats {
             total_rows,
@@ -259,7 +304,11 @@ pub async fn report_detail(state: State<'_, AppState>, report_id: String) -> App
             abnormal_rows,
             critical_rows,
             inline_prior_rows,
-            min_confidence: if min_confidence.is_finite() { min_confidence } else { 0.0 },
+            min_confidence: if min_confidence.is_finite() {
+                min_confidence
+            } else {
+                0.0
+            },
             avg_confidence,
         },
         prev_report_id,

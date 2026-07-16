@@ -13,7 +13,9 @@ fn main() {
     // gives the user a clear, actionable error if no pdfium is found anywhere.
     if let Err(e) = ensure_pdfium() {
         println!("cargo:warning=pdfium download failed: {e}");
-        println!("cargo:warning=Manual install: https://github.com/bblanchon/pdfium-binaries/releases");
+        println!(
+            "cargo:warning=Manual install: https://github.com/bblanchon/pdfium-binaries/releases"
+        );
     }
 
     tauri_build::build();
@@ -25,29 +27,32 @@ fn ensure_pdfium() -> Result<(), String> {
 
     // bblanchon's archive naming is {plat}-{arch}; the older naming used full
     // names like "pdfium-windows-x64". Try both. The first that downloads wins.
-    let (lib_filename, archive_match, candidates) = match (target_os.as_str(), target_arch.as_str()) {
+    let (lib_filename, archive_match, candidates) = match (target_os.as_str(), target_arch.as_str())
+    {
         ("windows", "x86_64") => (
-            "pdfium.dll", "pdfium.dll",
+            "pdfium.dll",
+            "pdfium.dll",
             vec!["pdfium-win-x64.tgz", "pdfium-windows-x64.tgz"],
         ),
         ("windows", "aarch64") => (
-            "pdfium.dll", "pdfium.dll",
+            "pdfium.dll",
+            "pdfium.dll",
             vec!["pdfium-win-arm64.tgz", "pdfium-windows-arm64.tgz"],
         ),
-        ("linux", "x86_64") => (
-            "libpdfium.so", "libpdfium.so",
-            vec!["pdfium-linux-x64.tgz"],
-        ),
+        ("linux", "x86_64") => ("libpdfium.so", "libpdfium.so", vec!["pdfium-linux-x64.tgz"]),
         ("linux", "aarch64") => (
-            "libpdfium.so", "libpdfium.so",
+            "libpdfium.so",
+            "libpdfium.so",
             vec!["pdfium-linux-arm64.tgz"],
         ),
         ("macos", "x86_64") => (
-            "libpdfium.dylib", "libpdfium.dylib",
+            "libpdfium.dylib",
+            "libpdfium.dylib",
             vec!["pdfium-mac-x64.tgz"],
         ),
         ("macos", "aarch64") => (
-            "libpdfium.dylib", "libpdfium.dylib",
+            "libpdfium.dylib",
+            "libpdfium.dylib",
             vec!["pdfium-mac-arm64.tgz"],
         ),
         (os, arch) => return Err(format!("unsupported target: {os}-{arch}")),
@@ -95,8 +100,12 @@ fn ensure_pdfium() -> Result<(), String> {
         let lib_bytes = extract_lib_from_tgz(&bytes, archive_match)
             .ok_or_else(|| format!("{lib_filename} not found in archive {got_archive}"))?;
         fs::write(&bundled, &lib_bytes).map_err(|e| format!("write {bundled:?}: {e}"))?;
-        println!("cargo:warning=pdfium: installed at {} ({} bytes from {})",
-                 bundled.display(), lib_bytes.len(), got_archive);
+        println!(
+            "cargo:warning=pdfium: installed at {} ({} bytes from {})",
+            bundled.display(),
+            lib_bytes.len(),
+            got_archive
+        );
     }
 
     // Mirror to target/{profile}/ so `cargo run` finds it next to the binary.
@@ -104,7 +113,10 @@ fn ensure_pdfium() -> Result<(), String> {
         let target_lib = target_dir.join(lib_filename);
         if target_dir.exists() && !target_lib.exists() {
             if let Err(e) = fs::copy(&bundled, &target_lib) {
-                println!("cargo:warning=could not mirror pdfium to {}: {e}", target_lib.display());
+                println!(
+                    "cargo:warning=could not mirror pdfium to {}: {e}",
+                    target_lib.display()
+                );
             } else {
                 println!("cargo:warning=pdfium: mirrored to {}", target_lib.display());
             }
@@ -154,11 +166,7 @@ fn extract_lib_from_tgz(tgz_bytes: &[u8], lib_match: &str) -> Option<Vec<u8>> {
     let mut archive = tar::Archive::new(gz);
     for entry in archive.entries().ok()? {
         let mut entry = entry.ok()?;
-        let path_str = entry
-            .path()
-            .ok()?
-            .to_string_lossy()
-            .replace('\\', "/");
+        let path_str = entry.path().ok()?.to_string_lossy().replace('\\', "/");
         if path_str.ends_with(lib_match) {
             let mut buf = Vec::new();
             std::io::Read::read_to_end(&mut entry, &mut buf).ok()?;

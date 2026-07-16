@@ -40,14 +40,17 @@
       },
       "assetProtocol": {
         "enable": true,
-        "scope": ["$APPDATA/blevel-tracker/**", "$APPLOCALDATA/blevel-tracker/**"]
+        "scope": [
+          "$APPDATA/blevel-tracker/**",
+          "$APPLOCALDATA/blevel-tracker/**"
+        ]
       }
     }
   },
   "bundle": {
     "active": true,
     "targets": ["msi", "nsis"],
-    "category": "Healthcare",
+    "category": "Healthcare and Fitness",
     "shortDescription": "Local-only clinical lab-PDF tracker",
     "longDescription": "Ingests clinical pathology PDFs and presents longitudinal analyte trends, deltas, and reference bands. Fully local; encrypted at rest.",
     "publisher": "blevel-tracker",
