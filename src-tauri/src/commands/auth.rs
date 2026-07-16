@@ -6,11 +6,18 @@ use tauri::State;
 use crate::crypto::{
     kdf,
     keystore::{generate_dmk, generate_salt, Keystore, Wrapper},
-    wrap,
+    password_strength, wrap,
 };
 use crate::db::Database;
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
+
+#[derive(Serialize)]
+pub struct PasskeyStatus {
+    pub label: String,
+    pub credential_id_b64: String,
+    pub prf_salt_b64: String,
+}
 
 #[derive(Serialize)]
 pub struct AuthStatus {
@@ -18,8 +25,10 @@ pub struct AuthStatus {
     pub has_password: bool,
     pub has_passkey: bool,
     pub passkey_count: usize,
+    pub passkeys: Vec<PasskeyStatus>,
     pub unlocked: bool,
     pub failed_unlocks: u32,
+    pub unlock_backoff_remaining_secs: i64,
     /// True only in debug builds. Frontend uses this to surface a dev "Skip"
     /// button that uses a known dev password — never compiled into release.
     pub is_dev: bool,
@@ -37,35 +46,35 @@ pub async fn auth_status(state: State<'_, AppState>) -> AppResult<AuthStatus> {
             has_password: false,
             has_passkey: false,
             passkey_count: 0,
+            passkeys: vec![],
             unlocked,
             failed_unlocks: 0,
+            unlock_backoff_remaining_secs: 0,
             is_dev: IS_DEV,
         });
     }
     let ks = Keystore::load(&path)?;
+    let passkeys = passkey_statuses(&ks);
     Ok(AuthStatus {
         initialized: true,
         has_password: ks.has_password(),
         has_passkey: ks.has_passkey(),
         passkey_count: ks.passkeys().len(),
+        passkeys,
         unlocked,
         failed_unlocks: ks.failed_unlocks,
+        unlock_backoff_remaining_secs: ks.unlock_backoff_remaining_secs(),
         is_dev: IS_DEV,
     })
 }
 
 #[tauri::command]
-pub async fn auth_setup_password(
-    state: State<'_, AppState>,
-    password: String,
-) -> AppResult<()> {
+pub async fn auth_setup_password(state: State<'_, AppState>, password: String) -> AppResult<()> {
     let ks_path = state.keystore_path();
     if ks_path.exists() {
         return Err(AppError::AlreadyInitialized);
     }
-    if password.len() < 10 {
-        return Err(AppError::BadRequest("password must be ≥ 10 chars".into()));
-    }
+    password_strength::validate_new_password(&password)?;
     let dmk = generate_dmk();
     let salt = generate_salt(16);
     let kek = kdf::derive_kek_from_password(&password, &salt)?;
@@ -90,12 +99,10 @@ pub async fn auth_setup_password(
 }
 
 #[tauri::command]
-pub async fn auth_unlock_password(
-    state: State<'_, AppState>,
-    password: String,
-) -> AppResult<()> {
+pub async fn auth_unlock_password(state: State<'_, AppState>, password: String) -> AppResult<()> {
     let ks_path = state.keystore_path();
     let mut ks = Keystore::load(&ks_path)?;
+    ks.enforce_unlock_backoff()?;
     let pw = ks
         .wrappers
         .iter()
@@ -110,9 +117,15 @@ pub async fn auth_unlock_password(
         })
         .ok_or_else(|| AppError::BadRequest("no password wrapper".into()))?;
 
-    let salt = B64.decode(pw.0).map_err(|e| AppError::Base64(e.to_string()))?;
-    let nonce = B64.decode(pw.1).map_err(|e| AppError::Base64(e.to_string()))?;
-    let ct = B64.decode(pw.2).map_err(|e| AppError::Base64(e.to_string()))?;
+    let salt = B64
+        .decode(pw.0)
+        .map_err(|e| AppError::Base64(e.to_string()))?;
+    let nonce = B64
+        .decode(pw.1)
+        .map_err(|e| AppError::Base64(e.to_string()))?;
+    let ct = B64
+        .decode(pw.2)
+        .map_err(|e| AppError::Base64(e.to_string()))?;
 
     let kek = kdf::derive_kek_from_password(&password, &salt)?;
     let dmk = match wrap::unwrap_dmk(&kek, &nonce, &ct) {
@@ -145,9 +158,7 @@ pub async fn auth_change_password(
     state: State<'_, AppState>,
     args: ChangePasswordArgs,
 ) -> AppResult<()> {
-    if args.new_password.len() < 10 {
-        return Err(AppError::BadRequest("new password must be ≥ 10 chars".into()));
-    }
+    password_strength::validate_new_password(&args.new_password)?;
     let ks_path = state.keystore_path();
     let mut ks = Keystore::load(&ks_path)?;
 
@@ -165,9 +176,15 @@ pub async fn auth_change_password(
         })
         .ok_or_else(|| AppError::BadRequest("no password wrapper".into()))?;
 
-    let salt = B64.decode(pw.0).map_err(|e| AppError::Base64(e.to_string()))?;
-    let nonce = B64.decode(pw.1).map_err(|e| AppError::Base64(e.to_string()))?;
-    let ct = B64.decode(pw.2).map_err(|e| AppError::Base64(e.to_string()))?;
+    let salt = B64
+        .decode(pw.0)
+        .map_err(|e| AppError::Base64(e.to_string()))?;
+    let nonce = B64
+        .decode(pw.1)
+        .map_err(|e| AppError::Base64(e.to_string()))?;
+    let ct = B64
+        .decode(pw.2)
+        .map_err(|e| AppError::Base64(e.to_string()))?;
     let cur_kek = kdf::derive_kek_from_password(&args.current_password, &salt)?;
     let dmk = wrap::unwrap_dmk(&cur_kek, &nonce, &ct)?;
 
@@ -227,9 +244,15 @@ pub async fn auth_register_passkey(
         })
         .ok_or_else(|| AppError::BadRequest("password required to register passkey".into()))?;
 
-    let salt = B64.decode(pw.0).map_err(|e| AppError::Base64(e.to_string()))?;
-    let nonce = B64.decode(pw.1).map_err(|e| AppError::Base64(e.to_string()))?;
-    let ct = B64.decode(pw.2).map_err(|e| AppError::Base64(e.to_string()))?;
+    let salt = B64
+        .decode(pw.0)
+        .map_err(|e| AppError::Base64(e.to_string()))?;
+    let nonce = B64
+        .decode(pw.1)
+        .map_err(|e| AppError::Base64(e.to_string()))?;
+    let ct = B64
+        .decode(pw.2)
+        .map_err(|e| AppError::Base64(e.to_string()))?;
     let kek = kdf::derive_kek_from_password(&args.current_password, &salt)?;
     let dmk = wrap::unwrap_dmk(&kek, &nonce, &ct)?;
 
@@ -263,6 +286,7 @@ pub async fn auth_unlock_passkey(
 ) -> AppResult<()> {
     let ks_path = state.keystore_path();
     let mut ks = Keystore::load(&ks_path)?;
+    ks.enforce_unlock_backoff()?;
     let target = ks
         .wrappers
         .iter()
@@ -277,14 +301,22 @@ pub async fn auth_unlock_passkey(
             }
             _ => None,
         })
-        .ok_or_else(|| AppError::NotFound("passkey not registered".into()))?;
+        .ok_or_else(|| {
+            ks.record_failure();
+            let _ = ks.save(&ks_path);
+            AppError::NotFound("passkey not registered".into())
+        })?;
 
     let prf = B64
         .decode(&args.prf_output_b64)
         .map_err(|e| AppError::Base64(e.to_string()))?;
     let kek = kdf::derive_kek_from_prf(&prf, b"blevel-tracker DMK wrap v1")?;
-    let nonce = B64.decode(target.0).map_err(|e| AppError::Base64(e.to_string()))?;
-    let ct = B64.decode(target.1).map_err(|e| AppError::Base64(e.to_string()))?;
+    let nonce = B64
+        .decode(target.0)
+        .map_err(|e| AppError::Base64(e.to_string()))?;
+    let ct = B64
+        .decode(target.1)
+        .map_err(|e| AppError::Base64(e.to_string()))?;
 
     let dmk = match wrap::unwrap_dmk(&kek, &nonce, &ct) {
         Ok(k) => k,
@@ -303,4 +335,23 @@ pub async fn auth_unlock_passkey(
     ks.record_success();
     ks.save(&ks_path)?;
     Ok(())
+}
+
+fn passkey_statuses(ks: &Keystore) -> Vec<PasskeyStatus> {
+    ks.wrappers
+        .iter()
+        .filter_map(|w| match w {
+            Wrapper::Passkey {
+                label,
+                credential_id_b64,
+                prf_salt_b64,
+                ..
+            } => Some(PasskeyStatus {
+                label: label.clone(),
+                credential_id_b64: credential_id_b64.clone(),
+                prf_salt_b64: prf_salt_b64.clone(),
+            }),
+            _ => None,
+        })
+        .collect()
 }

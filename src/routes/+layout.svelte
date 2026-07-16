@@ -12,10 +12,10 @@
   import { authEvents } from '$api/auth-events.svelte';
   import { toasts } from '../lib/toasts/store.svelte';
   import { AppError } from '$api/errors';
-  import UnlockGate from '$components/UnlockGate.svelte';
-  import NavBar from '$components/NavBar.svelte';
-  import Toaster from '$components/Toaster.svelte';
-  import Splash from '$components/Splash.svelte';
+  import UnlockGate from '$components/unlock-gate.svelte';
+  import NavBar from '$components/nav-bar.svelte';
+  import Toaster from '$components/toaster.svelte';
+  import Splash from '$components/splash.svelte';
   import { isTauri } from '$api/index';
   import { windowTitle } from '$lib/title.svelte';
   import { page } from '$app/stores';

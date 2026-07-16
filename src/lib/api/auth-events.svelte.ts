@@ -2,7 +2,7 @@
 // a `locked` error. Lives outside Svelte's reactive system intentionally —
 // listeners can be plain functions, set up at app boot.
 
-export type AuthEvent = { type: 'locked'; command: string | null };
+export type AuthEvent = { type: "locked"; command: string | null };
 
 type Listener = (e: AuthEvent) => void;
 
@@ -19,7 +19,7 @@ class AuthEventBus {
       try {
         l(e);
       } catch (err) {
-        console.error('auth-event listener threw', err);
+        console.error("auth-event listener threw", err);
       }
     }
   }

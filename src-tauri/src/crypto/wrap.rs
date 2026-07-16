@@ -6,10 +6,7 @@ use secrecy::{ExposeSecret, SecretBox};
 
 use crate::error::{AppError, AppResult};
 
-pub fn wrap_dmk(
-    kek: &SecretBox<[u8; 32]>,
-    dmk: &[u8; 32],
-) -> AppResult<(Vec<u8>, Vec<u8>)> {
+pub fn wrap_dmk(kek: &SecretBox<[u8; 32]>, dmk: &[u8; 32]) -> AppResult<(Vec<u8>, Vec<u8>)> {
     let cipher = XChaCha20Poly1305::new(GenericArray::from_slice(kek.expose_secret()));
     let nonce = XChaCha20Poly1305::generate_nonce(&mut OsRng);
     let ct = cipher

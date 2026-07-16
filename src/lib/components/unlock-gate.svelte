@@ -48,6 +48,7 @@
   const passwordsMatch = $derived(
     confirmPassword.length === 0 || password === confirmPassword
   );
+  const backoffRemaining = $derived(status?.unlock_backoff_remaining_secs ?? 0);
 
   async function setupPassword() {
     err = null;
@@ -75,19 +76,33 @@
       await auth.unlockPassword(password);
       password = '';
       await refresh();
-    } catch (e) { err = AppError.fromUnknown(e); }
+    } catch (e) {
+      err = AppError.fromUnknown(e);
+      await refresh();
+    }
     finally { busy = false; }
   }
 
-  async function unlockPasskey() {
+  async function unlockPasskey(passkey: auth.PasskeySummary | undefined = status?.passkeys?.[0]) {
     err = null;
     busy = true;
     try {
+      if (!passkey) {
+        throw new Error('No passkey is registered for this vault');
+      }
       if (!auth.isWebAuthnAvailable()) {
         throw new Error('WebAuthn not available in this WebView');
       }
-      throw new Error('Passkey unlock UI is wired in Settings → Passkeys');
-    } catch (e) { err = AppError.fromUnknown(e); }
+      const assertion = await auth.webauthnAssert(passkey.credential_id_b64, passkey.prf_salt_b64);
+      await auth.unlockPasskey({
+        credential_id_b64: auth.b64.encode(assertion.credentialId),
+        prf_output_b64: auth.b64.encode(assertion.prfOutput)
+      });
+      await refresh();
+    } catch (e) {
+      err = AppError.fromUnknown(e);
+      await refresh();
+    }
     finally { busy = false; }
   }
 
@@ -247,9 +262,19 @@
 
         {#if status?.has_passkey}
           <div class="gate__divider"><span>or</span></div>
-          <button class="btn w-full flex items-center justify-center gap-2" disabled={busy} onclick={unlockPasskey}>
-            <span aria-hidden="true">🔑</span> Use a passkey
-          </button>
+          {#if (status.passkeys?.length ?? 0) <= 1}
+            <button class="btn w-full flex items-center justify-center gap-2" disabled={busy} onclick={() => unlockPasskey()}>
+              <span aria-hidden="true">🔑</span> Use a passkey
+            </button>
+          {:else}
+            <div class="space-y-2">
+              {#each status.passkeys as passkey}
+                <button class="btn w-full flex items-center justify-center gap-2" disabled={busy} onclick={() => unlockPasskey(passkey)}>
+                  <span aria-hidden="true">🔑</span> {passkey.label || 'Passkey'}
+                </button>
+              {/each}
+            </div>
+          {/if}
         {/if}
 
         {#if status?.is_dev}
@@ -265,6 +290,9 @@
           <p class="text-[11px] text-warn flex items-center gap-1">
             <span aria-hidden="true">⚠</span>
             {status.failed_unlocks} failed attempt{status.failed_unlocks === 1 ? '' : 's'} since the last successful unlock.
+            {#if backoffRemaining > 0}
+              Try again in {backoffRemaining} second{backoffRemaining === 1 ? '' : 's'}.
+            {/if}
           </p>
         {/if}
       {/if}
