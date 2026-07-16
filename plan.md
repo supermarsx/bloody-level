@@ -9,6 +9,7 @@ No network calls. No cloud APIs. All inference, OCR, and storage stay on-device.
 ## 1. Goals & Non-Goals
 
 ### Goals
+
 - Parse every analyte in every PDF with high precision via deterministic, rule-based methods.
 - Embedded-only LLM/OCR tiers — opt-in via settings, lazy-loaded, never required for the happy path.
 - Encrypted-at-rest storage with **passkey-first** unlock and **password fallback**.
@@ -17,6 +18,7 @@ No network calls. No cloud APIs. All inference, OCR, and storage stay on-device.
 - Zero telemetry. Zero outbound network.
 
 ### Non-Goals
+
 - Multi-user / cloud sync (single-user local app).
 - HL7 / FHIR ingestion (PDF-only for v1).
 - Diagnostic recommendations — interpretation surfaces are descriptive, not prescriptive.
@@ -56,26 +58,27 @@ No network calls. No cloud APIs. All inference, OCR, and storage stay on-device.
 
 ## 3. Tech Stack
 
-| Layer        | Choice                                  | Rationale |
-|--------------|-----------------------------------------|-----------|
-| Shell        | Tauri 2.x                               | Tiny installer, native WebView2 on Windows. |
-| Frontend     | Svelte 5 (runes) + Vite                 | Best perf-to-DX ratio; reactivity model fits clinical dashboards. |
-| Charts       | Apache ECharts (`echarts` 5.x)          | First-class theming, ref-band shading, boxplots, candlesticks. |
-| UI primitives| `bits-ui` + `tailwindcss-variants`      | Headless components, themeable. |
-| Style        | Tailwind 4 + CSS custom properties      | Dual theme via CSS vars; chart palette mirrors. |
-| DB           | SQLCipher via `rusqlite` (bundled)      | Encrypted-at-rest with battle-tested AES-256. |
-| KDF          | `argon2` (Argon2id, m=64MB, t=3, p=1)   | Modern password-stretching. |
-| Passkey      | WebAuthn via WebView2 + PRF extension   | Hardware-backed unlock. |
-| PDF          | `pdfium-render` (or `lopdf` fallback)   | Highest text-extraction fidelity. |
-| OCR (no-LLM) | `tesseract` (Leptess / `rusty-tesseract`) | Battle-tested, ~30MB traineddata, no model GPU. |
-| OCR (vision) | olmOCR-2 (Qwen2.5-VL-7B-derived)        | Opt-in, ~4.5GB Q4 GGUF or sidecar. |
-| LLM          | Phi-4-mini-reasoning Q4_K_M             | ~2.3GB, llama-cpp-2 bindings. |
+| Layer         | Choice                                    | Rationale                                                         |
+| ------------- | ----------------------------------------- | ----------------------------------------------------------------- |
+| Shell         | Tauri 2.x                                 | Tiny installer, native WebView2 on Windows.                       |
+| Frontend      | Svelte 5 (runes) + Vite                   | Best perf-to-DX ratio; reactivity model fits clinical dashboards. |
+| Charts        | Apache ECharts (`echarts` 5.x)            | First-class theming, ref-band shading, boxplots, candlesticks.    |
+| UI primitives | `bits-ui` + `tailwindcss-variants`        | Headless components, themeable.                                   |
+| Style         | Tailwind 4 + CSS custom properties        | Dual theme via CSS vars; chart palette mirrors.                   |
+| DB            | SQLCipher via `rusqlite` (bundled)        | Encrypted-at-rest with battle-tested AES-256.                     |
+| KDF           | `argon2` (Argon2id, m=64MB, t=3, p=1)     | Modern password-stretching.                                       |
+| Passkey       | WebAuthn via WebView2 + PRF extension     | Hardware-backed unlock.                                           |
+| PDF           | `pdfium-render` (or `lopdf` fallback)     | Highest text-extraction fidelity.                                 |
+| OCR (no-LLM)  | `tesseract` (Leptess / `rusty-tesseract`) | Battle-tested, ~30MB traineddata, no model GPU.                   |
+| OCR (vision)  | olmOCR-2 (Qwen2.5-VL-7B-derived)          | Opt-in, ~4.5GB Q4 GGUF or sidecar.                                |
+| LLM           | Phi-4-mini-reasoning Q4_K_M               | ~2.3GB, llama-cpp-2 bindings.                                     |
 
 ---
 
 ## 4. Encryption & Authentication
 
 ### 4.1 Threat model
+
 Single-user local DB on a personal device. Threats: device theft, file exfil, casual access by other users on the same machine. **Out of scope:** privileged malware on the unlocked device.
 
 ### 4.2 Key hierarchy
@@ -126,6 +129,7 @@ WebAuthn PRF        Argon2id
 3. **Strength meter** at set time using `zxcvbn-rs`. Minimum entropy gate: 14 bits (configurable, but enforced ≥ 10).
 
 ### 4.5 Tauri-side implementation
+
 - All key material lives in pinned `secrecy::Secret<[u8; 32]>` buffers — zeroized on drop.
 - `CryptoCommand::unlock` returns only a session handle to the frontend; raw keys never cross the IPC boundary.
 - DB connection lives in a `tokio::Mutex<rusqlite::Connection>` inside the Rust core, exposed only via narrow command surfaces.
@@ -164,6 +168,7 @@ Persist to encrypted SQLite + audit log
 ### 5.1 Confidence scoring (drives tier escalation)
 
 Each parsed row gets a `confidence ∈ [0,1]` derived from:
+
 - analyte name match score (1.0 exact, 0.8 alias, 0.6 fuzzy ≥ 90%, 0.0 miss)
 - value parse status (numeric-clean = 1.0, qualitative-known = 1.0, unparsed = 0.0)
 - range parse status (grammar match = 1.0, unrecognized = 0.0)
@@ -172,6 +177,7 @@ Each parsed row gets a `confidence ∈ [0,1]` derived from:
 Row confidence = weighted geo-mean. Document confidence = min row confidence within a section.
 
 Thresholds (tunable in Settings):
+
 - `tier_2_escalate_below` = 0.4 (text density / pdfium-confidence)
 - `tier_3_escalate_below` = 0.55 (Tesseract `mean_confidence`)
 - `tier_4_escalate_below` = 0.7 (parser row confidence)
@@ -183,6 +189,7 @@ Thresholds (tunable in Settings):
 Organized into 10 modules. Every method is a pure function (`&Tokens → Result<T, ParseDiagnostic>`), independently unit-testable.
 
 ### 6.1 Layout & tokenization (10)
+
 1. `extract_pages_pdfium` — page-aware text + bounding boxes.
 2. `dehyphenate_lines` — fix soft-hyphen line breaks.
 3. `reflow_columns` — reconstruct multi-column layouts via x-coordinate clustering.
@@ -195,6 +202,7 @@ Organized into 10 modules. Every method is a pure function (`&Tokens → Result<
 10. `detect_signature_block` — strip "Dr. X" trailer to avoid spurious analytes.
 
 ### 6.2 Section detection (10)
+
 11. `detect_section_HEMATOLOGIA`
 12. `detect_section_PATOLOGIA_QUIMICA`
 13. `detect_section_IMUNOLOGIA`
@@ -207,6 +215,7 @@ Organized into 10 modules. Every method is a pure function (`&Tokens → Result<
 20. `detect_subsection_eixo_*` (hipófiso-tiroideu, hipófiso-gonadal)
 
 ### 6.3 Header / metadata extraction (10)
+
 21. `extract_patient_name` (Exmo Sr. / Exma Sra. block)
 22. `extract_patient_address`
 23. `extract_collection_date` (`Data de colheita`)
@@ -219,6 +228,7 @@ Organized into 10 modules. Every method is a pure function (`&Tokens → Result<
 30. `extract_clinic_entity` + `extract_requesting_physician`
 
 ### 6.4 Reference-range grammar (15)
+
 31. `parse_range_a_b` — `13.0 - 17.0`
 32. `parse_range_lt` — `< 190`
 33. `parse_range_lte` — `<= 42`
@@ -236,6 +246,7 @@ Organized into 10 modules. Every method is a pure function (`&Tokens → Result<
 45. `parse_range_open_ended` — single-bound or guidance-only ranges.
 
 ### 6.5 Row parsing (15)
+
 46. `parse_standard_row` — `analyte | result | unit | ref`
 47. `parse_row_with_1_prior_result`
 48. `parse_row_with_2_prior_results`
@@ -253,6 +264,7 @@ Organized into 10 modules. Every method is a pure function (`&Tokens → Result<
 60. `parse_method_annotation_line` — italic methodology in parentheses
 
 ### 6.6 Value parsing (10)
+
 61. `parse_numeric_decimal` — handles PT comma `13,8` and EN dot `13.8`
 62. `parse_numeric_integer`
 63. `parse_numeric_with_thousands_sep`
@@ -265,6 +277,7 @@ Organized into 10 modules. Every method is a pure function (`&Tokens → Result<
 70. `detect_flag_marker` — H/L/* badges from layout
 
 ### 6.7 Unit handling (10)
+
 71. `normalize_unit_g_dl`
 72. `normalize_unit_mg_dl`
 73. `normalize_unit_mmol_l`
@@ -277,6 +290,7 @@ Organized into 10 modules. Every method is a pure function (`&Tokens → Result<
 80. `validate_unit_for_analyte` — flag unit mismatch from ontology
 
 ### 6.8 Analyte canonicalization (10)
+
 81. `fuzzy_match_pt_name` — Levenshtein ≥ 0.92 against ontology.
 82. `resolve_acronym` — TSH, GGT, AST, ALT, HDL, LDL, eGFR, …
 83. `dedup_diacritics` — `é/e`, `á/a` collapse for matching only.
@@ -289,6 +303,7 @@ Organized into 10 modules. Every method is a pure function (`&Tokens → Result<
 90. `parse_method_annotation` — Quimioluminescência, HPLC, Jaffé Cinético modificado, etc.
 
 ### 6.9 Audit & repair (10)
+
 91. `compute_row_confidence` — weighted geo-mean of sub-scores.
 92. `detect_layout_anomaly` — column count mismatch on a row.
 93. `detect_orphan_value` — value with no left-side analyte name.
@@ -298,9 +313,10 @@ Organized into 10 modules. Every method is a pure function (`&Tokens → Result<
 97. `flag_missing_required_field` — value or range missing.
 98. `trigger_llm_repair` — gated by tier-4 toggle and per-row threshold.
 99. `trigger_ocr_fallback` — escalate to Tesseract or olmOCR-2.
-100. `write_parse_audit` — persist the full diagnostic trail.
+100.  `write_parse_audit` — persist the full diagnostic trail.
 
 ### Method conventions
+
 - Every method has matching test fixtures in `parse/fixtures/` derived from the 14 sample PDFs (after the ontology-bootstrap agent finishes).
 - All methods log to a structured `ParseDiagnostic` enum so the audit page can render exactly which method matched (or didn't).
 
@@ -469,18 +485,21 @@ CREATE TABLE settings (
 ## 9. Clinical UX (the "all the controls" list)
 
 ### 9.1 Reference bands (chart background)
+
 - Green band = normal range.
 - Yellow band = borderline (ref ± 10% if not specified).
 - Red band = critical (configurable per analyte).
 - Banded shading rendered as ECharts `markArea`, palette swaps with theme.
 
 ### 9.2 Per-result indicators
+
 - Δ vs immediately prior: absolute + percent + arrow (▲ ▼ →).
 - Δ vs first recorded: shown on hover.
 - Z-score against reference midpoint (when both bounds present).
 - H / L / Crit badges, color-coded.
 
 ### 9.3 Per-analyte detail page
+
 - Time-series line + ref bands.
 - Sparkline summary card with min/max/mean/last.
 - Table of every reading with method, source PDF, parser-method tag.
@@ -489,27 +508,32 @@ CREATE TABLE settings (
 - Sex-/age-/cycle-aware ref selection at hover-time.
 
 ### 9.4 Dashboard
+
 - Most-recent snapshot per patient in a panel grid: Hemograma, Lipid, CMP, Thyroid, Vitamins, Hormones, etc.
 - Each tile: latest value, Δ vs prior, status pill (Normal / Borderline / High / Low / Critical).
 - "Worth-watching" section: analytes trending toward abnormal (slope test over last 3 readings).
 - "Flagged" section: out-of-range latest values.
 
 ### 9.5 Reports view
+
 - Split-pane: PDF on left (rendered via pdfium-render to canvas), parsed table on right.
 - Click a parsed row → highlights the source bbox in the PDF.
 - "Re-parse with LLM" button per row when LLM tier is enabled.
 
 ### 9.6 Compare view
+
 - Pick 2 reports (same or different patient) side-by-side.
 - Auto-aligned by analyte; deltas computed.
 - Pick 2 patients → cohort view (e.g., comparing siblings).
 
 ### 9.7 Ingest
+
 - Drag-drop folder or files.
 - Live progress: per-file tier reached, confidence, analytes parsed.
 - Conflict resolution prompts (new patient detected, duplicate report SHA, etc.).
 
 ### 9.8 Settings
+
 - Theme (Light / Dark / System).
 - LLM tier enable + model path.
 - olmOCR-2 tier enable + model path.
@@ -539,19 +563,19 @@ src/
 │   │   ├── tokens.ts               # design tokens
 │   │   └── echarts-themes.ts       # registered ECharts themes
 │   ├── charts/
-│   │   ├── TimeSeries.svelte       # line + ref bands + crit markers
-│   │   ├── PanelSnapshot.svelte    # tile with sparkline
-│   │   ├── DeltaBadge.svelte
-│   │   ├── ReferenceBand.svelte
-│   │   └── ZScoreGauge.svelte
+│   │   ├── time-series.svelte      # line + ref bands + crit markers
+│   │   ├── panel-snapshot.svelte   # tile with sparkline
+│   │   ├── delta-badge.svelte
+│   │   ├── reference-band.svelte
+│   │   └── z-score-gauge.svelte
 │   ├── components/
-│   │   ├── PatientPicker.svelte
-│   │   ├── PdfDropzone.svelte
-│   │   ├── PdfViewer.svelte
-│   │   ├── ParsedRowTable.svelte
-│   │   ├── FlagPill.svelte
-│   │   ├── UnlockGate.svelte
-│   │   └── SettingsPanel.svelte
+│   │   ├── patient-picker.svelte
+│   │   ├── pdf-dropzone.svelte
+│   │   ├── pdf-viewer.svelte
+│   │   ├── parsed-row-table.svelte
+│   │   ├── flag-pill.svelte
+│   │   ├── unlock-gate.svelte
+│   │   └── settings-panel.svelte
 │   └── format/
 │       ├── numbers.ts              # locale-aware decimal formatting
 │       ├── dates.ts
@@ -575,10 +599,11 @@ src/
 ## 11. Theming (dark + light)
 
 ### 11.1 CSS custom properties
+
 A single `app.css` defines tokens for both modes. The `data-theme` attribute on `<html>` switches the active set.
 
 ```css
-:root[data-theme='light'] {
+:root[data-theme="light"] {
   --bg-1: #ffffff;
   --bg-2: #f6f7f9;
   --fg-1: #0a0a0a;
@@ -588,11 +613,11 @@ A single `app.css` defines tokens for both modes. The `data-theme` attribute on 
   --ok: #16a34a;
   --warn: #d97706;
   --crit: #dc2626;
-  --band-normal: rgba(22,163,74,0.10);
-  --band-borderline: rgba(217,119,6,0.10);
-  --band-critical: rgba(220,38,38,0.10);
+  --band-normal: rgba(22, 163, 74, 0.1);
+  --band-borderline: rgba(217, 119, 6, 0.1);
+  --band-critical: rgba(220, 38, 38, 0.1);
 }
-:root[data-theme='dark'] {
+:root[data-theme="dark"] {
   --bg-1: #0b0d10;
   --bg-2: #14171c;
   --fg-1: #f3f4f6;
@@ -602,19 +627,22 @@ A single `app.css` defines tokens for both modes. The `data-theme` attribute on 
   --ok: #22c55e;
   --warn: #f59e0b;
   --crit: #ef4444;
-  --band-normal: rgba(34,197,94,0.12);
-  --band-borderline: rgba(245,158,11,0.12);
-  --band-critical: rgba(239,68,68,0.14);
+  --band-normal: rgba(34, 197, 94, 0.12);
+  --band-borderline: rgba(245, 158, 11, 0.12);
+  --band-critical: rgba(239, 68, 68, 0.14);
 }
 ```
 
 ### 11.2 ECharts theme registry
+
 Two themes (`blevel-light`, `blevel-dark`) registered at app boot. Charts read the active CSS vars and pass them to ECharts via `getComputedStyle(document.documentElement)`.
 
 ### 11.3 Theme rune
+
 ```ts
-export const theme = $state({ mode: 'system' as 'light'|'dark'|'system' });
+export const theme = $state({ mode: "system" as "light" | "dark" | "system" });
 ```
+
 A `MediaQueryList` listener flips `data-theme` and re-applies the ECharts theme on every chart instance.
 
 ---
@@ -622,6 +650,7 @@ A `MediaQueryList` listener flips `data-theme` and re-applies the ECharts theme 
 ## 12. LLM Integration & Toggles
 
 ### 12.1 Phi-4-mini-reasoning
+
 - `llama-cpp-2` Rust bindings.
 - Lazy-load on first need; emit progress to frontend.
 - Two prompt families:
@@ -630,12 +659,14 @@ A `MediaQueryList` listener flips `data-theme` and re-applies the ECharts theme 
 - Strict JSON-output mode via grammar (gbnf).
 
 ### 12.2 olmOCR-2
+
 - Two integration options, decided at scaffold time after testing:
   - (a) Native via `llama-cpp-2` if Qwen2.5-VL multimodal is available in our llama.cpp build.
   - (b) Sidecar Python (`olmocr` CLI) over stdio, started on demand.
 - Either way: opt-in toggle, lazy load, large-model warning, progress UI.
 
 ### 12.3 Settings model
+
 ```json
 {
   "llm": {
@@ -671,6 +702,7 @@ A `MediaQueryList` listener flips `data-theme` and re-applies the ECharts theme 
 ## 14. Dependencies
 
 ### Rust crates
+
 ```toml
 tauri = { version = "2", features = ["protocol-asset"] }
 rusqlite = { version = "0.31", features = ["bundled-sqlcipher-vendored-openssl"] }
@@ -696,6 +728,7 @@ thiserror = "1"
 ```
 
 ### Frontend
+
 ```json
 {
   "svelte": "^5",
@@ -714,21 +747,21 @@ thiserror = "1"
 
 ## 15. Phased Build Plan
 
-| Phase | Scope | Exit criterion |
-|-------|-------|----------------|
-| 0 | Plan + ontology bootstrap | This doc + `analytes.seed.json` produced. |
-| 1 | Skeleton: Tauri + Svelte + Tailwind + theming | App boots, theme toggle works, sample chart renders. |
-| 2 | DB + crypto: SQLCipher + password unlock | First-run sets password; relock works; data persists. |
-| 3 | PDF tier 1: pdfium extraction + ingest command | Drag-drop PDF → raw_text + reports row. |
-| 4 | Parser methods 1–60 (layout, sections, headers, ranges, basic rows) | All 14 sample PDFs produce rows; doc confidence reported. |
-| 5 | Parser methods 61–100 (values, units, canonicalization, audit) | All sample analytes mapped to ontology; audit page renders. |
-| 6 | Dashboard + analyte detail + ref bands + deltas | All 14 PDFs visualized end-to-end. |
-| 7 | Tesseract OCR tier (always-on path for image PDFs) | A scanned-PDF fixture parses via Tesseract. |
-| 8 | Passkey support (WebAuthn PRF + dual-wrap) | Register passkey → relock → unlock with passkey only. |
-| 9 | Phi-4 LLM repair tier (opt-in) | Toggle on → low-confidence row gets LLM-repaired and shown in audit. |
-| 10 | olmOCR-2 vision tier (opt-in) | Toggle on → image-only PDF parsed via olmOCR. |
-| 11 | Compare view, export, settings polish | Feature-complete v1. |
-| 12 | Bundle + installer + signing | Shippable. |
+| Phase | Scope                                                               | Exit criterion                                                       |
+| ----- | ------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| 0     | Plan + ontology bootstrap                                           | This doc + `analytes.seed.json` produced.                            |
+| 1     | Skeleton: Tauri + Svelte + Tailwind + theming                       | App boots, theme toggle works, sample chart renders.                 |
+| 2     | DB + crypto: SQLCipher + password unlock                            | First-run sets password; relock works; data persists.                |
+| 3     | PDF tier 1: pdfium extraction + ingest command                      | Drag-drop PDF → raw_text + reports row.                              |
+| 4     | Parser methods 1–60 (layout, sections, headers, ranges, basic rows) | All 14 sample PDFs produce rows; doc confidence reported.            |
+| 5     | Parser methods 61–100 (values, units, canonicalization, audit)      | All sample analytes mapped to ontology; audit page renders.          |
+| 6     | Dashboard + analyte detail + ref bands + deltas                     | All 14 PDFs visualized end-to-end.                                   |
+| 7     | Tesseract OCR tier (always-on path for image PDFs)                  | A scanned-PDF fixture parses via Tesseract.                          |
+| 8     | Passkey support (WebAuthn PRF + dual-wrap)                          | Register passkey → relock → unlock with passkey only.                |
+| 9     | Phi-4 LLM repair tier (opt-in)                                      | Toggle on → low-confidence row gets LLM-repaired and shown in audit. |
+| 10    | olmOCR-2 vision tier (opt-in)                                       | Toggle on → image-only PDF parsed via olmOCR.                        |
+| 11    | Compare view, export, settings polish                               | Feature-complete v1.                                                 |
+| 12    | Bundle + installer + signing                                        | Shippable.                                                           |
 
 ---
 
@@ -740,4 +773,4 @@ thiserror = "1"
 
 ---
 
-*End of plan. The ontology bootstrap agent runs concurrently with scaffold work in Phase 1.*
+_End of plan. The ontology bootstrap agent runs concurrently with scaffold work in Phase 1._
