@@ -1,0 +1,357 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: Create the GitHub Release as a draft
+        required: true
+        type: boolean
+        default: true
+      prerelease:
+        description: Mark the GitHub Release as a prerelease
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  metadata:
+    name: Metadata
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      app_version: ${{ steps.version.outputs.app_version }}
+      artifact_prefix: ${{ steps.version.outputs.artifact_prefix }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Compute version metadata
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            git fetch --force --tags
+            year="$(date -u +%y)"
+            current="$(
+              git tag -l "${year}.*" |
+              grep -E "^${year}\.[0-9]+$" |
+              sed "s/^${year}\.//" |
+              sort -n |
+              tail -1
+            )"
+            if [[ -z "$current" ]]; then
+              next=1
+            else
+              next=$((current + 1))
+            fi
+            version="${year}.${next}"
+            app_version="${version}.0"
+            artifact_prefix="release-${version}"
+          else
+            short_sha="${GITHUB_SHA::7}"
+            version="ci-${short_sha}"
+            app_version="0.1.0"
+            artifact_prefix="tauri"
+          fi
+
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "app_version=${app_version}" >> "$GITHUB_OUTPUT"
+          echo "artifact_prefix=${artifact_prefix}" >> "$GITHUB_OUTPUT"
+          echo "Version metadata: ${version} (${app_version})"
+
+  checks:
+    name: Checks
+    needs: metadata
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Linux Tauri dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            curl \
+            file \
+            libayatana-appindicator3-dev \
+            libfuse2 \
+            libgtk-3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            patchelf \
+            pkg-config \
+            xdg-utils
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt,clippy
+
+      - name: Cache Rust
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Check frontend formatting
+        run: npm run format:check
+
+      - name: Lint frontend
+        run: npm run lint
+
+      - name: Type check frontend
+        run: npm run check
+
+      - name: Check Rust formatting
+        working-directory: src-tauri
+        run: cargo fmt --all -- --check
+
+      - name: Lint Rust
+        working-directory: src-tauri
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Test Rust
+        working-directory: src-tauri
+        run: cargo test --locked --all-targets
+
+  build:
+    name: Build ${{ matrix.name }}
+    needs:
+      - metadata
+      - checks
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64
+            artifact: windows-x64
+            runner: windows-2025
+            rust_target: ""
+            tauri_args: ""
+          - name: Windows arm64
+            artifact: windows-arm64
+            runner: windows-2025
+            rust_target: aarch64-pc-windows-msvc
+            tauri_args: "--target aarch64-pc-windows-msvc"
+          - name: Linux x64
+            artifact: linux-x64
+            runner: ubuntu-24.04
+            rust_target: ""
+            tauri_args: "--bundles deb,rpm,appimage"
+          - name: Linux arm64
+            artifact: linux-arm64
+            runner: ubuntu-24.04-arm
+            rust_target: ""
+            tauri_args: "--bundles deb,rpm,appimage"
+          - name: macOS arm64
+            artifact: macos-arm64
+            runner: macos-15
+            rust_target: aarch64-apple-darwin
+            tauri_args: "--target aarch64-apple-darwin --bundles app,dmg"
+          - name: macOS x64
+            artifact: macos-x64
+            runner: macos-15-intel
+            rust_target: x86_64-apple-darwin
+            tauri_args: "--target x86_64-apple-darwin --bundles app,dmg"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Linux Tauri dependencies
+        if: startsWith(matrix.runner, 'ubuntu-')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            curl \
+            file \
+            libayatana-appindicator3-dev \
+            libfuse2 \
+            libgtk-3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            patchelf \
+            pkg-config \
+            xdg-utils
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Set up Rust
+        if: matrix.rust_target == ''
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Rust target
+        if: matrix.rust_target != ''
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - name: Cache Rust
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Set release version in build metadata
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          APP_VERSION: ${{ needs.metadata.outputs.app_version }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const appVersion = process.env.APP_VERSION;
+
+          for (const file of ['package.json', 'src-tauri/tauri.conf.json']) {
+            const json = JSON.parse(fs.readFileSync(file, 'utf8'));
+            json.version = appVersion;
+            fs.writeFileSync(file, `${JSON.stringify(json, null, 2)}\n`);
+          }
+
+          const cargoFile = 'src-tauri/Cargo.toml';
+          const cargo = fs.readFileSync(cargoFile, 'utf8');
+          const updated = cargo.replace(
+            /(\[package\][\s\S]*?\nversion\s*=\s*")[^"]+(")/,
+            `$1${appVersion}$2`,
+          );
+          if (updated === cargo) {
+            throw new Error('Could not update src-tauri/Cargo.toml package version');
+          }
+          fs.writeFileSync(cargoFile, updated);
+          NODE
+
+      - name: Build Tauri bundle
+        id: tauri
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          args: ${{ matrix.tauri_args }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ needs.metadata.outputs.artifact_prefix }}-${{ matrix.artifact }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            src-tauri/target/release/bundle/**/*
+            src-tauri/target/**/release/bundle/**/*
+
+  publish:
+    name: Publish GitHub Release
+    if: github.event_name == 'workflow_dispatch'
+    needs:
+      - metadata
+      - build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RELEASE_VERSION: ${{ needs.metadata.outputs.version }}
+      APP_VERSION: ${{ needs.metadata.outputs.app_version }}
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: dist
+
+      - name: Create release notes
+        shell: bash
+        run: |
+          cat > release-notes.md <<EOF
+          Automated Tauri release ${RELEASE_VERSION}.
+
+          App metadata version: ${APP_VERSION}
+          Commit: ${GITHUB_SHA}
+
+          These builds are unsigned unless platform signing secrets are configured.
+          EOF
+
+      - name: Create GitHub Release
+        shell: bash
+        run: |
+          if gh release view "${RELEASE_VERSION}" >/dev/null 2>&1; then
+            echo "Release ${RELEASE_VERSION} already exists" >&2
+            exit 1
+          fi
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_VERSION}" >/dev/null 2>&1; then
+            echo "Tag ${RELEASE_VERSION} already exists" >&2
+            exit 1
+          fi
+
+          mapfile -t assets < <(find dist -type f | sort)
+          if [[ "${#assets[@]}" -eq 0 ]]; then
+            echo "No release assets were downloaded" >&2
+            exit 1
+          fi
+
+          args=(
+            release create "${RELEASE_VERSION}"
+            "${assets[@]}"
+            --target "${GITHUB_SHA}"
+            --title "bloody-level ${RELEASE_VERSION}"
+            --notes-file release-notes.md
+          )
+          if [[ "${{ inputs.draft }}" == "true" ]]; then
+            args+=(--draft)
+          fi
+          if [[ "${{ inputs.prerelease }}" == "true" ]]; then
+            args+=(--prerelease)
+          fi
+
+          gh "${args[@]}"
