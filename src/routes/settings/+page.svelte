@@ -73,8 +73,8 @@
 
   // ── Loaded data ────────────────────────────────────────────────────────
   let tess   = $state<tiers.TierStatus | null>(null);
-  let llm    = $state<tiers.TierStatus | null>(null);
-  let olm    = $state<tiers.TierStatus | null>(null);
+  let llm    = $state<tiers.ModelTierStatus | null>(null);
+  let olm    = $state<tiers.ModelTierStatus | null>(null);
   let pdfium = $state<tiers.PdfiumStatus | null>(null);
   let info   = $state<appInfo.AppInfo | null>(null);
   let raw    = $state<Record<string, unknown>>({});
@@ -96,6 +96,57 @@
   async function toggleTier(key: 'tesseract' | 'llm' | 'olmocr', enabled: boolean) {
     const current = (raw[key] as Record<string, unknown> | undefined) ?? {};
     await settings.set(key, { ...current, enabled });
+    await refresh();
+  }
+
+  type ModelTierKey = 'llm' | 'olmocr';
+  let tierAction = $state<ModelTierKey | null>(null);
+
+  function configuredModelPath(key: ModelTierKey, status?: tiers.TierStatus | null): string {
+    const value = (raw[key] as Record<string, unknown> | undefined)?.model_path;
+    if (typeof value === 'string' && value.trim()) return value.trim();
+    const configured = 'configured_model_path' in (status ?? {})
+      ? (status as tiers.ModelTierStatus).configured_model_path
+      : null;
+    return configured?.trim() ?? '';
+  }
+
+  function modelPathHint(key: ModelTierKey, status: tiers.TierStatus): string {
+    const configured = configuredModelPath(key, status);
+    if (configured) return configured;
+    if (status.loaded_model_path) return status.loaded_model_path;
+    return info?.models_dir ? `${info.models_dir} (set model_path in this tier)` : 'No model_path configured';
+  }
+
+  async function runTierAction(key: ModelTierKey, action: 'load' | 'unload', modelPath = '') {
+    if (tierAction) return;
+    tierAction = key;
+    try {
+      if (key === 'llm') {
+        if (action === 'load') await tiers.loadLlm(modelPath);
+        else await tiers.unloadLlm();
+      } else {
+        if (action === 'load') await tiers.loadOlmocr(modelPath);
+        else await tiers.unloadOlmocr();
+      }
+      await refresh();
+    } catch (e) {
+      toasts.error(e);
+      await refresh();
+    } finally {
+      tierAction = null;
+    }
+  }
+
+  async function chooseModelPath(key: ModelTierKey) {
+    const selected = await openDialog({
+      directory: false,
+      multiple: false,
+      title: key === 'llm' ? 'Choose Phi-4 model file' : 'Choose olmOCR model file'
+    }) as string | null;
+    if (!selected) return;
+    const current = (raw[key] as Record<string, unknown> | undefined) ?? {};
+    await settings.set(key, { ...current, model_path: selected });
     await refresh();
   }
 
@@ -211,7 +262,7 @@
       ids: p.kind === 'static' ? [...p.ids] : [],
       analyteSearch: '',
       useFilters: f !== null && f !== undefined,
-      filters: { ...EMPTY_FILTERS, ...(f ?? {}) },
+      filters: { ...EMPTY_FILTERS, ...f },
     };
     void ensureAnalytesLoaded();
   }
@@ -1449,8 +1500,13 @@
               <div class="row__body">
                 <div class="row__title">Tesseract OCR <span class="row__sub">no LLM</span></div>
                 <div class="row__hint">
-                  compiled: {tess.compiled ? 'yes' : 'no — rebuild with --features tesseract-ocr'}
+                  compiled: {tess.compiled ? 'yes' : 'no — rebuild with --features tesseract-ocr'} ·
+                  languages: {tess.model_present ? 'present' : 'missing'} ·
+                  runtime: {tess.loaded ? 'ready' : 'unavailable'}
                 </div>
+                {#if tess.last_error}
+                  <div class="row__hint row__hint--error">{tess.last_error}</div>
+                {/if}
               </div>
               <input type="checkbox"
                 bind:checked={tess.enabled_in_settings}
@@ -1460,36 +1516,77 @@
           {/if}
 
           {#if llm}
-            <label class="row">
+            <div class="row">
               <div class="row__body">
                 <div class="row__title">Phi-4-mini-reasoning <span class="row__sub">repair tier</span></div>
                 <div class="row__hint">
                   compiled: {llm.compiled ? 'yes' : 'no — rebuild with --features embedded-llm'} ·
                   model: {llm.model_present ? 'present' : 'missing'} ·
-                  loaded: {llm.loaded ? 'yes' : 'no'}
+                  loaded: {llm.loaded ? 'yes' : llm.loading ? 'loading' : 'no'}
                 </div>
+                <div class="model-path" title={modelPathHint('llm', llm)}>
+                  model_path: {modelPathHint('llm', llm)}
+                </div>
+                {#if llm.loaded_model_path && llm.loaded_model_path !== configuredModelPath('llm', llm)}
+                  <div class="model-path" title={llm.loaded_model_path}>loaded: {llm.loaded_model_path}</div>
+                {/if}
+                {#if llm.last_error}<div class="text-[11px] text-warn break-words mt-1">{llm.last_error}</div>{/if}
               </div>
-              <input type="checkbox"
-                bind:checked={llm.enabled_in_settings}
-                disabled={!llm.compiled || !llm.model_present}
-                onchange={(e) => toggleTier('llm', e.currentTarget.checked)} />
-            </label>
+              <div class="tier-actions">
+                <button class="mini-btn"
+                  disabled={tierAction !== null}
+                  onclick={() => chooseModelPath('llm')}>Browse</button>
+                <button class="mini-btn"
+                  disabled={!llm.compiled || !configuredModelPath('llm', llm) || llm.loaded || llm.loading || tierAction !== null}
+                  onclick={() => runTierAction('llm', 'load', configuredModelPath('llm', llm))}>
+                  {tierAction === 'llm' || llm.loading ? 'Loading' : 'Load'}
+                </button>
+                <button class="mini-btn"
+                  disabled={!llm.loaded || llm.loading || tierAction !== null}
+                  onclick={() => runTierAction('llm', 'unload')}>Unload</button>
+                <input type="checkbox"
+                  bind:checked={llm.enabled_in_settings}
+                  disabled={!llm.compiled || !llm.model_present}
+                  onchange={(e) => toggleTier('llm', e.currentTarget.checked)} />
+              </div>
+            </div>
           {/if}
 
           {#if olm}
-            <label class="row">
+            <div class="row">
               <div class="row__body">
                 <div class="row__title">olmOCR-2 <span class="row__sub">vision OCR</span></div>
                 <div class="row__hint">
                   compiled: {olm.compiled ? 'yes' : 'no — rebuild with --features embedded-ocr-vision'} ·
-                  model: {olm.model_present ? 'present' : 'missing'}
+                  model: {olm.model_present ? 'present' : 'missing'} ·
+                  loaded: {olm.loaded ? 'yes' : olm.loading ? 'loading' : 'no'}
                 </div>
+                <div class="model-path" title={modelPathHint('olmocr', olm)}>
+                  model_path: {modelPathHint('olmocr', olm)}
+                </div>
+                {#if olm.loaded_model_path && olm.loaded_model_path !== configuredModelPath('olmocr', olm)}
+                  <div class="model-path" title={olm.loaded_model_path}>loaded: {olm.loaded_model_path}</div>
+                {/if}
+                {#if olm.last_error}<div class="text-[11px] text-warn break-words mt-1">{olm.last_error}</div>{/if}
               </div>
-              <input type="checkbox"
-                bind:checked={olm.enabled_in_settings}
-                disabled={!olm.compiled || !olm.model_present}
-                onchange={(e) => toggleTier('olmocr', e.currentTarget.checked)} />
-            </label>
+              <div class="tier-actions">
+                <button class="mini-btn"
+                  disabled={tierAction !== null}
+                  onclick={() => chooseModelPath('olmocr')}>Browse</button>
+                <button class="mini-btn"
+                  disabled={!olm.compiled || !configuredModelPath('olmocr', olm) || olm.loaded || olm.loading || tierAction !== null}
+                  onclick={() => runTierAction('olmocr', 'load', configuredModelPath('olmocr', olm))}>
+                  {tierAction === 'olmocr' || olm.loading ? 'Loading' : 'Load'}
+                </button>
+                <button class="mini-btn"
+                  disabled={!olm.loaded || olm.loading || tierAction !== null}
+                  onclick={() => runTierAction('olmocr', 'unload')}>Unload</button>
+                <input type="checkbox"
+                  bind:checked={olm.enabled_in_settings}
+                  disabled={!olm.compiled || !olm.model_present}
+                  onchange={(e) => toggleTier('olmocr', e.currentTarget.checked)} />
+              </div>
+            </div>
           {/if}
         </section>
       {/if}
@@ -1914,6 +2011,42 @@
     letter-spacing: 0.04em;
   }
   .row__hint { font-size: 0.7rem; color: rgb(var(--fg-3)); line-height: 1.35; }
+  .row__hint--error { color: rgb(var(--crit)); }
+  .tier-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex: 0 0 auto;
+  }
+  .mini-btn {
+    border: 1px solid rgb(var(--line));
+    background: rgb(var(--bg-1));
+    color: rgb(var(--fg-2));
+    border-radius: 0.35rem;
+    padding: 0.28rem 0.55rem;
+    font-size: 0.72rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+  }
+  .mini-btn:hover:not(:disabled) {
+    background: rgb(var(--bg-2));
+    color: rgb(var(--fg-1));
+    border-color: rgb(var(--accent) / 0.45);
+  }
+  .mini-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .model-path {
+    max-width: min(42rem, 100%);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.67rem;
+    color: rgb(var(--fg-3));
+  }
 
   /* ── Segmented control ── */
   .seg {

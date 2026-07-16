@@ -16,7 +16,10 @@ export function parseTiers(json: string | null | undefined): CategoricalTier[] {
   }
 }
 
-export function matchTier(value: number, tiers: CategoricalTier[]): CategoricalTier | null {
+export function matchTier(
+  value: number,
+  tiers: CategoricalTier[],
+): CategoricalTier | null {
   for (const t of tiers) {
     const minOk = t.min === undefined || value >= t.min;
     const maxOk = t.max === undefined || value < t.max;
@@ -31,22 +34,30 @@ export function matchTier(value: number, tiers: CategoricalTier[]): CategoricalT
 /// → normal; everything else → null (no pill).
 export function tierToFlag(label: string): string | null {
   const k = label
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
-  if (k.includes('toxicidade') || k.includes('sobrecarga') || k.includes('muito elevado')) {
-    return 'critical_high';
+  if (
+    k.includes("toxicidade") ||
+    k.includes("sobrecarga") ||
+    k.includes("muito elevado")
+  ) {
+    return "critical_high";
   }
-  if (k.includes('elevado')) return 'high';
-  if (k.includes('deficiencia') || k.includes('ferropenia absoluta')) {
-    return 'low';
+  if (k.includes("elevado")) return "high";
+  if (k.includes("deficiencia") || k.includes("ferropenia absoluta")) {
+    return "low";
   }
-  if (k.includes('insuficiencia') || k.includes('ferropenia funcional')) {
-    return 'low';
+  if (k.includes("insuficiencia") || k.includes("ferropenia funcional")) {
+    return "low";
   }
-  if (k.includes('limite')) return 'normal';
-  if (k.includes('normal') || k.includes('suficiencia') || k.includes('baixo ou moderado')) {
-    return 'normal';
+  if (k.includes("limite")) return "normal";
+  if (
+    k.includes("normal") ||
+    k.includes("suficiencia") ||
+    k.includes("baixo ou moderado")
+  ) {
+    return "normal";
   }
   return null;
 }
@@ -57,5 +68,5 @@ export function formatTierRange(tier: CategoricalTier): string {
   }
   if (tier.max !== undefined) return `< ${tier.max}`;
   if (tier.min !== undefined) return `≥ ${tier.min}`;
-  return '—';
+  return "—";
 }

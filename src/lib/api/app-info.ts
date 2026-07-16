@@ -1,4 +1,4 @@
-import { invoke } from './index';
+import { invoke } from "./index";
 
 export interface Features {
   embedded_llm: boolean;
@@ -48,7 +48,7 @@ export interface AppInfo {
 }
 
 export async function get(): Promise<AppInfo> {
-  return invoke<AppInfo>('app_info');
+  return invoke<AppInfo>("app_info");
 }
 
 export interface ExportVaultResult {
@@ -58,8 +58,10 @@ export interface ExportVaultResult {
   manifest_path: string;
 }
 
-export async function exportVault(destination: string): Promise<ExportVaultResult> {
-  return invoke<ExportVaultResult>('export_vault', { destination });
+export async function exportVault(
+  destination: string,
+): Promise<ExportVaultResult> {
+  return invoke<ExportVaultResult>("export_vault", { destination });
 }
 
 export interface ImportVaultResult {
@@ -70,11 +72,11 @@ export interface ImportVaultResult {
 }
 
 export async function importVault(source: string): Promise<ImportVaultResult> {
-  return invoke<ImportVaultResult>('import_vault', { source });
+  return invoke<ImportVaultResult>("import_vault", { source });
 }
 
 export function formatBytes(b: number | null | undefined): string {
-  if (b == null) return '—';
+  if (b == null) return "—";
   if (b < 1024) return `${b} B`;
   const kb = b / 1024;
   if (kb < 1024) return `${kb.toFixed(1)} KB`;
