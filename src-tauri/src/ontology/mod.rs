@@ -71,8 +71,7 @@ pub struct AnalyteDef {
 
 pub fn load(path: &Path) -> AppResult<OntologySeed> {
     let bytes = std::fs::read(path).map_err(AppError::from)?;
-    let seed: OntologySeed =
-        serde_json::from_slice(&bytes).map_err(AppError::from)?;
+    let seed: OntologySeed = serde_json::from_slice(&bytes).map_err(AppError::from)?;
     Ok(seed)
 }
 
@@ -147,9 +146,7 @@ pub fn install_into_db(seed: &OntologySeed, conn: &rusqlite::Connection) -> AppR
                 a.paired_value as i32,
                 a.is_panel_header as i32,
                 serde_json::to_string(&a.expected_units)?,
-                a.default_ref
-                    .as_ref()
-                    .map(|v| v.to_string()),
+                a.default_ref.as_ref().map(|v| v.to_string()),
                 a.sex_dependent as i32,
                 a.age_dependent as i32,
                 a.cycle_dependent as i32,

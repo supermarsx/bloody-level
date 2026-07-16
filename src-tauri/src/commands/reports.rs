@@ -182,9 +182,11 @@ pub async fn analyte_timeseries(
         })
     };
     let rows: Vec<AnalyteReading> = if let Some(pid) = patient_id {
-        stmt.query_map([analyte_id, pid], map)?.collect::<Result<_, _>>()?
+        stmt.query_map([analyte_id, pid], map)?
+            .collect::<Result<_, _>>()?
     } else {
-        stmt.query_map([analyte_id], map)?.collect::<Result<_, _>>()?
+        stmt.query_map([analyte_id], map)?
+            .collect::<Result<_, _>>()?
     };
     Ok(rows)
 }
@@ -274,5 +276,8 @@ pub async fn list_flagged_analytes(
         rows.collect::<Result<Vec<_>, _>>()?
     };
 
-    Ok(FlaggedAnalytesResult { abnormal, subclinical })
+    Ok(FlaggedAnalytesResult {
+        abnormal,
+        subclinical,
+    })
 }

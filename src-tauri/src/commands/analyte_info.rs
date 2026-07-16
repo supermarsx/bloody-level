@@ -183,17 +183,17 @@ pub async fn list_ontology_entries(
                 default_ref_json: r.get(8)?,
                 categorical_tiers_json: r.get(9)?,
                 cycle_phases_json: r.get(10)?,
-                sex_dependent:    r.get::<_, i64>(11)? != 0,
-                age_dependent:    r.get::<_, i64>(12)? != 0,
-                cycle_dependent:  r.get::<_, i64>(13)? != 0,
-                is_qualitative:   r.get::<_, i64>(14)? != 0,
-                is_derived:       r.get::<_, i64>(15)? != 0,
-                is_panel_header:  r.get::<_, i64>(16)? != 0,
-                paired_value:     r.get::<_, i64>(17)? != 0,
+                sex_dependent: r.get::<_, i64>(11)? != 0,
+                age_dependent: r.get::<_, i64>(12)? != 0,
+                cycle_dependent: r.get::<_, i64>(13)? != 0,
+                is_qualitative: r.get::<_, i64>(14)? != 0,
+                is_derived: r.get::<_, i64>(15)? != 0,
+                is_panel_header: r.get::<_, i64>(16)? != 0,
+                paired_value: r.get::<_, i64>(17)? != 0,
                 has_description: desc.as_ref().map(|s| !s.trim().is_empty()).unwrap_or(false),
-                has_high_means:  hi.as_ref().map(|s| !s.trim().is_empty()).unwrap_or(false),
-                has_low_means:   lo.as_ref().map(|s| !s.trim().is_empty()).unwrap_or(false),
-                has_unit_notes:  un.as_ref().map(|s| !s.trim().is_empty()).unwrap_or(false),
+                has_high_means: hi.as_ref().map(|s| !s.trim().is_empty()).unwrap_or(false),
+                has_low_means: lo.as_ref().map(|s| !s.trim().is_empty()).unwrap_or(false),
+                has_unit_notes: un.as_ref().map(|s| !s.trim().is_empty()).unwrap_or(false),
                 alias_count: r.get(22)?,
                 result_count: r.get(23)?,
                 source: r.get(24)?,
@@ -273,7 +273,10 @@ fn validate_id(id: &str) -> AppResult<()> {
             "analyte id is too long (max 80 chars)".into(),
         ));
     }
-    if !id.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_') {
+    if !id
+        .chars()
+        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+    {
         return Err(AppError::BadRequest(
             "analyte id may only contain a-z, 0-9, and underscores".into(),
         ));
@@ -281,11 +284,7 @@ fn validate_id(id: &str) -> AppResult<()> {
     Ok(())
 }
 
-fn write_aliases(
-    tx: &rusqlite::Connection,
-    analyte_id: &str,
-    aliases: &[String],
-) -> AppResult<()> {
+fn write_aliases(tx: &rusqlite::Connection, analyte_id: &str, aliases: &[String]) -> AppResult<()> {
     let mut stmt = tx.prepare(
         "INSERT OR IGNORE INTO analyte_aliases(alias, analyte_id, source) VALUES(?1, ?2, 'user')",
     )?;
@@ -303,16 +302,15 @@ fn write_aliases(
 }
 
 #[tauri::command]
-pub async fn create_analyte(
-    state: State<'_, AppState>,
-    args: AnalyteWriteArgs,
-) -> AppResult<()> {
+pub async fn create_analyte(state: State<'_, AppState>, args: AnalyteWriteArgs) -> AppResult<()> {
     validate_id(&args.id)?;
     let guard = state.db.lock().await;
     let db = guard.as_ref().ok_or(AppError::Locked)?;
     let tx = db.conn.unchecked_transaction()?;
     let exists: bool = tx
-        .query_row::<i64, _, _>("SELECT 1 FROM analytes WHERE id = ?1", [&args.id], |r| r.get(0))
+        .query_row::<i64, _, _>("SELECT 1 FROM analytes WHERE id = ?1", [&args.id], |r| {
+            r.get(0)
+        })
         .optional()?
         .is_some();
     if exists {
@@ -368,10 +366,7 @@ pub async fn create_analyte(
 }
 
 #[tauri::command]
-pub async fn update_analyte(
-    state: State<'_, AppState>,
-    args: AnalyteWriteArgs,
-) -> AppResult<()> {
+pub async fn update_analyte(state: State<'_, AppState>, args: AnalyteWriteArgs) -> AppResult<()> {
     validate_id(&args.id)?;
     let guard = state.db.lock().await;
     let db = guard.as_ref().ok_or(AppError::Locked)?;
@@ -388,15 +383,28 @@ pub async fn update_analyte(
             categorical_tiers_json = ?21, cycle_phases_json = ?22
          WHERE id = ?1",
         rusqlite::params![
-            args.id, args.pt_name, args.loinc, args.section, args.subsection, args.panel,
-            args.is_qualitative as i32, args.is_derived as i32,
-            args.paired_value as i32, args.is_panel_header as i32,
+            args.id,
+            args.pt_name,
+            args.loinc,
+            args.section,
+            args.subsection,
+            args.panel,
+            args.is_qualitative as i32,
+            args.is_derived as i32,
+            args.paired_value as i32,
+            args.is_panel_header as i32,
             units_json,
             args.default_ref_json,
-            args.sex_dependent as i32, args.age_dependent as i32, args.cycle_dependent as i32,
+            args.sex_dependent as i32,
+            args.age_dependent as i32,
+            args.cycle_dependent as i32,
             args.method_annotation,
-            args.description, args.high_means, args.low_means, args.unit_notes,
-            args.categorical_tiers_json, args.cycle_phases_json,
+            args.description,
+            args.high_means,
+            args.low_means,
+            args.unit_notes,
+            args.categorical_tiers_json,
+            args.cycle_phases_json,
         ],
     )?;
     if affected == 0 {
@@ -420,10 +428,7 @@ pub async fn update_analyte(
 }
 
 #[tauri::command]
-pub async fn delete_analyte(
-    state: State<'_, AppState>,
-    analyte_id: String,
-) -> AppResult<()> {
+pub async fn delete_analyte(state: State<'_, AppState>, analyte_id: String) -> AppResult<()> {
     let guard = state.db.lock().await;
     let db = guard.as_ref().ok_or(AppError::Locked)?;
     // Guard: only delete user-source rows. Seed rows would just come back
@@ -431,29 +436,33 @@ pub async fn delete_analyte(
     // them would orphan FK pointers.
     let source: Option<String> = db
         .conn
-        .query_row::<String, _, _>("SELECT source FROM analytes WHERE id = ?1", [&analyte_id], |r| r.get(0))
+        .query_row::<String, _, _>(
+            "SELECT source FROM analytes WHERE id = ?1",
+            [&analyte_id],
+            |r| r.get(0),
+        )
         .optional()?;
     let Some(source) = source else {
         return Err(AppError::NotFound(format!("analyte {analyte_id}")));
     };
     if source != "user" {
         return Err(AppError::BadRequest(
-            "Only user-created analytes can be deleted. Seed rows are owned by the bundled JSON.".into(),
+            "Only user-created analytes can be deleted. Seed rows are owned by the bundled JSON."
+                .into(),
         ));
     }
-    let result_count: i64 = db
-        .conn
-        .query_row(
-            "SELECT COUNT(*) FROM results WHERE analyte_id = ?1",
-            [&analyte_id],
-            |r| r.get(0),
-        )?;
+    let result_count: i64 = db.conn.query_row(
+        "SELECT COUNT(*) FROM results WHERE analyte_id = ?1",
+        [&analyte_id],
+        |r| r.get(0),
+    )?;
     if result_count > 0 {
         return Err(AppError::BadRequest(format!(
             "Can't delete `{analyte_id}` — {result_count} result row(s) still reference it. Re-link them first."
         )));
     }
-    db.conn.execute("DELETE FROM analytes WHERE id = ?1", [&analyte_id])?;
+    db.conn
+        .execute("DELETE FROM analytes WHERE id = ?1", [&analyte_id])?;
     audit::log(
         &db.conn,
         "delete",
@@ -472,10 +481,7 @@ pub struct AliasArgs {
 }
 
 #[tauri::command]
-pub async fn add_analyte_alias(
-    state: State<'_, AppState>,
-    args: AliasArgs,
-) -> AppResult<()> {
+pub async fn add_analyte_alias(state: State<'_, AppState>, args: AliasArgs) -> AppResult<()> {
     let alias = args.alias.trim().to_string();
     if alias.is_empty() {
         return Err(AppError::BadRequest("alias cannot be empty".into()));
@@ -498,10 +504,7 @@ pub async fn add_analyte_alias(
 }
 
 #[tauri::command]
-pub async fn remove_analyte_alias(
-    state: State<'_, AppState>,
-    alias: String,
-) -> AppResult<()> {
+pub async fn remove_analyte_alias(state: State<'_, AppState>, alias: String) -> AppResult<()> {
     let guard = state.db.lock().await;
     let db = guard.as_ref().ok_or(AppError::Locked)?;
     // Only user-source aliases get removed. Seed-source aliases are

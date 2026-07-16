@@ -27,10 +27,7 @@ pub struct SearchResults {
 }
 
 #[tauri::command]
-pub async fn global_search(
-    state: State<'_, AppState>,
-    query: String,
-) -> AppResult<SearchResults> {
+pub async fn global_search(state: State<'_, AppState>, query: String) -> AppResult<SearchResults> {
     let q = query.trim();
     if q.is_empty() {
         return Ok(SearchResults {
@@ -57,25 +54,26 @@ pub async fn global_search(
              ORDER BY p.display_name COLLATE NOCASE
              LIMIT ?2",
         )?;
-        let rows: Vec<SearchHit> = stmt.query_map(rusqlite::params![&like, limit], |r| {
-            let id: String = r.get(0)?;
-            let name: String = r.get(1)?;
-            let latest: Option<String> = r.get(2)?;
-            let rcount: i64 = r.get(3)?;
-            Ok(SearchHit {
-                kind: "patient",
-                href: format!("/patient/{id}"),
-                id,
-                label: name,
-                sub: Some(format!(
-                    "{} report{} · latest {}",
-                    rcount,
-                    if rcount == 1 { "" } else { "s" },
-                    latest.unwrap_or_else(|| "—".into())
-                )),
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let rows: Vec<SearchHit> = stmt
+            .query_map(rusqlite::params![&like, limit], |r| {
+                let id: String = r.get(0)?;
+                let name: String = r.get(1)?;
+                let latest: Option<String> = r.get(2)?;
+                let rcount: i64 = r.get(3)?;
+                Ok(SearchHit {
+                    kind: "patient",
+                    href: format!("/patient/{id}"),
+                    id,
+                    label: name,
+                    sub: Some(format!(
+                        "{} report{} · latest {}",
+                        rcount,
+                        if rcount == 1 { "" } else { "s" },
+                        latest.unwrap_or_else(|| "—".into())
+                    )),
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
         rows
     };
 
@@ -92,19 +90,20 @@ pub async fn global_search(
              ORDER BY a.pt_name COLLATE NOCASE
              LIMIT ?2",
         )?;
-        let rows: Vec<SearchHit> = stmt.query_map(rusqlite::params![&like, limit], |r| {
-            let id: String = r.get(0)?;
-            let name: String = r.get(1)?;
-            let section: Option<String> = r.get(2)?;
-            Ok(SearchHit {
-                kind: "analyte",
-                href: format!("/analyte/{id}"),
-                id,
-                label: name,
-                sub: section,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let rows: Vec<SearchHit> = stmt
+            .query_map(rusqlite::params![&like, limit], |r| {
+                let id: String = r.get(0)?;
+                let name: String = r.get(1)?;
+                let section: Option<String> = r.get(2)?;
+                Ok(SearchHit {
+                    kind: "analyte",
+                    href: format!("/analyte/{id}"),
+                    id,
+                    label: name,
+                    sub: section,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
         rows
     };
 
@@ -123,44 +122,45 @@ pub async fn global_search(
              ORDER BY r.collection_date_iso DESC
              LIMIT ?2",
         )?;
-        let rows: Vec<SearchHit> = stmt.query_map(rusqlite::params![&like, limit], |r| {
-            let id: String = r.get(0)?;
-            let name: String = r.get(1)?;
-            let date: String = r.get(2)?;
-            let lab: Option<String> = r.get(3)?;
-            let proc_id: Option<String> = r.get(4)?;
-            let insc: Option<String> = r.get(5)?;
-            let nickname: Option<String> = r.get(6)?;
-            let mut sub_parts: Vec<String> = vec![];
-            if let Some(l) = lab {
-                sub_parts.push(l);
-            }
-            if let Some(p) = proc_id {
-                sub_parts.push(format!("Proc {p}"));
-            }
-            if let Some(i) = insc {
-                sub_parts.push(format!("Insc {i}"));
-            }
-            let sub = if sub_parts.is_empty() {
-                None
-            } else {
-                Some(sub_parts.join(" · "))
-            };
-            // When the report has a nickname, lead with it — the user is far
-            // more likely to remember "Annual checkup" than the date.
-            let label = match nickname {
-                Some(n) => format!("{n} · {date} · {name}"),
-                None => format!("{date} · {name}"),
-            };
-            Ok(SearchHit {
-                kind: "report",
-                href: format!("/report/{id}"),
-                id,
-                label,
-                sub,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let rows: Vec<SearchHit> = stmt
+            .query_map(rusqlite::params![&like, limit], |r| {
+                let id: String = r.get(0)?;
+                let name: String = r.get(1)?;
+                let date: String = r.get(2)?;
+                let lab: Option<String> = r.get(3)?;
+                let proc_id: Option<String> = r.get(4)?;
+                let insc: Option<String> = r.get(5)?;
+                let nickname: Option<String> = r.get(6)?;
+                let mut sub_parts: Vec<String> = vec![];
+                if let Some(l) = lab {
+                    sub_parts.push(l);
+                }
+                if let Some(p) = proc_id {
+                    sub_parts.push(format!("Proc {p}"));
+                }
+                if let Some(i) = insc {
+                    sub_parts.push(format!("Insc {i}"));
+                }
+                let sub = if sub_parts.is_empty() {
+                    None
+                } else {
+                    Some(sub_parts.join(" · "))
+                };
+                // When the report has a nickname, lead with it — the user is far
+                // more likely to remember "Annual checkup" than the date.
+                let label = match nickname {
+                    Some(n) => format!("{n} · {date} · {name}"),
+                    None => format!("{date} · {name}"),
+                };
+                Ok(SearchHit {
+                    kind: "report",
+                    href: format!("/report/{id}"),
+                    id,
+                    label,
+                    sub,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
         rows
     };
 

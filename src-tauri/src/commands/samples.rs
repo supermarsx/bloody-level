@@ -24,7 +24,9 @@ pub async fn sample_pdf_paths() -> AppResult<Vec<SamplePdf>> {
     ];
 
     for candidate in candidates.iter().flatten() {
-        if !candidate.is_dir() { continue; }
+        if !candidate.is_dir() {
+            continue;
+        }
         let mut out = Vec::new();
         let entries = match std::fs::read_dir(candidate) {
             Ok(e) => e,
@@ -32,9 +34,18 @@ pub async fn sample_pdf_paths() -> AppResult<Vec<SamplePdf>> {
         };
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.extension().and_then(|e| e.to_str()).map(|s| s.eq_ignore_ascii_case("pdf")).unwrap_or(false) {
+            if path
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(|s| s.eq_ignore_ascii_case("pdf"))
+                .unwrap_or(false)
+            {
                 let size_bytes = entry.metadata().map(|m| m.len()).unwrap_or(0);
-                let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
+                let name = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("")
+                    .to_string();
                 out.push(SamplePdf {
                     path: path.to_string_lossy().to_string(),
                     name,

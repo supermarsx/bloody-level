@@ -8,6 +8,14 @@ use crate::error::{AppError, AppResult};
 use crate::parse::header;
 use crate::state::AppState;
 
+type ReportDeleteSnapshot = (
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+);
+type ResultDeleteSnapshot = (Option<String>, Option<String>, Option<f64>);
+
 #[derive(Serialize)]
 pub struct BackfillSexResult {
     pub patients_scanned: usize,
@@ -28,9 +36,9 @@ pub async fn backfill_patient_sex(state: State<'_, AppState>) -> AppResult<Backf
     let mut patients_updated = 0usize;
     let mut patients_still_unknown = 0usize;
 
-    let mut select = db.conn.prepare(
-        "SELECT id FROM patients WHERE sex NOT IN ('m','f')",
-    )?;
+    let mut select = db
+        .conn
+        .prepare("SELECT id FROM patients WHERE sex NOT IN ('m','f')")?;
     let patient_ids: Vec<String> = select
         .query_map([], |r| r.get::<_, String>(0))?
         .collect::<Result<Vec<_>, _>>()?;
@@ -74,9 +82,7 @@ pub async fn backfill_patient_sex(state: State<'_, AppState>) -> AppResult<Backf
         "backfill",
         "patient",
         None,
-        &format!(
-            "Backfill sex: {patients_updated}/{patients_scanned} patients updated"
-        ),
+        &format!("Backfill sex: {patients_updated}/{patients_scanned} patients updated"),
         Some(&json!({
             "scanned": patients_scanned,
             "updated": patients_updated,
@@ -117,7 +123,9 @@ pub async fn backfill_patient_dob(state: State<'_, AppState>) -> AppResult<Backf
     let mut exact_updates = 0usize;
     let mut approximate_updates = 0usize;
 
-    let mut select = db.conn.prepare("SELECT id FROM patients WHERE dob_iso IS NULL")?;
+    let mut select = db
+        .conn
+        .prepare("SELECT id FROM patients WHERE dob_iso IS NULL")?;
     let patient_ids: Vec<String> = select
         .query_map([], |r| r.get::<_, String>(0))?
         .collect::<Result<Vec<_>, _>>()?;
@@ -172,9 +180,7 @@ pub async fn backfill_patient_dob(state: State<'_, AppState>) -> AppResult<Backf
         "backfill",
         "patient",
         None,
-        &format!(
-            "Backfill DOB: {patients_updated}/{patients_scanned} patients updated"
-        ),
+        &format!("Backfill DOB: {patients_updated}/{patients_scanned} patients updated"),
         Some(&json!({
             "scanned": patients_scanned,
             "updated": patients_updated,
@@ -202,7 +208,7 @@ pub async fn delete_report(state: State<'_, AppState>, report_id: String) -> App
     let guard = state.db.lock().await;
     let db = guard.as_ref().ok_or(AppError::Locked)?;
 
-    let snapshot: Option<(Option<String>, Option<String>, Option<String>, Option<String>)> = db
+    let snapshot: Option<ReportDeleteSnapshot> = db
         .conn
         .query_row(
             "SELECT raw_pdf_path, patient_id, collection_date_iso, lab_entity FROM reports WHERE id = ?1",
@@ -211,14 +217,15 @@ pub async fn delete_report(state: State<'_, AppState>, report_id: String) -> App
         )
         .optional()?;
 
-    let affected = db.conn.execute("DELETE FROM reports WHERE id = ?1", [&report_id])?;
+    let affected = db
+        .conn
+        .execute("DELETE FROM reports WHERE id = ?1", [&report_id])?;
     if affected == 0 {
         return Err(AppError::NotFound(format!("report {report_id}")));
     }
 
-    let (pdf_path, patient_id, collection_date_iso, lab_entity) = snapshot
-        .map(|(a, b, c, d)| (a, b, c, d))
-        .unwrap_or((None, None, None, None));
+    let (pdf_path, patient_id, collection_date_iso, lab_entity) =
+        snapshot.unwrap_or((None, None, None, None));
     audit::log(
         &db.conn,
         "delete",
@@ -274,7 +281,10 @@ pub async fn merge_patients(
         |r| r.get(0),
     )?;
     if target_count == 0 {
-        return Err(AppError::NotFound(format!("target patient {}", args.target_id)));
+        return Err(AppError::NotFound(format!(
+            "target patient {}",
+            args.target_id
+        )));
     }
     let source_count: i64 = db.conn.query_row(
         "SELECT COUNT(*) FROM patients WHERE id = ?1",
@@ -282,7 +292,10 @@ pub async fn merge_patients(
         |r| r.get(0),
     )?;
     if source_count == 0 {
-        return Err(AppError::NotFound(format!("source patient {}", args.source_id)));
+        return Err(AppError::NotFound(format!(
+            "source patient {}",
+            args.source_id
+        )));
     }
 
     if !db.conn.is_autocommit() {
@@ -345,7 +358,9 @@ pub async fn delete_patient(state: State<'_, AppState>, patient_id: String) -> A
     }
     let report_count = pdfs.len();
 
-    let affected = db.conn.execute("DELETE FROM patients WHERE id = ?1", [&patient_id])?;
+    let affected = db
+        .conn
+        .execute("DELETE FROM patients WHERE id = ?1", [&patient_id])?;
     if affected == 0 {
         return Err(AppError::NotFound(format!("patient {patient_id}")));
     }
@@ -381,7 +396,10 @@ pub async fn bulk_delete_reports(
     report_ids: Vec<String>,
 ) -> AppResult<BulkDeleteResult> {
     if report_ids.is_empty() {
-        return Ok(BulkDeleteResult { deleted: 0, failed: vec![] });
+        return Ok(BulkDeleteResult {
+            deleted: 0,
+            failed: vec![],
+        });
     }
     let guard = state.db.lock().await;
     let db = guard.as_ref().ok_or(AppError::Locked)?;
@@ -444,7 +462,7 @@ pub async fn bulk_delete_reports(
 pub async fn delete_result(state: State<'_, AppState>, result_id: i64) -> AppResult<()> {
     let guard = state.db.lock().await;
     let db = guard.as_ref().ok_or(AppError::Locked)?;
-    let snapshot: Option<(Option<String>, Option<String>, Option<f64>)> = db
+    let snapshot: Option<ResultDeleteSnapshot> = db
         .conn
         .query_row(
             "SELECT report_id, analyte_id, value_numeric FROM results WHERE id = ?1",
@@ -452,13 +470,13 @@ pub async fn delete_result(state: State<'_, AppState>, result_id: i64) -> AppRes
             |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
         )
         .optional()?;
-    let affected = db.conn.execute("DELETE FROM results WHERE id = ?1", [result_id])?;
+    let affected = db
+        .conn
+        .execute("DELETE FROM results WHERE id = ?1", [result_id])?;
     if affected == 0 {
         return Err(AppError::NotFound(format!("result {result_id}")));
     }
-    let (report_id, analyte_id, value_numeric) = snapshot
-        .map(|(a, b, c)| (a, b, c))
-        .unwrap_or((None, None, None));
+    let (report_id, analyte_id, value_numeric) = snapshot.unwrap_or((None, None, None));
     audit::log(
         &db.conn,
         "delete",
@@ -551,7 +569,8 @@ pub async fn set_patient_hrt_start(
     state: State<'_, AppState>,
     args: SetPatientHrtStartArgs,
 ) -> AppResult<()> {
-    let cleaned = args.hrt_start_iso
+    let cleaned = args
+        .hrt_start_iso
         .as_ref()
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty());
@@ -590,7 +609,9 @@ pub async fn set_patient_hrt_start(
 
 fn looks_like_iso_date(s: &str) -> bool {
     let bytes = s.as_bytes();
-    if bytes.len() != 10 { return false; }
+    if bytes.len() != 10 {
+        return false;
+    }
     bytes.iter().enumerate().all(|(i, &b)| match i {
         4 | 7 => b == b'-',
         _ => b.is_ascii_digit(),
@@ -699,7 +720,9 @@ pub async fn create_patient(
         return Err(AppError::BadRequest("display_name cannot be empty".into()));
     }
     if !["m", "f", "x", "?"].contains(&args.sex.as_str()) {
-        return Err(AppError::BadRequest("sex must be one of m / f / x / ?".into()));
+        return Err(AppError::BadRequest(
+            "sex must be one of m / f / x / ?".into(),
+        ));
     }
     let id = patient_slug(trimmed);
     if id.is_empty() {
@@ -751,7 +774,10 @@ pub async fn create_patient(
         })),
     );
 
-    Ok(CreatePatientResult { id, created: !existed })
+    Ok(CreatePatientResult {
+        id,
+        created: !existed,
+    })
 }
 
 /// Slug rule shared with the ingest path so manual + ingested IDs converge.
@@ -804,11 +830,9 @@ pub async fn patient_overviews(state: State<'_, AppState>) -> AppResult<Vec<Pati
     let db = guard.as_ref().ok_or(AppError::Locked)?;
     // 12-month cutoff in ISO date form — comparisons are lexicographic on
     // YYYY-MM-DD, which matches numeric ordering exactly.
-    let cutoff_iso: String = db.conn.query_row(
-        "SELECT date('now','-12 months')",
-        [],
-        |r| r.get(0),
-    )?;
+    let cutoff_iso: String = db
+        .conn
+        .query_row("SELECT date('now','-12 months')", [], |r| r.get(0))?;
 
     let mut stmt = db.conn.prepare(
         "SELECT
@@ -875,26 +899,38 @@ pub async fn patient_overviews(state: State<'_, AppState>) -> AppResult<Vec<Pati
 #[tauri::command]
 pub async fn update_patient(state: State<'_, AppState>, args: UpdatePatientArgs) -> AppResult<()> {
     if !["m", "f", "x", "?"].contains(&args.sex.as_str()) {
-        return Err(AppError::BadRequest("sex must be one of m / f / x / ?".into()));
+        return Err(AppError::BadRequest(
+            "sex must be one of m / f / x / ?".into(),
+        ));
     }
     let guard = state.db.lock().await;
     let db = guard.as_ref().ok_or(AppError::Locked)?;
     let now = now_secs();
     // Empty strings on optional metadata clear the column rather than
     // saving a literal "". Notes preserve internal whitespace.
-    let nickname = args.nickname
+    let nickname = args
+        .nickname
         .as_ref()
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty());
-    let notes = args.notes.as_ref().filter(|s| !s.trim().is_empty()).cloned();
+    let notes = args
+        .notes
+        .as_ref()
+        .filter(|s| !s.trim().is_empty())
+        .cloned();
     let affected = db.conn.execute(
         "UPDATE patients SET display_name = ?1, sex = ?2, dob_iso = ?3,
                               nickname = ?4, notes = ?5,
                               updated_at = ?6
          WHERE id = ?7",
         rusqlite::params![
-            args.display_name, args.sex, args.dob_iso,
-            nickname, notes, now, args.id
+            args.display_name,
+            args.sex,
+            args.dob_iso,
+            nickname,
+            notes,
+            now,
+            args.id
         ],
     )?;
     if affected == 0 {
@@ -1043,10 +1079,7 @@ pub async fn update_report(state: State<'_, AppState>, args: UpdateReportArgs) -
         "update",
         "report",
         Some(&args.id),
-        &format!(
-            "Updated report {} ({})",
-            args.id, args.collection_date_iso
-        ),
+        &format!("Updated report {} ({})", args.id, args.collection_date_iso),
         Some(&json!({
             "collection_date_iso": args.collection_date_iso,
             "emission_date_iso": args.emission_date_iso,
@@ -1168,7 +1201,9 @@ pub async fn link_unmatched_analyte(
             "rows_relinked": updated,
         })),
     );
-    Ok(LinkAnalyteResult { rows_relinked: updated })
+    Ok(LinkAnalyteResult {
+        rows_relinked: updated,
+    })
 }
 
 #[derive(Serialize)]
@@ -1205,7 +1240,9 @@ pub async fn reload_ontology(state: State<'_, AppState>) -> AppResult<ReloadOnto
             "seed_path": seed_path.as_ref().map(|p| p.display().to_string()),
         })),
     );
-    Ok(ReloadOntologyResult { analytes_installed: n })
+    Ok(ReloadOntologyResult {
+        analytes_installed: n,
+    })
 }
 
 #[tauri::command]

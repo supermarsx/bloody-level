@@ -33,8 +33,7 @@ pub async fn open_file_external(state: State<'_, AppState>, path: String) -> App
         )));
     }
 
-    spawn_opener(&canon)
-        .map_err(|e| AppError::Internal(format!("opener failed: {e}")))?;
+    spawn_opener(&canon).map_err(|e| AppError::Internal(format!("opener failed: {e}")))?;
     Ok(())
 }
 
@@ -45,15 +44,12 @@ pub async fn open_file_external(state: State<'_, AppState>, path: String) -> App
 pub async fn open_url(url: String) -> AppResult<()> {
     let trimmed = url.trim();
     if !(trimmed.starts_with("http://") || trimmed.starts_with("https://")) {
-        return Err(AppError::BadRequest(
-            "Only http(s) URLs are allowed".into(),
-        ));
+        return Err(AppError::BadRequest("Only http(s) URLs are allowed".into()));
     }
     if trimmed.len() > 2048 {
         return Err(AppError::BadRequest("URL is too long".into()));
     }
-    spawn_url_opener(trimmed)
-        .map_err(|e| AppError::Internal(format!("url opener failed: {e}")))?;
+    spawn_url_opener(trimmed).map_err(|e| AppError::Internal(format!("url opener failed: {e}")))?;
     Ok(())
 }
 
