@@ -3,4 +3,4 @@
 // from `adapter-static` plus client-side routing handles every URL.
 export const ssr = false;
 export const prerender = false;
-export const trailingSlash = 'never';
+export const trailingSlash = "never";

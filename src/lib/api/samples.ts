@@ -1,4 +1,4 @@
-import { invoke } from './index';
+import { invoke } from "./index";
 
 export interface SamplePdf {
   path: string;
@@ -7,5 +7,5 @@ export interface SamplePdf {
 }
 
 export async function list(): Promise<SamplePdf[]> {
-  return invoke<SamplePdf[]>('sample_pdf_paths');
+  return invoke<SamplePdf[]>("sample_pdf_paths");
 }

@@ -12,7 +12,7 @@ export interface PhaseRef {
 
 export function phaseRefFor(
   json: string | null | undefined,
-  phase: string | null | undefined
+  phase: string | null | undefined,
 ): PhaseRef | null {
   if (!json || !phase) return null;
   let parsed: Record<string, [number | null, number | null]>;
@@ -37,8 +37,8 @@ export function phaseRefFor(
 }
 
 export function flagForPhaseRef(value: number, ref: PhaseRef): string | null {
-  if (ref.low != null && value < ref.low) return 'low';
-  if (ref.high != null && value > ref.high) return 'high';
-  if (ref.low != null || ref.high != null) return 'normal';
+  if (ref.low != null && value < ref.low) return "low";
+  if (ref.high != null && value > ref.high) return "high";
+  if (ref.low != null || ref.high != null) return "normal";
   return null;
 }

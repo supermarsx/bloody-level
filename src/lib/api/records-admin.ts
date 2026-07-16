@@ -1,7 +1,7 @@
-import { invoke } from './index';
+import { invoke } from "./index";
 
 export async function deleteReport(reportId: string): Promise<void> {
-  await invoke('delete_report', { reportId });
+  await invoke("delete_report", { reportId });
 }
 
 export interface BulkDeleteResult {
@@ -9,8 +9,10 @@ export interface BulkDeleteResult {
   failed: string[];
 }
 
-export async function bulkDeleteReports(reportIds: string[]): Promise<BulkDeleteResult> {
-  return invoke<BulkDeleteResult>('bulk_delete_reports', { reportIds });
+export async function bulkDeleteReports(
+  reportIds: string[],
+): Promise<BulkDeleteResult> {
+  return invoke<BulkDeleteResult>("bulk_delete_reports", { reportIds });
 }
 
 export interface MergePatientsArgs {
@@ -23,8 +25,10 @@ export interface MergePatientsResult {
   source_deleted: boolean;
 }
 
-export async function mergePatients(args: MergePatientsArgs): Promise<MergePatientsResult> {
-  return invoke<MergePatientsResult>('merge_patients', { args });
+export async function mergePatients(
+  args: MergePatientsArgs,
+): Promise<MergePatientsResult> {
+  return invoke<MergePatientsResult>("merge_patients", { args });
 }
 
 export interface ReloadOntologyResult {
@@ -32,28 +36,28 @@ export interface ReloadOntologyResult {
 }
 
 export async function reloadOntology(): Promise<ReloadOntologyResult> {
-  return invoke<ReloadOntologyResult>('reload_ontology');
+  return invoke<ReloadOntologyResult>("reload_ontology");
 }
 
 export async function deletePatient(patientId: string): Promise<void> {
-  await invoke('delete_patient', { patientId });
+  await invoke("delete_patient", { patientId });
 }
 
 export async function deleteResult(resultId: number): Promise<void> {
-  await invoke('delete_result', { resultId });
+  await invoke("delete_result", { resultId });
 }
 
 export interface UpdatePatientArgs {
   id: string;
   display_name: string;
-  sex: 'm' | 'f' | 'x' | '?';
+  sex: "m" | "f" | "x" | "?";
   dob_iso: string | null;
   nickname?: string | null;
   notes?: string | null;
 }
 
 export async function updatePatient(args: UpdatePatientArgs): Promise<void> {
-  await invoke('update_patient', { args });
+  await invoke("update_patient", { args });
 }
 
 export interface UpdateReportArgs {
@@ -66,17 +70,26 @@ export interface UpdateReportArgs {
 }
 
 export async function updateReport(args: UpdateReportArgs): Promise<void> {
-  await invoke('update_report', { args });
+  await invoke("update_report", { args });
 }
 
-export type CyclePhase = 'follicular' | 'ovulation' | 'luteal' | 'postmenopause' | null;
+export type CyclePhase =
+  "follicular" | "ovulation" | "luteal" | "postmenopause" | null;
 
-export async function setReportCyclePhase(id: string, cyclePhase: CyclePhase): Promise<void> {
-  await invoke('set_report_cycle_phase', { args: { id, cycle_phase: cyclePhase } });
+export async function setReportCyclePhase(
+  id: string,
+  cyclePhase: CyclePhase,
+): Promise<void> {
+  await invoke("set_report_cycle_phase", {
+    args: { id, cycle_phase: cyclePhase },
+  });
 }
 
-export async function setReportNickname(id: string, nickname: string | null): Promise<void> {
-  await invoke('set_report_nickname', { args: { id, nickname } });
+export async function setReportNickname(
+  id: string,
+  nickname: string | null,
+): Promise<void> {
+  await invoke("set_report_nickname", { args: { id, nickname } });
 }
 
 export interface BackfillSexResult {
@@ -86,7 +99,7 @@ export interface BackfillSexResult {
 }
 
 export async function backfillPatientSex(): Promise<BackfillSexResult> {
-  return invoke<BackfillSexResult>('backfill_patient_sex');
+  return invoke<BackfillSexResult>("backfill_patient_sex");
 }
 
 export interface BackfillDobResult {
@@ -98,10 +111,10 @@ export interface BackfillDobResult {
 }
 
 export async function backfillPatientDob(): Promise<BackfillDobResult> {
-  return invoke<BackfillDobResult>('backfill_patient_dob');
+  return invoke<BackfillDobResult>("backfill_patient_dob");
 }
 
-export type PatientSex = 'm' | 'f' | 'x' | '?';
+export type PatientSex = "m" | "f" | "x" | "?";
 
 export interface CreatePatientArgs {
   display_name: string;
@@ -114,8 +127,10 @@ export interface CreatePatientResult {
   created: boolean;
 }
 
-export async function createPatient(args: CreatePatientArgs): Promise<CreatePatientResult> {
-  return invoke<CreatePatientResult>('create_patient', { args });
+export async function createPatient(
+  args: CreatePatientArgs,
+): Promise<CreatePatientResult> {
+  return invoke<CreatePatientResult>("create_patient", { args });
 }
 
 export interface PatientOverview {
@@ -137,23 +152,37 @@ export interface PatientOverview {
 }
 
 export async function patientOverviews(): Promise<PatientOverview[]> {
-  return invoke<PatientOverview[]>('patient_overviews');
+  return invoke<PatientOverview[]>("patient_overviews");
 }
 
-export async function setPatientNickname(id: string, nickname: string | null): Promise<void> {
-  await invoke('set_patient_nickname', { args: { id, nickname } });
+export async function setPatientNickname(
+  id: string,
+  nickname: string | null,
+): Promise<void> {
+  await invoke("set_patient_nickname", { args: { id, nickname } });
 }
 
-export async function setPatientNotes(id: string, notes: string | null): Promise<void> {
-  await invoke('set_patient_notes', { args: { id, notes } });
+export async function setPatientNotes(
+  id: string,
+  notes: string | null,
+): Promise<void> {
+  await invoke("set_patient_notes", { args: { id, notes } });
 }
 
-export async function setPatientHrtStart(id: string, hrtStartIso: string | null): Promise<void> {
-  await invoke('set_patient_hrt_start', { args: { id, hrt_start_iso: hrtStartIso } });
+export async function setPatientHrtStart(
+  id: string,
+  hrtStartIso: string | null,
+): Promise<void> {
+  await invoke("set_patient_hrt_start", {
+    args: { id, hrt_start_iso: hrtStartIso },
+  });
 }
 
-export async function setReportAnnotations(id: string, annotations: string | null): Promise<void> {
-  await invoke('set_report_annotations', { args: { id, annotations } });
+export async function setReportAnnotations(
+  id: string,
+  annotations: string | null,
+): Promise<void> {
+  await invoke("set_report_annotations", { args: { id, annotations } });
 }
 
 export interface UpdateResultArgs {
@@ -168,7 +197,7 @@ export interface UpdateResultArgs {
 }
 
 export async function updateResult(args: UpdateResultArgs): Promise<void> {
-  await invoke('update_result', { args });
+  await invoke("update_result", { args });
 }
 
 export interface LinkAnalyteArgs {
@@ -180,8 +209,10 @@ export interface LinkAnalyteResult {
   rows_relinked: number;
 }
 
-export async function linkUnmatchedAnalyte(args: LinkAnalyteArgs): Promise<LinkAnalyteResult> {
-  return invoke<LinkAnalyteResult>('link_unmatched_analyte', { args });
+export async function linkUnmatchedAnalyte(
+  args: LinkAnalyteArgs,
+): Promise<LinkAnalyteResult> {
+  return invoke<LinkAnalyteResult>("link_unmatched_analyte", { args });
 }
 
 export interface AnalyteOption {
@@ -193,5 +224,5 @@ export interface AnalyteOption {
 }
 
 export async function listAnalytes(): Promise<AnalyteOption[]> {
-  return invoke<AnalyteOption[]>('list_analytes');
+  return invoke<AnalyteOption[]>("list_analytes");
 }

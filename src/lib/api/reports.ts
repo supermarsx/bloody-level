@@ -1,4 +1,4 @@
-import { invoke } from './index';
+import { invoke } from "./index";
 
 export interface PatientSummary {
   id: string;
@@ -42,17 +42,24 @@ export interface AnalyteReading {
 }
 
 export async function listPatients(): Promise<PatientSummary[]> {
-  return invoke<PatientSummary[]>('list_patients');
+  return invoke<PatientSummary[]>("list_patients");
 }
 
-export async function listReports(patientId?: string): Promise<ReportSummary[]> {
-  return invoke<ReportSummary[]>('list_reports', { patientId: patientId ?? null });
+export async function listReports(
+  patientId?: string,
+): Promise<ReportSummary[]> {
+  return invoke<ReportSummary[]>("list_reports", {
+    patientId: patientId ?? null,
+  });
 }
 
-export async function analyteTimeseries(analyteId: string, patientId?: string): Promise<AnalyteReading[]> {
-  return invoke<AnalyteReading[]>('analyte_timeseries', {
+export async function analyteTimeseries(
+  analyteId: string,
+  patientId?: string,
+): Promise<AnalyteReading[]> {
+  return invoke<AnalyteReading[]>("analyte_timeseries", {
     analyteId,
-    patientId: patientId ?? null
+    patientId: patientId ?? null,
   });
 }
 
@@ -61,6 +68,8 @@ export interface FlaggedAnalytesResult {
   subclinical: string[];
 }
 
-export async function listFlaggedAnalytes(patientId: string): Promise<FlaggedAnalytesResult> {
-  return invoke<FlaggedAnalytesResult>('list_flagged_analytes', { patientId });
+export async function listFlaggedAnalytes(
+  patientId: string,
+): Promise<FlaggedAnalytesResult> {
+  return invoke<FlaggedAnalytesResult>("list_flagged_analytes", { patientId });
 }

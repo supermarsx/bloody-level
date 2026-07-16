@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
-  import TimeSeries from '$charts/TimeSeries.svelte';
-  import FlagPill from '$charts/FlagPill.svelte';
-  import DeltaBadge from '$charts/DeltaBadge.svelte';
+  import TimeSeries from '$charts/time-series.svelte';
+  import FlagPill from '$charts/flag-pill.svelte';
+  import DeltaBadge from '$charts/delta-badge.svelte';
   import { analyteTimeseries, type AnalyteReading } from '$api/reports';
   import * as analyteApi from '$api/analyte-info';
   import * as admin from '$api/records-admin';
@@ -17,9 +17,9 @@
   import { exportAnalyteTimeseriesCsv } from '$api/export';
   import { saveTextFile } from '$format/save';
   import { setPageTitle } from '$lib/title.svelte';
-  import BackButton from '$components/BackButton.svelte';
+  import BackButton from '$components/back-button.svelte';
   import { listOntologyEntries, type AnalyteOntologyEntry } from '$api/analyte-info';
-  import ReferenceCard from '$components/ReferenceCard.svelte';
+  import ReferenceCard from '$components/reference-card.svelte';
   import { ask } from '@tauri-apps/plugin-dialog';
   import { chartPrefs } from '$charts/prefs.svelte';
 

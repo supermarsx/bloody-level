@@ -1,8 +1,8 @@
-import { invoke as tauriInvoke } from '@tauri-apps/api/core';
-import { AppError } from './errors';
-import { authEvents } from './auth-events.svelte';
+import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { AppError } from "./errors";
+import { authEvents } from "./auth-events.svelte";
 
-export * from './errors';
+export * from "./errors";
 
 const IN_FLIGHT_TIMEOUT_MS = 30_000;
 
@@ -23,7 +23,7 @@ export interface InvokeOptions {
 export async function invoke<T>(
   cmd: string,
   args?: Record<string, unknown>,
-  opts: InvokeOptions = {}
+  opts: InvokeOptions = {},
 ): Promise<T> {
   const timeoutMs = opts.timeoutMs ?? IN_FLIGHT_TIMEOUT_MS;
 
@@ -31,25 +31,26 @@ export async function invoke<T>(
     const work = tauriInvoke<T>(cmd, args);
 
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const timeout: Promise<never> = timeoutMs > 0
-      ? new Promise((_, reject) => {
-          timer = setTimeout(() => {
-            reject(
-              new AppError(
-                {
-                  kind: 'cancelled',
-                  code: 'ipc.timeout',
-                  message: `${cmd} did not respond within ${(timeoutMs / 1000).toFixed(0)}s`,
-                  detail: null,
-                  retryable: true,
-                  timestamp: Math.floor(Date.now() / 1000)
-                },
-                cmd
-              )
-            );
-          }, timeoutMs);
-        })
-      : new Promise<never>(() => {});
+    const timeout: Promise<never> =
+      timeoutMs > 0
+        ? new Promise((_, reject) => {
+            timer = setTimeout(() => {
+              reject(
+                new AppError(
+                  {
+                    kind: "cancelled",
+                    code: "ipc.timeout",
+                    message: `${cmd} did not respond within ${(timeoutMs / 1000).toFixed(0)}s`,
+                    detail: null,
+                    retryable: true,
+                    timestamp: Math.floor(Date.now() / 1000),
+                  },
+                  cmd,
+                ),
+              );
+            }, timeoutMs);
+          })
+        : new Promise<never>(() => {});
 
     try {
       const result = await Promise.race([work, timeout]);
@@ -74,7 +75,9 @@ export async function invoke<T>(
       lastErr = raw;
       if (attempt < RETRY_DELAYS_MS.length && isIpcProtocolFailure(raw)) {
         // eslint-disable-next-line no-console
-        console.warn(`[ipc] ${cmd} attempt ${attempt + 1} failed, retrying in ${RETRY_DELAYS_MS[attempt]}ms`);
+        console.warn(
+          `[ipc] ${cmd} attempt ${attempt + 1} failed, retrying in ${RETRY_DELAYS_MS[attempt]}ms`,
+        );
         await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt]));
         continue;
       }
@@ -82,26 +85,30 @@ export async function invoke<T>(
     }
   }
   const err = AppError.fromUnknown(lastErr, cmd);
-  if (err.kind === 'locked' && !opts.silentAuth) {
-    authEvents.emit({ type: 'locked', command: cmd });
+  if (err.kind === "locked" && !opts.silentAuth) {
+    authEvents.emit({ type: "locked", command: cmd });
   }
   throw err;
 }
 
 function isIpcProtocolFailure(e: unknown): boolean {
   if (e instanceof TypeError) {
-    const msg = (e.message || '').toLowerCase();
-    return msg.includes('failed to fetch') || msg.includes('network') || msg.includes('load failed');
+    const msg = (e.message || "").toLowerCase();
+    return (
+      msg.includes("failed to fetch") ||
+      msg.includes("network") ||
+      msg.includes("load failed")
+    );
   }
   return false;
 }
 
 export function isTauri(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
-export * as auth from './auth';
-export * as settings from './settings';
-export * as ingest from './ingest';
-export * as reports from './reports';
-export * as tiers from './tiers';
+export * as auth from "./auth";
+export * as settings from "./settings";
+export * as ingest from "./ingest";
+export * as reports from "./reports";
+export * as tiers from "./tiers";

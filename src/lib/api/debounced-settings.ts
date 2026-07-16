@@ -9,8 +9,8 @@
 // In-memory state still updates synchronously via the appearance / chart
 // stores; only the *persisted save* is debounced.
 
-import * as settings from './settings';
-import { toasts } from '../toasts/store.svelte';
+import * as settings from "./settings";
+import { toasts } from "../toasts/store.svelte";
 
 const DELAY_MS = 1500;
 const pending = new Map<string, unknown>();
@@ -22,28 +22,26 @@ let flushHandle: ReturnType<typeof setTimeout> | null = null;
  * dotted-key noise.
  */
 const PREFIX_LABEL: Record<string, string> = {
-  appearance: 'Appearance',
-  chart:      'Chart preference'
+  appearance: "Appearance",
+  chart: "Chart preference",
 };
 
 function summariseKeys(keys: string[]): string {
   if (keys.length === 1) {
     const k = keys[0];
-    const prefix = k.split('.')[0];
-    const tail = k.split('.').slice(1).join('.').replace(/_/g, ' ');
-    return PREFIX_LABEL[prefix]
-      ? `${PREFIX_LABEL[prefix]} · ${tail}`
-      : k;
+    const prefix = k.split(".")[0];
+    const tail = k.split(".").slice(1).join(".").replace(/_/g, " ");
+    return PREFIX_LABEL[prefix] ? `${PREFIX_LABEL[prefix]} · ${tail}` : k;
   }
   // Mixed-prefix flush — group counts.
   const groups: Record<string, number> = {};
   for (const k of keys) {
-    const prefix = k.split('.')[0];
+    const prefix = k.split(".")[0];
     groups[prefix] = (groups[prefix] ?? 0) + 1;
   }
   return Object.entries(groups)
     .map(([prefix, n]) => `${PREFIX_LABEL[prefix] ?? prefix} ×${n}`)
-    .join(' · ');
+    .join(" · ");
 }
 
 async function doFlush() {
@@ -56,8 +54,10 @@ async function doFlush() {
       await settings.set(k, v);
     }
     toasts.success(
-      entries.length === 1 ? 'Setting saved' : `${entries.length} settings saved`,
-      summariseKeys(entries.map(([k]) => k))
+      entries.length === 1
+        ? "Setting saved"
+        : `${entries.length} settings saved`,
+      summariseKeys(entries.map(([k]) => k)),
     );
   } catch (e) {
     toasts.error(e);
@@ -87,8 +87,8 @@ export async function flushNow(): Promise<void> {
 // Fire any pending writes when the page is about to unload, so a user
 // quitting the app right after flipping a toggle still sees their
 // preference persisted on next launch.
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeunload', () => {
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", () => {
     if (pending.size > 0) {
       // Best-effort synchronous-ish flush. We can't await here, so the
       // worst case is the last write doesn't land — but the OS-level
@@ -98,8 +98,8 @@ if (typeof window !== 'undefined') {
   });
   // Also flush when the WebView is hidden (tab switch / app minimised on
   // some platforms) — same rationale.
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden' && pending.size > 0) {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden" && pending.size > 0) {
       void doFlush();
     }
   });

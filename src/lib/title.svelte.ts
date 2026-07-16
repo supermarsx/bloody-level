@@ -6,9 +6,9 @@
 //
 // `state` surfaces transient signals: locked, ingest in flight, etc.
 
-import { isTauri } from '$api/index';
+import { isTauri } from "$api/index";
 
-const APP = 'blevel-tracker';
+const APP = "blevel-tracker";
 
 class TitleStore {
   /** Page-specific subject — e.g. 'Hemoglobina · MARIANA' */
@@ -45,14 +45,14 @@ class TitleStore {
     parts.push(APP);
 
     const stateBits: string[] = [];
-    if (this.locked) stateBits.push('locked');
+    if (this.locked) stateBits.push("locked");
     for (const [k, v] of Object.entries(this.segments)) {
       stateBits.push(v ? `${k}: ${v}` : k);
     }
 
-    let title = parts.join('  ·  ');
+    let title = parts.join("  ·  ");
     if (stateBits.length > 0) {
-      title += `  [${stateBits.join(' · ')}]`;
+      title += `  [${stateBits.join(" · ")}]`;
     }
     if (this.locked) title = `🔒 ${title}`;
     return title;
@@ -68,12 +68,12 @@ class TitleStore {
 
   private async applyNow() {
     const title = this.compose();
-    if (typeof document !== 'undefined') {
+    if (typeof document !== "undefined") {
       document.title = title;
     }
     if (!isTauri()) return;
     try {
-      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
       await getCurrentWindow().setTitle(title);
     } catch {
       // Non-critical — `setTitle` permission may be missing in legacy builds.

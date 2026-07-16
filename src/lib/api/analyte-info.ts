@@ -1,4 +1,4 @@
-import { invoke } from './index';
+import { invoke } from "./index";
 
 export interface AnalyteInfo {
   id: string;
@@ -26,7 +26,7 @@ export interface AnalyteInfo {
 }
 
 export async function get(analyteId: string): Promise<AnalyteInfo> {
-  return invoke<AnalyteInfo>('analyte_info', { analyteId });
+  return invoke<AnalyteInfo>("analyte_info", { analyteId });
 }
 
 export interface AnalyteOntologyEntry {
@@ -54,11 +54,11 @@ export interface AnalyteOntologyEntry {
   has_unit_notes: boolean;
   alias_count: number;
   result_count: number;
-  source: 'seed' | 'user';
+  source: "seed" | "user";
 }
 
 export async function listOntologyEntries(): Promise<AnalyteOntologyEntry[]> {
-  return invoke<AnalyteOntologyEntry[]>('list_ontology_entries');
+  return invoke<AnalyteOntologyEntry[]>("list_ontology_entries");
 }
 
 /**
@@ -92,17 +92,20 @@ export interface AnalyteWriteArgs {
 }
 
 export async function createAnalyte(args: AnalyteWriteArgs): Promise<void> {
-  await invoke('create_analyte', { args });
+  await invoke("create_analyte", { args });
 }
 export async function updateAnalyte(args: AnalyteWriteArgs): Promise<void> {
-  await invoke('update_analyte', { args });
+  await invoke("update_analyte", { args });
 }
 export async function deleteAnalyte(analyteId: string): Promise<void> {
-  await invoke('delete_analyte', { analyteId });
+  await invoke("delete_analyte", { analyteId });
 }
-export async function addAnalyteAlias(analyteId: string, alias: string): Promise<void> {
-  await invoke('add_analyte_alias', { args: { analyte_id: analyteId, alias } });
+export async function addAnalyteAlias(
+  analyteId: string,
+  alias: string,
+): Promise<void> {
+  await invoke("add_analyte_alias", { args: { analyte_id: analyteId, alias } });
 }
 export async function removeAnalyteAlias(alias: string): Promise<void> {
-  await invoke('remove_analyte_alias', { alias });
+  await invoke("remove_analyte_alias", { alias });
 }

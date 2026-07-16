@@ -15,10 +15,10 @@
 // keyed by the bundled preset id; deletes from there yields the bundled
 // default again.
 
-import * as settings from '$api/settings';
-import { setDebounced } from '$api/debounced-settings';
+import * as settings from "$api/settings";
+import { setDebounced } from "$api/debounced-settings";
 
-export type HrtFilter = 'all' | 'pre' | 'post';
+export type HrtFilter = "all" | "pre" | "post";
 
 /** Every per-card filter the Compare page exposes. Mirrors the script
  *  variables on /compare so the round-trip is loss-free. */
@@ -39,24 +39,24 @@ export interface ComparePresetFilters {
 }
 
 export const EMPTY_FILTERS: ComparePresetFilters = {
-  dateFromIso: '',
-  dateUntilIso: '',
-  valueMin: '',
-  valueMax: '',
+  dateFromIso: "",
+  dateUntilIso: "",
+  valueMin: "",
+  valueMax: "",
   includeInlinePriors: false,
   onlyAbnormal: false,
   onlyCritical: false,
   onlyNormal: false,
   onlyUnflagged: false,
   lastNPerAnalyte: 0,
-  excludeReportIds: '',
+  excludeReportIds: "",
   intersectOnly: false,
-  hrtFilter: 'all',
+  hrtFilter: "all",
 };
 
 /** Static preset — fixed analyte list, optional filter overrides. */
 export type StaticPreset = {
-  kind: 'static';
+  kind: "static";
   id: string;
   name: string;
   ids: string[];
@@ -64,7 +64,7 @@ export type StaticPreset = {
    *  When set, every filter is reset to its empty-default and then this
    *  object's keys are applied on top. */
   filters: Partial<ComparePresetFilters> | null;
-  source: 'bundled' | 'user';
+  source: "bundled" | "user";
   hint?: string;
 };
 
@@ -73,13 +73,13 @@ export type StaticPreset = {
  *  without backend support), so users can't create them — only attach
  *  filters. */
 export type DynamicPreset = {
-  kind: 'dynamic';
+  kind: "dynamic";
   id: string;
   name: string;
-  source: 'bundled' | 'user';
+  source: "bundled" | "user";
   /** Identifier the Compare page resolves into the actual analyte ID
    *  list at runtime. */
-  dataSource: 'abnormal' | 'subclinical';
+  dataSource: "abnormal" | "subclinical";
   filters: Partial<ComparePresetFilters> | null;
   hint: string;
 };
@@ -89,55 +89,134 @@ export type ComparePreset = StaticPreset | DynamicPreset;
 // ─── Bundled defaults ─────────────────────────────────────────────────────
 
 const BUNDLED_PRESETS: ComparePreset[] = [
-  { kind: 'static',  id: 'iron',         name: 'Iron panel',
-    ids: ['ferritina', 'ferro_serico', 'transferrina', 'saturacao_transferrina'],
-    filters: null, source: 'bundled' },
-  { kind: 'static',  id: 'lipids',       name: 'Lipids',
-    ids: ['colesterol_total', 'hdl', 'ldl', 'trigliceridos'],
-    filters: null, source: 'bundled' },
-  { kind: 'static',  id: 'thyroid',      name: 'Thyroid',
-    ids: ['tsh', 't4_livre', 't3_livre'],
-    filters: null, source: 'bundled' },
-  { kind: 'static',  id: 'liver',        name: 'Liver',
-    ids: ['alt', 'ast', 'gama_gt', 'fosfatase_alcalina'],
-    filters: null, source: 'bundled' },
-  { kind: 'static',  id: 'kidney',       name: 'Kidney',
-    ids: ['creatinina', 'ureia', 'tfg_estimada'],
-    filters: null, source: 'bundled' },
-  { kind: 'static',  id: 'hemogram',     name: 'Hemogram',
-    ids: ['hemoglobina', 'hematocrito', 'eritrocitos', 'plaquetas'],
-    filters: null, source: 'bundled' },
-  { kind: 'static',  id: 'hematology',   name: 'Hematology',
+  {
+    kind: "static",
+    id: "iron",
+    name: "Iron panel",
     ids: [
-      'hemoglobina', 'hematocrito', 'eritrocitos',
-      'vgm', 'hgm', 'cmhg', 'rdw',
-      'leucocitos', 'neutrofilos', 'linfocitos', 'monocitos', 'eosinofilos', 'basofilos',
-      'plaquetas', 'reticulocitos'
+      "ferritina",
+      "ferro_serico",
+      "transferrina",
+      "saturacao_transferrina",
     ],
-    filters: null, source: 'bundled' },
-  { kind: 'static',  id: 'inflammation', name: 'Inflammation',
-    ids: ['proteina_c_reactiva', 'velocidade_sedimentacao'],
-    filters: null, source: 'bundled' },
-  { kind: 'static',  id: 'hrt_e2_t',     name: 'HRT (E2/T)',
-    ids: ['estradiol', 'testosterona_total', 'testosterona_livre', 'shbg', 'prolactina'],
-    filters: null, source: 'bundled' },
-  { kind: 'dynamic', id: 'abnormal',     name: 'Abnormal',
-    dataSource: 'abnormal', filters: null, source: 'bundled',
-    hint: 'Every analyte with at least one low / high / critical reading on file.' },
-  { kind: 'dynamic', id: 'subclinical',  name: 'Subclinical',
-    dataSource: 'subclinical', filters: null, source: 'bundled',
-    hint: 'Latest reading flagged normal but sitting in the bottom or top decile of its printed reference range.' },
+    filters: null,
+    source: "bundled",
+  },
+  {
+    kind: "static",
+    id: "lipids",
+    name: "Lipids",
+    ids: ["colesterol_total", "hdl", "ldl", "trigliceridos"],
+    filters: null,
+    source: "bundled",
+  },
+  {
+    kind: "static",
+    id: "thyroid",
+    name: "Thyroid",
+    ids: ["tsh", "t4_livre", "t3_livre"],
+    filters: null,
+    source: "bundled",
+  },
+  {
+    kind: "static",
+    id: "liver",
+    name: "Liver",
+    ids: ["alt", "ast", "gama_gt", "fosfatase_alcalina"],
+    filters: null,
+    source: "bundled",
+  },
+  {
+    kind: "static",
+    id: "kidney",
+    name: "Kidney",
+    ids: ["creatinina", "ureia", "tfg_estimada"],
+    filters: null,
+    source: "bundled",
+  },
+  {
+    kind: "static",
+    id: "hemogram",
+    name: "Hemogram",
+    ids: ["hemoglobina", "hematocrito", "eritrocitos", "plaquetas"],
+    filters: null,
+    source: "bundled",
+  },
+  {
+    kind: "static",
+    id: "hematology",
+    name: "Hematology",
+    ids: [
+      "hemoglobina",
+      "hematocrito",
+      "eritrocitos",
+      "vgm",
+      "hgm",
+      "cmhg",
+      "rdw",
+      "leucocitos",
+      "neutrofilos",
+      "linfocitos",
+      "monocitos",
+      "eosinofilos",
+      "basofilos",
+      "plaquetas",
+      "reticulocitos",
+    ],
+    filters: null,
+    source: "bundled",
+  },
+  {
+    kind: "static",
+    id: "inflammation",
+    name: "Inflammation",
+    ids: ["proteina_c_reactiva", "velocidade_sedimentacao"],
+    filters: null,
+    source: "bundled",
+  },
+  {
+    kind: "static",
+    id: "hrt_e2_t",
+    name: "HRT (E2/T)",
+    ids: [
+      "estradiol",
+      "testosterona_total",
+      "testosterona_livre",
+      "shbg",
+      "prolactina",
+    ],
+    filters: null,
+    source: "bundled",
+  },
+  {
+    kind: "dynamic",
+    id: "abnormal",
+    name: "Abnormal",
+    dataSource: "abnormal",
+    filters: null,
+    source: "bundled",
+    hint: "Every analyte with at least one low / high / critical reading on file.",
+  },
+  {
+    kind: "dynamic",
+    id: "subclinical",
+    name: "Subclinical",
+    dataSource: "subclinical",
+    filters: null,
+    source: "bundled",
+    hint: "Latest reading flagged normal but sitting in the bottom or top decile of its printed reference range.",
+  },
 ];
 
-const KEY_USER_PRESETS = 'compare.user_presets';
-const KEY_BUNDLED_OVERRIDES = 'compare.bundled_overrides';
+const KEY_USER_PRESETS = "compare.user_presets";
+const KEY_BUNDLED_OVERRIDES = "compare.bundled_overrides";
 
 /** Editable subset of a preset — what the editor mutates. The kind /
  *  dataSource / source are immutable and not exposed. */
 export type EditablePreset = {
   name: string;
-  ids: string[];                                  // ignored for dynamic
-  filters: Partial<ComparePresetFilters> | null;  // null = don't touch filters
+  ids: string[]; // ignored for dynamic
+  filters: Partial<ComparePresetFilters> | null; // null = don't touch filters
 };
 
 class ComparePresets {
@@ -151,8 +230,10 @@ class ComparePresets {
   async load() {
     if (this.loaded) return;
     try {
-      const overrides = await settings.get<Record<string, EditablePreset>>(KEY_BUNDLED_OVERRIDES);
-      if (overrides && typeof overrides === 'object') {
+      const overrides = await settings.get<Record<string, EditablePreset>>(
+        KEY_BUNDLED_OVERRIDES,
+      );
+      if (overrides && typeof overrides === "object") {
         this.bundledOverrides = overrides;
       }
       const user = await settings.get<StaticPreset[]>(KEY_USER_PRESETS);
@@ -160,18 +241,30 @@ class ComparePresets {
         // Ensure every user-loaded entry has the right shape; defensively
         // drop anything malformed so a corrupt save doesn't crash the page.
         this.userPresets = user
-          .filter((p) => p && typeof p === 'object' && p.kind === 'static' && typeof p.id === 'string' && typeof p.name === 'string')
+          .filter(
+            (p) =>
+              p &&
+              typeof p === "object" &&
+              p.kind === "static" &&
+              typeof p.id === "string" &&
+              typeof p.name === "string",
+          )
           .map((p) => ({
-            kind: 'static',
+            kind: "static",
             id: p.id,
             name: p.name,
-            ids: Array.isArray(p.ids) ? p.ids.filter((x) => typeof x === 'string') : [],
-            filters: p.filters && typeof p.filters === 'object' ? p.filters : null,
-            source: 'user',
+            ids: Array.isArray(p.ids)
+              ? p.ids.filter((x) => typeof x === "string")
+              : [],
+            filters:
+              p.filters && typeof p.filters === "object" ? p.filters : null,
+            source: "user",
             hint: p.hint,
           }));
       }
-    } catch { /* stay on defaults */ }
+    } catch {
+      /* stay on defaults */
+    }
     this.loaded = true;
   }
 
@@ -180,7 +273,7 @@ class ComparePresets {
     const merged: ComparePreset[] = BUNDLED_PRESETS.map((b) => {
       const ov = this.bundledOverrides[b.id];
       if (!ov) return b;
-      if (b.kind === 'static') {
+      if (b.kind === "static") {
         return {
           ...b,
           name: ov.name ?? b.name,
@@ -229,20 +322,25 @@ class ComparePresets {
     setDebounced(KEY_BUNDLED_OVERRIDES, {});
   }
 
-  addUserPreset(p: { name: string; ids: string[]; filters: Partial<ComparePresetFilters> | null; hint?: string }): StaticPreset {
-    const baseId = `user_${slug(p.name) || 'preset'}`;
+  addUserPreset(p: {
+    name: string;
+    ids: string[];
+    filters: Partial<ComparePresetFilters> | null;
+    hint?: string;
+  }): StaticPreset {
+    const baseId = `user_${slug(p.name) || "preset"}`;
     let id = baseId;
     let n = 2;
     while (this.userPresets.some((x) => x.id === id)) {
       id = `${baseId}_${n++}`;
     }
     const created: StaticPreset = {
-      kind: 'static',
+      kind: "static",
       id,
-      name: p.name.trim() || 'Untitled',
-      ids: p.ids.filter((x) => typeof x === 'string'),
+      name: p.name.trim() || "Untitled",
+      ids: p.ids.filter((x) => typeof x === "string"),
       filters: p.filters,
-      source: 'user',
+      source: "user",
       hint: p.hint,
     };
     this.userPresets = [...this.userPresets, created];
@@ -253,8 +351,13 @@ class ComparePresets {
   updateUserPreset(id: string, edit: EditablePreset) {
     const next = this.userPresets.map((p) =>
       p.id === id
-        ? { ...p, name: edit.name.trim() || p.name, ids: edit.ids.filter((x) => typeof x === 'string'), filters: edit.filters }
-        : p
+        ? {
+            ...p,
+            name: edit.name.trim() || p.name,
+            ids: edit.ids.filter((x) => typeof x === "string"),
+            filters: edit.filters,
+          }
+        : p,
     );
     this.userPresets = next;
     setDebounced(KEY_USER_PRESETS, next);
@@ -269,10 +372,10 @@ class ComparePresets {
 function slug(s: string): string {
   return s
     .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[^\w\s-]/g, '')
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "")
     .trim()
-    .replace(/\s+/g, '_')
+    .replace(/\s+/g, "_")
     .slice(0, 32);
 }
 

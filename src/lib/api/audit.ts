@@ -1,10 +1,10 @@
-import { invoke } from './index';
+import { invoke } from "./index";
 
 export interface AuditEntry {
   id: number;
-  ts: number;                       // unix seconds
-  action: string;                   // 'create' | 'update' | 'delete' | 'merge' | 'ingest' | 'reload' | …
-  entity_type: string;              // 'patient' | 'report' | 'result' | 'analyte' | 'alias' | 'ontology' | 'system' | 'audit'
+  ts: number; // unix seconds
+  action: string; // 'create' | 'update' | 'delete' | 'merge' | 'ingest' | 'reload' | …
+  entity_type: string; // 'patient' | 'report' | 'result' | 'analyte' | 'alias' | 'ontology' | 'system' | 'audit'
   entity_id: string | null;
   summary: string;
   details_json: string | null;
@@ -28,8 +28,10 @@ export interface AuditListFilters {
   offset?: number;
 }
 
-export async function listAuditEntries(filters: AuditListFilters = {}): Promise<AuditListResult> {
-  return invoke<AuditListResult>('list_audit_entries', { ...filters });
+export async function listAuditEntries(
+  filters: AuditListFilters = {},
+): Promise<AuditListResult> {
+  return invoke<AuditListResult>("list_audit_entries", { ...filters });
 }
 
 export interface AuditClearResult {
@@ -37,5 +39,5 @@ export interface AuditClearResult {
 }
 
 export async function clearAuditLog(): Promise<AuditClearResult> {
-  return invoke<AuditClearResult>('clear_audit_log');
+  return invoke<AuditClearResult>("clear_audit_log");
 }

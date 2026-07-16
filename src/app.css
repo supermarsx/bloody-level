@@ -4,7 +4,7 @@
 
 /* ---------- Design tokens (RGB triplets so Tailwind /<alpha-value> works) ---------- */
 
-:root[data-theme='light'] {
+:root[data-theme="light"] {
   --bg-1: 255 255 255;
   --bg-2: 246 247 249;
   --bg-3: 234 236 240;
@@ -12,21 +12,21 @@
   --fg-2: 75 85 99;
   --fg-3: 156 163 175;
   --line: 229 231 235;
-  --accent: 124 58 237;     /* violet-600 — matches brand gradient endpoint */
+  --accent: 124 58 237; /* violet-600 — matches brand gradient endpoint */
   --ok: 22 163 74;
   --warn: 217 119 6;
   --crit: 220 38 38;
 
   /* Reference-band fills (low-alpha, drawn via ECharts markArea) */
-  --band-normal: rgba(22, 163, 74, 0.10);
-  --band-borderline: rgba(217, 119, 6, 0.10);
-  --band-critical: rgba(220, 38, 38, 0.10);
+  --band-normal: rgba(22, 163, 74, 0.1);
+  --band-borderline: rgba(217, 119, 6, 0.1);
+  --band-critical: rgba(220, 38, 38, 0.1);
 
   /* Chart palette — high-contrast, color-blind-friendly, light-mode tuned.
      `--chart-1` deliberately matches the violet accent so the primary series
      reads as the brand colour. Subsequent slots fan out to differentiate
      overlay series. */
-  --chart-1: #7c3aed;  /* violet 600 — primary series */
+  --chart-1: #7c3aed; /* violet 600 — primary series */
   --chart-2: #16a34a;
   --chart-3: #d97706;
   --chart-4: #2563eb;
@@ -38,7 +38,7 @@
   --chart-axis: rgba(0, 0, 0, 0.55);
 }
 
-:root[data-theme='dark'] {
+:root[data-theme="dark"] {
   --bg-1: 11 13 16;
   --bg-2: 20 23 28;
   --bg-3: 31 36 43;
@@ -46,7 +46,7 @@
   --fg-2: 156 163 175;
   --fg-3: 107 114 128;
   --line: 31 36 43;
-  --accent: 167 139 250;    /* violet-400 — readable on dark bg */
+  --accent: 167 139 250; /* violet-400 — readable on dark bg */
   --ok: 34 197 94;
   --warn: 245 158 11;
   --crit: 239 68 68;
@@ -55,7 +55,7 @@
   --band-borderline: rgba(245, 158, 11, 0.12);
   --band-critical: rgba(239, 68, 68, 0.14);
 
-  --chart-1: #a78bfa;  /* violet 400 — primary series, matches accent */
+  --chart-1: #a78bfa; /* violet 400 — primary series, matches accent */
   --chart-2: #4ade80;
   --chart-3: #fbbf24;
   --chart-4: #60a5fa;
@@ -75,56 +75,100 @@
  * Defaults (no `data-accent` attribute) match the violet baseline above.
  */
 
-:root[data-theme='light'][data-accent='blue']    { --accent: 37 99 235;  --chart-1: #2563eb; }
-:root[data-theme='dark'][data-accent='blue']     { --accent: 96 165 250; --chart-1: #60a5fa; }
+:root[data-theme="light"][data-accent="blue"] {
+  --accent: 37 99 235;
+  --chart-1: #2563eb;
+}
+:root[data-theme="dark"][data-accent="blue"] {
+  --accent: 96 165 250;
+  --chart-1: #60a5fa;
+}
 
-:root[data-theme='light'][data-accent='emerald'] { --accent: 5 150 105;  --chart-1: #059669; }
-:root[data-theme='dark'][data-accent='emerald']  { --accent: 52 211 153; --chart-1: #34d399; }
+:root[data-theme="light"][data-accent="emerald"] {
+  --accent: 5 150 105;
+  --chart-1: #059669;
+}
+:root[data-theme="dark"][data-accent="emerald"] {
+  --accent: 52 211 153;
+  --chart-1: #34d399;
+}
 
-:root[data-theme='light'][data-accent='rose']    { --accent: 225 29 72;  --chart-1: #e11d48; }
-:root[data-theme='dark'][data-accent='rose']     { --accent: 251 113 133; --chart-1: #fb7185; }
+:root[data-theme="light"][data-accent="rose"] {
+  --accent: 225 29 72;
+  --chart-1: #e11d48;
+}
+:root[data-theme="dark"][data-accent="rose"] {
+  --accent: 251 113 133;
+  --chart-1: #fb7185;
+}
 
-:root[data-theme='light'][data-accent='amber']   { --accent: 217 119 6;  --chart-1: #d97706; }
-:root[data-theme='dark'][data-accent='amber']    { --accent: 251 191 36; --chart-1: #fbbf24; }
+:root[data-theme="light"][data-accent="amber"] {
+  --accent: 217 119 6;
+  --chart-1: #d97706;
+}
+:root[data-theme="dark"][data-accent="amber"] {
+  --accent: 251 191 36;
+  --chart-1: #fbbf24;
+}
 
-:root[data-theme='light'][data-accent='teal']    { --accent: 13 148 136; --chart-1: #0d9488; }
-:root[data-theme='dark'][data-accent='teal']     { --accent: 45 212 191; --chart-1: #2dd4bf; }
+:root[data-theme="light"][data-accent="teal"] {
+  --accent: 13 148 136;
+  --chart-1: #0d9488;
+}
+:root[data-theme="dark"][data-accent="teal"] {
+  --accent: 45 212 191;
+  --chart-1: #2dd4bf;
+}
 
 /* Density — affects vertical rhythm of common spacing classes. We keep it
    light-touch to avoid breaking layouts: tighten card padding by 25% and
    line-height by ~10% in `compact`. */
-:root[data-density='compact'] {
+:root[data-density="compact"] {
   --density-card-pad: 0.6rem;
   --density-line-height: 1.4;
 }
-:root:not([data-density='compact']) {
+:root:not([data-density="compact"]) {
   --density-card-pad: 1rem;
   --density-line-height: 1.55;
 }
-body { line-height: var(--density-line-height); }
-:root[data-density='compact'] .card,
-:root[data-density='compact'] .card-tight { padding: var(--density-card-pad); }
+body {
+  line-height: var(--density-line-height);
+}
+:root[data-density="compact"] .card,
+:root[data-density="compact"] .card-tight {
+  padding: var(--density-card-pad);
+}
 
 /* Font scale — multiplies the base body font-size. Components that use
    `text-xs/sm/base` Tailwind classes inherit naturally because Tailwind
    sizes are derived from the root. */
-:root[data-font-scale='sm'] { font-size: 14px; }
+:root[data-font-scale="sm"] {
+  font-size: 14px;
+}
 :root:not([data-font-scale]),
-:root[data-font-scale='md'] { font-size: 15px; }
-:root[data-font-scale='lg'] { font-size: 16px; }
+:root[data-font-scale="md"] {
+  font-size: 15px;
+}
+:root[data-font-scale="lg"] {
+  font-size: 16px;
+}
 
 /* Font family choice. `sans` is the default; the others swap the body
    typeface only — monospace remains for code/numbers via Tailwind's
    `font-mono` + `tabular-nums`. */
-:root[data-font-family='serif'] body { font-family: 'Source Serif Pro', Georgia, 'Times New Roman', serif; }
-:root[data-font-family='mono'] body  { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+:root[data-font-family="serif"] body {
+  font-family: "Source Serif Pro", Georgia, "Times New Roman", serif;
+}
+:root[data-font-family="mono"] body {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
 
 /* Reduce-motion gate — kills our app-level animations. The browser-level
    `prefers-reduced-motion` media query already neutralises CSS keyframes
    we wrote with that guard; this is the explicit user-controlled variant. */
-:root[data-reduce-motion='true'] *,
-:root[data-reduce-motion='true'] *::before,
-:root[data-reduce-motion='true'] *::after {
+:root[data-reduce-motion="true"] *,
+:root[data-reduce-motion="true"] *::before,
+:root[data-reduce-motion="true"] *::after {
   animation-duration: 0.001ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.001ms !important;
@@ -133,7 +177,8 @@ body { line-height: var(--density-line-height); }
 
 /* ---------- Base ---------- */
 
-html, body {
+html,
+body {
   height: 100%;
   background-color: rgb(var(--bg-1));
   color: rgb(var(--fg-1));
@@ -159,7 +204,7 @@ body {
 }
 
 ::selection {
-  background-color: rgb(var(--accent) / 0.30);
+  background-color: rgb(var(--accent) / 0.3);
 }
 
 /* ---------- Component primitives ---------- */
@@ -207,14 +252,14 @@ input.input[type="email"] {
   color-scheme: dark light; /* let the native picker UI invert with theme */
   accent-color: rgb(var(--accent));
 }
-:root[data-theme='light'] .input,
-:root[data-theme='light'] .select,
-:root[data-theme='light'] .search {
+:root[data-theme="light"] .input,
+:root[data-theme="light"] .select,
+:root[data-theme="light"] .search {
   color-scheme: light;
 }
-:root[data-theme='dark'] .input,
-:root[data-theme='dark'] .select,
-:root[data-theme='dark'] .search {
+:root[data-theme="dark"] .input,
+:root[data-theme="dark"] .select,
+:root[data-theme="dark"] .search {
   color-scheme: dark;
 }
 
@@ -245,7 +290,7 @@ select {
 }
 /* Theme-aware chevron tint — light mode uses fg-2 grey, dark mode keeps the
    default light grey from the data URI (which already reads on dark bg). */
-:root[data-theme='light'] select {
+:root[data-theme="light"] select {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20' fill='none' stroke='%234b5563' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 8 10 12 14 8'/></svg>");
 }
 /* The dropdown popup (the actual <option> list) is rendered by the OS and
@@ -279,23 +324,28 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
   opacity: 0.75;
 }
-:root[data-theme='dark'] input[type="date"]::-webkit-calendar-picker-indicator,
-:root[data-theme='dark'] input[type="datetime-local"]::-webkit-calendar-picker-indicator,
-:root[data-theme='dark'] input[type="month"]::-webkit-calendar-picker-indicator,
-:root[data-theme='dark'] input[type="week"]::-webkit-calendar-picker-indicator,
-:root[data-theme='dark'] input[type="time"]::-webkit-calendar-picker-indicator {
+:root[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+:root[data-theme="dark"]
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+:root[data-theme="dark"] input[type="month"]::-webkit-calendar-picker-indicator,
+:root[data-theme="dark"] input[type="week"]::-webkit-calendar-picker-indicator,
+:root[data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(0.85);
 }
 
 /* Tell every form control which colour scheme it should pick its native
    chrome from. Without this, Chrome's autofill highlight + native dropdown
    stays light-blue on dark mode. */
-:root[data-theme='light'] input,
-:root[data-theme='light'] select,
-:root[data-theme='light'] textarea { color-scheme: light; }
-:root[data-theme='dark'] input,
-:root[data-theme='dark'] select,
-:root[data-theme='dark'] textarea { color-scheme: dark; }
+:root[data-theme="light"] input,
+:root[data-theme="light"] select,
+:root[data-theme="light"] textarea {
+  color-scheme: light;
+}
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea {
+  color-scheme: dark;
+}
 
 /* Checkbox + radio: tint the check fill with the brand accent rather than
    the OS blue. `accent-color` is the modern-CSS knob for this. */
@@ -308,14 +358,28 @@ input[type="radio"] {
   @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border;
 }
 
-.pill-ok    { @apply pill bg-ok/10    text-ok    border-ok/30; }
-.pill-warn  { @apply pill bg-warn/10  text-warn  border-warn/30; }
-.pill-crit  { @apply pill bg-crit/10  text-crit  border-crit/30; }
-.pill-muted { @apply pill bg-bg3      text-fg2   border-line; }
+.pill-ok {
+  @apply pill bg-ok/10    text-ok    border-ok/30;
+}
+.pill-warn {
+  @apply pill bg-warn/10  text-warn  border-warn/30;
+}
+.pill-crit {
+  @apply pill bg-crit/10  text-crit  border-crit/30;
+}
+.pill-muted {
+  @apply pill bg-bg3      text-fg2   border-line;
+}
 
-.delta-up    { color: rgb(var(--crit)); }   /* high-direction = warning by default */
-.delta-down  { color: rgb(var(--ok)); }
-.delta-none  { color: rgb(var(--fg-3)); }
+.delta-up {
+  color: rgb(var(--crit));
+} /* high-direction = warning by default */
+.delta-down {
+  color: rgb(var(--ok));
+}
+.delta-none {
+  color: rgb(var(--fg-3));
+}
 
 /* Small "+14d" / "+3mo" pill used by reports + readings tables to show the
    time elapsed between consecutive entries. Distinct from `.hrt-tag` (HRT
@@ -344,17 +408,30 @@ input[type="radio"] {
 }
 
 /* ---------- Reference band classes (used as inline-style fallbacks) ---------- */
-.band-normal     { background: var(--band-normal); }
-.band-borderline { background: var(--band-borderline); }
-.band-critical   { background: var(--band-critical); }
+.band-normal {
+  background: var(--band-normal);
+}
+.band-borderline {
+  background: var(--band-borderline);
+}
+.band-critical {
+  background: var(--band-critical);
+}
 
 /* ---------- Scrollbar (subtle, theme-aware) ---------- */
 
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
 ::-webkit-scrollbar-thumb {
   background: rgb(var(--bg-3));
   border-radius: 6px;
   border: 2px solid rgb(var(--bg-1));
 }
-::-webkit-scrollbar-thumb:hover { background: rgb(var(--fg-3)); }
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--fg-3));
+}

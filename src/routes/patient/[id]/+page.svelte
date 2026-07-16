@@ -7,10 +7,10 @@
   import { AppError } from '$api/errors';
   import { toasts } from '../../../lib/toasts/store.svelte';
   import { formatDate, ageFromDob, formatRelativeSpan } from '$format/dates';
-  import PatientPickerDialog from '$components/PatientPickerDialog.svelte';
+  import PatientPickerDialog from '$components/patient-picker-dialog.svelte';
   import { setPageTitle } from '$lib/title.svelte';
-  import BackButton from '$components/BackButton.svelte';
-  import HrtSection from '$components/HrtSection.svelte';
+  import BackButton from '$components/back-button.svelte';
+  import HrtSection from '$components/hrt-section.svelte';
   import { hrtMilestoneFor } from '$format/hrt-milestone';
 
   let patientId = $derived($page.params.id ?? '');

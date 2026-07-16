@@ -4,7 +4,7 @@
 // years past 12 months. Negative values are flagged as `pre` so users
 // labelling baseline labs see "Day −7 (baseline)".
 
-import { differenceInDays, parseISO } from 'date-fns';
+import { differenceInDays, parseISO } from "date-fns";
 
 export interface HrtMilestone {
   /** Whole-day distance from start (negative if collection precedes start). */
@@ -23,7 +23,7 @@ export interface HrtMilestone {
 
 export function hrtMilestoneFor(
   collectionDateIso: string | null | undefined,
-  hrtStartIso: string | null | undefined
+  hrtStartIso: string | null | undefined,
 ): HrtMilestone | null {
   if (!collectionDateIso || !hrtStartIso) return null;
   let start: Date, collect: Date;
@@ -58,14 +58,15 @@ export function hrtMilestoneFor(
   } else {
     const wholeYears = Math.floor(months / 12);
     const remainder = months % 12;
-    label = remainder === 0 ? `Year ${wholeYears}` : `${wholeYears}y ${remainder}m`;
+    label =
+      remainder === 0 ? `Year ${wholeYears}` : `${wholeYears}y ${remainder}m`;
   }
 
   // Long label always shows all three units so the tooltip / sub-label
   // tells the same story regardless of which scale the user is reading.
-  const yearText = absYears > 0 ? ` · ${absYears} y` : '';
+  const yearText = absYears > 0 ? ` · ${absYears} y` : "";
   const long = isPre
-    ? `${absDays} day${absDays === 1 ? '' : 's'} before HRT start (${absMonths} mo${yearText})`
-    : `${days} day${days === 1 ? '' : 's'} · ${absMonths} mo${yearText} since HRT start`;
+    ? `${absDays} day${absDays === 1 ? "" : "s"} before HRT start (${absMonths} mo${yearText})`
+    : `${days} day${days === 1 ? "" : "s"} · ${absMonths} mo${yearText} since HRT start`;
   return { days, months, years, isPre, label, long };
 }

@@ -4,8 +4,8 @@
   import * as admin from '$api/records-admin';
   import { toasts } from '../../lib/toasts/store.svelte';
   import { parseTiers, formatTierRange } from '$format/tiers';
-  import AnalyteEditorDialog from '$components/AnalyteEditorDialog.svelte';
-  import ReferenceCard from '$components/ReferenceCard.svelte';
+  import AnalyteEditorDialog from '$components/analyte-editor-dialog.svelte';
+  import ReferenceCard from '$components/reference-card.svelte';
   import { ask } from '@tauri-apps/plugin-dialog';
 
   let entries = $state<AnalyteOntologyEntry[]>([]);

@@ -1,6 +1,6 @@
-import { AppError, titleForError, type ErrorContext } from '$api/errors';
+import { AppError, titleForError, type ErrorContext } from "$api/errors";
 
-export type ToastKind = 'info' | 'success' | 'warn' | 'error';
+export type ToastKind = "info" | "success" | "warn" | "error";
 
 export interface Toast {
   id: number;
@@ -19,7 +19,7 @@ class ToastStore {
   toasts = $state<Toast[]>([]);
   private nextId = 1;
 
-  private push(t: Omit<Toast, 'id'>): number {
+  private push(t: Omit<Toast, "id">): number {
     const id = this.nextId++;
     const toast: Toast = { ...t, id };
     this.toasts = [...this.toasts, toast];
@@ -30,23 +30,43 @@ class ToastStore {
   }
 
   info(title: string, message?: string, durationMs = 4000): number {
-    return this.push({ kind: 'info', title, message: message ?? null, durationMs });
+    return this.push({
+      kind: "info",
+      title,
+      message: message ?? null,
+      durationMs,
+    });
   }
 
   success(title: string, message?: string, durationMs = 3000): number {
-    return this.push({ kind: 'success', title, message: message ?? null, durationMs });
+    return this.push({
+      kind: "success",
+      title,
+      message: message ?? null,
+      durationMs,
+    });
   }
 
   warn(title: string, message?: string, durationMs = 5000): number {
-    return this.push({ kind: 'warn', title, message: message ?? null, durationMs });
+    return this.push({
+      kind: "warn",
+      title,
+      message: message ?? null,
+      durationMs,
+    });
   }
 
   /** Push a typed error. Sticky for crypto/locked; auto-dismiss otherwise. */
-  error(err: unknown, opts: { retry?: () => void; sticky?: boolean } = {}): number {
+  error(
+    err: unknown,
+    opts: { retry?: () => void; sticky?: boolean } = {},
+  ): number {
     const e = err instanceof AppError ? err : AppError.fromUnknown(err);
-    const sticky = opts.sticky ?? (e.kind === 'crypto' || e.kind === 'locked' || e.kind === 'database');
+    const sticky =
+      opts.sticky ??
+      (e.kind === "crypto" || e.kind === "locked" || e.kind === "database");
     return this.push({
-      kind: 'error',
+      kind: "error",
       title: titleForError(e),
       message: e.message,
       detail: e.detail,
@@ -54,7 +74,7 @@ class ToastStore {
       durationMs: sticky ? 0 : 7000,
       command: e.command,
       code: e.code,
-      context: e.context
+      context: e.context,
     });
   }
 

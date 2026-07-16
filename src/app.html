@@ -3,18 +3,27 @@
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%sveltekit.assets%/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <meta name="color-scheme" content="dark light" />
     <title>blevel-tracker</title>
     <script>
       // Apply persisted theme before first paint to prevent flash.
       (function () {
         try {
-          const stored = localStorage.getItem('blevel.theme');
-          const mode = stored && ['light', 'dark', 'system'].includes(stored) ? stored : 'system';
-          const sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          const resolved = mode === 'system' ? (sysDark ? 'dark' : 'light') : mode;
-          document.documentElement.setAttribute('data-theme', resolved);
+          const stored = localStorage.getItem("blevel.theme");
+          const mode =
+            stored && ["light", "dark", "system"].includes(stored)
+              ? stored
+              : "system";
+          const sysDark = window.matchMedia(
+            "(prefers-color-scheme: dark)",
+          ).matches;
+          const resolved =
+            mode === "system" ? (sysDark ? "dark" : "light") : mode;
+          document.documentElement.setAttribute("data-theme", resolved);
         } catch {}
       })();
     </script>

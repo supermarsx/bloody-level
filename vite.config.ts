@@ -1,5 +1,5 @@
-import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vite';
+import { sveltekit } from "@sveltejs/kit/vite";
+import { defineConfig } from "vite";
 
 const host = process.env.TAURI_DEV_HOST;
 
@@ -12,20 +12,19 @@ export default defineConfig({
     port: 1420,
     strictPort: true,
     host: host || false,
-    hmr: host
-      ? { protocol: 'ws', host, port: 1421 }
-      : undefined,
+    hmr: host ? { protocol: "ws", host, port: 1421 } : undefined,
     watch: {
       // src-tauri changes are watched by `tauri dev` itself.
-      ignored: ['**/src-tauri/**']
-    }
+      ignored: ["**/src-tauri/**"],
+    },
   },
 
   // Vite resolves env vars prefixed with VITE_; we add TAURI_ for plugin awareness.
-  envPrefix: ['VITE_', 'TAURI_ENV_*'],
+  envPrefix: ["VITE_", "TAURI_ENV_*"],
   build: {
-    target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari13',
-    minify: !process.env.TAURI_ENV_DEBUG ? 'esbuild' : false,
-    sourcemap: !!process.env.TAURI_ENV_DEBUG
-  }
+    target:
+      process.env.TAURI_ENV_PLATFORM === "windows" ? "chrome105" : "safari13",
+    minify: !process.env.TAURI_ENV_DEBUG ? "esbuild" : false,
+    sourcemap: !!process.env.TAURI_ENV_DEBUG,
+  },
 });

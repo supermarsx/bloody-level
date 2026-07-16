@@ -1,6 +1,6 @@
 <script lang="ts">
-  import FlagPill from './FlagPill.svelte';
-  import DeltaBadge from './DeltaBadge.svelte';
+  import FlagPill from './flag-pill.svelte';
+  import DeltaBadge from './delta-badge.svelte';
   import { formatNumber } from '$format/numbers';
   import { prettyUnit } from '$format/units';
 

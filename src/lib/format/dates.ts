@@ -1,4 +1,9 @@
-import { format, parseISO, differenceInDays, differenceInYears } from 'date-fns';
+import {
+  format,
+  parseISO,
+  differenceInDays,
+  differenceInYears,
+} from "date-fns";
 
 /**
  * Whole-year age between a YYYY-MM-DD date of birth and today. Honours
@@ -20,15 +25,20 @@ import { format, parseISO, differenceInDays, differenceInYears } from 'date-fns'
  */
 export function formatRelativeSpan(
   fromIso: string | null | undefined,
-  toIso: string | null | undefined
+  toIso: string | null | undefined,
 ): string {
-  if (!fromIso || !toIso) return '—';
+  if (!fromIso || !toIso) return "—";
   let f: Date, t: Date;
-  try { f = parseISO(fromIso); t = parseISO(toIso); } catch { return '—'; }
+  try {
+    f = parseISO(fromIso);
+    t = parseISO(toIso);
+  } catch {
+    return "—";
+  }
   const days = differenceInDays(t, f);
-  if (!Number.isFinite(days)) return '—';
-  if (days === 0) return 'same day';
-  const sign = days > 0 ? '+' : '−';
+  if (!Number.isFinite(days)) return "—";
+  if (days === 0) return "same day";
+  const sign = days > 0 ? "+" : "−";
   const abs = Math.abs(days);
   if (abs < 14) return `${sign}${abs}d`;
   if (abs < 56) return `${sign}${Math.round(abs / 7)}w`;
@@ -51,18 +61,18 @@ export function ageFromDob(iso: string | null | undefined): number | null {
 }
 
 export function formatDate(iso: string | null | undefined): string {
-  if (!iso) return '—';
+  if (!iso) return "—";
   try {
-    return format(parseISO(iso), 'yyyy-MM-dd');
+    return format(parseISO(iso), "yyyy-MM-dd");
   } catch {
     return iso;
   }
 }
 
 export function formatDateLong(iso: string | null | undefined): string {
-  if (!iso) return '—';
+  if (!iso) return "—";
   try {
-    return format(parseISO(iso), 'MMM d, yyyy');
+    return format(parseISO(iso), "MMM d, yyyy");
   } catch {
     return iso;
   }

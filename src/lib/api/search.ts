@@ -1,7 +1,7 @@
-import { invoke } from './index';
+import { invoke } from "./index";
 
 export interface SearchHit {
-  kind: 'patient' | 'analyte' | 'report';
+  kind: "patient" | "analyte" | "report";
   id: string;
   label: string;
   sub: string | null;
@@ -15,5 +15,5 @@ export interface SearchResults {
 }
 
 export async function globalSearch(query: string): Promise<SearchResults> {
-  return invoke<SearchResults>('global_search', { query });
+  return invoke<SearchResults>("global_search", { query });
 }

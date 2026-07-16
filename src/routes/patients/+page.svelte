@@ -6,7 +6,7 @@
   import { AppError } from '$api/errors';
   import { toasts } from '../../lib/toasts/store.svelte';
   import { formatDate } from '$format/dates';
-  import PatientPickerDialog from '$components/PatientPickerDialog.svelte';
+  import PatientPickerDialog from '$components/patient-picker-dialog.svelte';
   import { ageFromDob } from '$format/dates';
 
   type SortKey = 'name' | 'reports' | 'latest' | 'abnormal' | 'critical' | 'analytes';

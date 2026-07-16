@@ -2,7 +2,7 @@
   import { page } from '$app/stores';
   import { theme } from '$theme/store.svelte';
   import * as auth from '$api/auth';
-  import GlobalSearch from './GlobalSearch.svelte';
+  import GlobalSearch from './global-search.svelte';
 
   // Inline SVG paths so the navbar has no asset dependencies. Each icon is
   // 20×20, single-stroke, 1.6px stroke-width — readable at our 12-line bar.

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import TimeSeries from '$charts/TimeSeries.svelte';
+  import TimeSeries from '$charts/time-series.svelte';
   import { listPatients, analyteTimeseries, listFlaggedAnalytes,
            type PatientSummary, type AnalyteReading, type FlaggedAnalytesResult } from '$api/reports';
   import { listOntologyEntries, type AnalyteOntologyEntry } from '$api/analyte-info';
