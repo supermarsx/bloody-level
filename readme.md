@@ -1,83 +1,62 @@
 # bloody-level
 
-Local-first desktop app for turning blood-work PDFs into a private,
-longitudinal lab dashboard.
+[![CI](https://github.com/supermarsx/bloody-level/actions/workflows/ci.yml/badge.svg)](https://github.com/supermarsx/bloody-level/actions/workflows/ci.yml)
 
-![bloody-level dashboard screenshot](static/screenshot.png)
+Private, local-first desktop software for turning pathology-report PDFs into a longitudinal lab-results view.
 
-## What It Does
+> This is a tracking and review tool, not a diagnostic tool. It does not provide medical advice.
 
-bloody-level ingests clinical pathology PDF reports, extracts analytes, and
-shows trends over time with reference ranges, deltas, flags, report history, and
-patient-level context.
+## The short version
 
-Everything is designed to stay on the device:
+1. Unlock the local vault with your password or registered passkey.
+2. Drop one or more blood-work PDFs into **Ingest**.
+3. Review parsed rows, flags, reference ranges, and parser diagnostics.
+4. Follow a patient over time from the dashboard, reports, analyte trends, and compare view.
 
-- Local encrypted SQLite/SQLCipher vault
-- Password unlock with passkey support
-- No telemetry and no cloud sync
-- PDF text extraction through bundled pdfium
-- Optional local OCR/model tiers for harder PDFs
-- Dashboard, patients, records, report detail, analyte detail, compare, audit,
-  ontology, and settings views
+The app is designed for one person and one device:
 
-This is a tracking and review tool, not a diagnostic tool. It does not provide
-medical advice.
+- the database is encrypted at rest;
+- original PDFs are copied into the app data directory;
+- there is no telemetry, cloud sync, analytics, or required network service;
+- PDF text extraction and optional OCR/model tiers run locally.
 
-## Current Status
+## Current status
 
-The core desktop app is implemented: encrypted storage, password/passkey unlock,
-pdfium ingest, parser, dashboard, patients, records, report detail, analyte
-detail, compare, audit, ontology, settings, and CI/release automation.
+The core workflow is implemented: vault setup and unlock, PDF ingestion, deterministic parsing, patient and report management, analyte trends, comparison charts, CSV export, audit diagnostics, ontology editing, settings, and cross-platform CI builds.
 
-Optional Tesseract OCR is feature-gated for scanned or low-text PDFs. Embedded
-model tiers currently expose settings/status, model file picking, load/unload,
-and local model-path validation, but the olmOCR-2 extraction runtime and Phi-4
-repair runtime are still pending. See
-[docs/implementation-plan.md](docs/implementation-plan.md) for the remaining
-OCR/model, PDF-fixture, and release-hardening work.
+Optional model runtimes are intentionally incomplete. Tesseract OCR can be enabled for sparse or scanned PDFs. The current olmOCR-2 and Phi-4 integrations provide local model-path validation and lifecycle status, but do not yet return vision-OCR or repair results. See [the implementation status](docs/reference/status.md).
 
-## Getting Started
+## Quick start
 
-Install the usual desktop-app toolchain:
+Prerequisites:
 
-- Node.js 20+
-- Rust via `rustup`
-- Tauri system prerequisites for your OS
+- Node.js 20 or newer
+- Rust via [`rustup`](https://rustup.rs/), with Rust 1.88 or newer for the locked dependency set
+- Tauri 2 system prerequisites for your operating system
 
-The Rust build does not require OpenSSL, Perl, or NASM for encryption. Downloads
-use rustls through `ureq`; database encryption uses bundled SQLite3 Multiple
-Ciphers in SQLCipher v4 compatibility mode, retaining the existing vault format.
-The normal C/C++ compiler required by Tauri is still needed.
-
-The native SQLite binding uses a local Cargo patch with pinned, bundled sources;
-see [the vendor notes](src-tauri/vendor/libsqlite3-sys/README.md) for versions,
-licenses, and update instructions. The locked dependencies require Rust 1.88
-or newer.
-
-The build script attempts to download the matching pdfium sidecar into
-`src-tauri/binaries/` at build time. If that download is unavailable, install
-the matching `pdfium.dll`, `libpdfium.so`, or `libpdfium.dylib` there manually.
-
-Then run:
+From the repository root:
 
 ```bash
-npm install
+npm ci
 npm run tauri:dev
 ```
 
-## Useful Commands
+The PDFium sidecar is downloaded during a native build when it is missing. If that is unavailable, place the matching `pdfium.dll`, `libpdfium.so`, or `libpdfium.dylib` in `src-tauri/binaries/` and rebuild.
+
+## Useful commands
 
 ```bash
-npm run dev             # Vite frontend only
-npm run tauri:dev       # desktop app in development
+npm run tauri:dev       # desktop development app
+npm run dev             # frontend-only Vite server
 npm run check           # Svelte type check
 npm run lint            # frontend lint
-npm run format:check    # frontend/doc formatting check
-npm run tauri:build     # local release bundle
+npm run format:check    # Prettier check for source and docs
+npm run tauri:build     # local Tauri release bundle
+npm run docs:serve      # local documentation server
+npm run docs:build      # strict documentation build
 ```
 
-Rust checks live under `src-tauri/`:
+Rust checks run from `src-tauri/`:
 
 ```bash
 cargo fmt --all -- --check
@@ -85,75 +64,41 @@ cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked --all-targets
 ```
 
-## Optional Native And Model Tiers
+## Documentation
 
-Default builds do not require Tesseract, llama.cpp, or local model files.
+The complete, searchable documentation lives in [docs/](docs/index.md) and is built with MkDocs Material. It is dark-first, supports light mode, uses nested navigation, and includes instant search with suggestions and highlighted results.
 
-- Tier 1 is the default pdfium text-extraction path.
-- Tier 2 Tesseract OCR is enabled with Cargo feature `tesseract-ocr` and uses
-  the local `tesseract` executable plus tessdata for the configured languages.
-- Tier 3 olmOCR-2 status is enabled with `embedded-ocr-vision`; local model-path
-  picking/load state exists, but OCR output is not implemented yet.
-- Tier 4 Phi-4 repair status is enabled with `embedded-llm`; local model-path
-  picking/load state exists, but repair output is not implemented yet.
+- [Install and run](docs/getting-started/installation.md)
+- [Import and review a report](docs/user-guide/ingest.md)
+- [Privacy, encryption, and backups](docs/data-and-security/privacy.md)
+- [Architecture and development](docs/developer/architecture.md)
+- [Release versioning](docs/developer/releases.md)
+- [Troubleshooting](docs/reference/troubleshooting.md)
 
-Downloaded or local model files live in the app data directory, not in the
-repository.
+Install the docs toolchain with:
 
-## Releases
+```bash
+python -m pip install -r docs/requirements.txt
+```
 
-The repo uses one GitHub Actions workflow: `.github/workflows/ci.yml`.
+## Boundaries worth knowing
 
-On pull requests and pushes it runs:
+- PDF is the supported input format; HL7/FHIR and cloud imports are out of scope for the current version.
+- Parsed values are descriptive records. A flag or reference-range comparison is not a diagnosis.
+- Low-confidence rows remain visible in the report audit panel so they can be checked or linked to an ontology entry.
+- Unsigned builds are expected until platform signing secrets are configured.
+- Models are not bundled with the application and are never downloaded implicitly as part of normal use.
 
-- frontend format check
-- frontend lint
-- Svelte type check
-- Rust format check
-- Rust clippy
-- Rust tests
-- gated Tauri builds
+## Repository layout
 
-Manual `workflow_dispatch` runs the same checks and builds, then publishes a
-GitHub Release using `YY.N` version tags such as `26.1`, `26.2`, and so on. App
-metadata is converted to semver for Tauri, for example `26.1.0`.
-
-Unsigned builds are produced unless signing secrets are configured. Apple
-notarization/updater placeholders are supported; Windows code signing still
-needs a project-specific certificate or signing provider configuration.
-
-Supported signing/update secrets are:
-
-- `APPLE_CERTIFICATE`
-- `APPLE_CERTIFICATE_PASSWORD`
-- `APPLE_SIGNING_IDENTITY`
-- `APPLE_ID`
-- `APPLE_PASSWORD`
-- `APPLE_TEAM_ID`
-- `APPLE_API_KEY`
-- `APPLE_API_ISSUER`
-- `TAURI_SIGNING_PRIVATE_KEY`
-- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
-
-## Project Layout
-
-- `src/` - SvelteKit frontend
-- `src-tauri/` - Rust backend, Tauri config, SQLite migrations
-- `ontology/` - analyte seed data
-- `static/` - static assets used by the frontend and README
-- `docs/implementation-plan.md` - remaining implementation plan
-- `plan.md` - original architecture and product plan
-
-## Data Location
-
-App data lives outside the repository and is git-ignored:
-
-- encrypted database
-- keystore
-- imported PDFs
-- downloaded/local model files
-
-See `.gitignore` for the full list of ignored runtime artifacts.
+| Path         | Purpose                                                                                    |
+| ------------ | ------------------------------------------------------------------------------------------ |
+| `src/`       | SvelteKit frontend and user interface                                                      |
+| `src-tauri/` | Rust core, Tauri commands, encrypted database, migrations, parser, and native integrations |
+| `ontology/`  | Seed analyte registry                                                                      |
+| `docs/`      | MkDocs site source                                                                         |
+| `mkdocs.yml` | Documentation theme, search, and navigation                                                |
+| `static/`    | Frontend and README assets                                                                 |
 
 ## License
 
