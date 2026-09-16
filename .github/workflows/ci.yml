@@ -52,8 +52,7 @@ jobs:
             year="$(date -u +%y)"
             current="$(
               git tag -l "${year}.*" |
-              grep -E "^${year}\.[0-9]+$" |
-              sed "s/^${year}\.//" |
+              awk -v year="$year" '$0 ~ "^" year "\.[0-9]+$" { sub("^" year "\.", ""); print }' |
               sort -n |
               tail -1
             )"
