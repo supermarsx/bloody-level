@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/index.css";
+@config "../tailwind.config.js";
 
 /* ---------- Design tokens (RGB triplets so Tailwind /<alpha-value> works) ---------- */
 
@@ -224,7 +223,9 @@ body {
 }
 
 .btn-accent {
-  @apply btn bg-accent text-white border-accent hover:bg-accent/90;
+  @apply inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-md
+         border border-accent bg-accent hover:bg-accent/90
+         text-sm font-medium text-white select-none transition-colors;
 }
 
 /* ---------- Form primitives (theme-tokenised inputs) ---------- *
@@ -359,16 +360,20 @@ input[type="radio"] {
 }
 
 .pill-ok {
-  @apply pill bg-ok/10    text-ok    border-ok/30;
+  @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+         border bg-ok/10 text-ok border-ok/30;
 }
 .pill-warn {
-  @apply pill bg-warn/10  text-warn  border-warn/30;
+  @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+         border bg-warn/10 text-warn border-warn/30;
 }
 .pill-crit {
-  @apply pill bg-crit/10  text-crit  border-crit/30;
+  @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+         border bg-crit/10 text-crit border-crit/30;
 }
 .pill-muted {
-  @apply pill bg-bg3      text-fg2   border-line;
+  @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+         border bg-bg3 text-fg2 border-line;
 }
 
 .delta-up {

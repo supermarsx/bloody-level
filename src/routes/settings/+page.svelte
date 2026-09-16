@@ -20,7 +20,7 @@
       { name: 'Svelte 5',                note: 'svelte.dev',        url: 'https://svelte.dev/' },
       { name: 'SvelteKit 2',             note: 'kit.svelte.dev',    url: 'https://kit.svelte.dev/' },
       { name: 'Tailwind CSS 4',          note: 'tailwindcss.com',   url: 'https://tailwindcss.com/' },
-      { name: 'Vite 5',                  note: 'vitejs.dev',        url: 'https://vitejs.dev/' }
+      { name: 'Vite 8',                  note: 'vitejs.dev',        url: 'https://vitejs.dev/' }
     ]},
     { head: 'PDF / parsing', items: [
       { name: 'pdfium-render',           note: 'crates.io/pdfium-render', url: 'https://crates.io/crates/pdfium-render' },
@@ -40,7 +40,7 @@
       { name: 'zeroize',                 note: 'secure-erase utilities',  url: 'https://crates.io/crates/zeroize' }
     ]},
     { head: 'Charts & UI', items: [
-      { name: 'Apache ECharts 5',        note: 'echarts.apache.org',      url: 'https://echarts.apache.org/' },
+      { name: 'Apache ECharts 6',        note: 'echarts.apache.org',      url: 'https://echarts.apache.org/' },
       { name: 'date-fns',                note: 'date math helpers',       url: 'https://date-fns.org/' },
       { name: 'sharp',                   note: 'icon rasterisation',      url: 'https://sharp.pixelplumbing.com/' }
     ]},
