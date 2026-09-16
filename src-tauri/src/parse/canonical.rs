@@ -68,13 +68,13 @@ impl AnalyteRegistry {
         let mut best: Option<(&str, f64)> = None;
         for (k, id) in &self.canonical_pt {
             let s = normalized_levenshtein(&key, k);
-            if s >= 0.92 && best.map_or(true, |(_, b)| s > b) {
+            if s >= 0.92 && best.is_none_or(|(_, b)| s > b) {
                 best = Some((id.as_str(), s));
             }
         }
         for (k, id) in &self.aliases {
             let s = normalized_levenshtein(&key, k);
-            if s >= 0.92 && best.map_or(true, |(_, b)| s > b) {
+            if s >= 0.92 && best.is_none_or(|(_, b)| s > b) {
                 best = Some((id.as_str(), s));
             }
         }

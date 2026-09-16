@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Local-only clinical lab-PDF tracker with embedded OCR/LLM tiers"
 authors = ["blevel-tracker"]
 edition = "2021"
-rust-version = "1.77"
+rust-version = "1.88"
 
 [lib]
 name = "blevel_tracker_lib"
@@ -38,8 +38,10 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs", "sync", 
 once_cell = "1"
 
 # --- Encrypted storage -----------------------------------------------------
-rusqlite = { version = "0.31", features = ["bundled-sqlcipher-vendored-openssl"] }
-rusqlite_migration = "1"
+# SQLite3 Multiple Ciphers bundles its crypto implementation, without OpenSSL.
+# Keep SQLCipher v4 file compatibility in db/connection.rs.
+rusqlite = { version = "0.37", features = ["bundled"] }
+rusqlite_migration = "~2.3.0"
 
 # --- Crypto ----------------------------------------------------------------
 argon2 = "0.5"
@@ -69,7 +71,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 llama-cpp-2 = { version = "0.1", optional = true }
 
 [features]
-# Default build is lean: pdfium + SQLCipher + the parser. The optional tiers
+# Default build is lean: pdfium + encrypted SQLite + the parser. The optional tiers
 # stay opt-in because each adds significant build time and runtime requirements
 # without yet providing user-visible functionality:
 #
@@ -83,6 +85,14 @@ default = []
 tesseract-ocr        = []
 embedded-llm         = ["dep:llama-cpp-2"]
 embedded-ocr-vision  = ["dep:llama-cpp-2"]
+
+[dev-dependencies]
+tempfile = "3"
+
+# Bundle SQLite3 Multiple Ciphers behind the standard SQLite C API.
+# Source versions, licenses and update instructions are in the vendor README.
+[patch.crates-io]
+libsqlite3-sys = { path = "vendor/libsqlite3-sys" }
 
 [profile.release]
 codegen-units = 1

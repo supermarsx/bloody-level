@@ -69,6 +69,7 @@ pub struct DbStats {
     pub journal_mode: Option<String>,
     pub page_size: Option<i64>,
     pub page_count: Option<i64>,
+    /// Encryption engine version; field name retained for API compatibility.
     pub sqlcipher_version: Option<String>,
 }
 
@@ -218,7 +219,7 @@ async fn collect_db_stats(state: &State<'_, AppState>) -> Option<DbStats> {
         journal_mode: q_str("PRAGMA journal_mode"),
         page_size: q_i64("PRAGMA page_size"),
         page_count: q_i64("PRAGMA page_count"),
-        sqlcipher_version: q_str("PRAGMA cipher_version"),
+        sqlcipher_version: q_str("SELECT sqlite3mc_version()"),
     })
 }
 

@@ -1717,7 +1717,7 @@
               </div>
 
               <dl class="dl pt-2 border-t border-line">
-                <dt>SQLCipher</dt>
+                <dt>Encryption engine</dt>
                 <dd class="font-mono">{stats.sqlcipher_version ?? '—'}</dd>
                 <dt>Journal mode</dt>
                 <dd class="font-mono uppercase">{stats.journal_mode ?? '—'}</dd>

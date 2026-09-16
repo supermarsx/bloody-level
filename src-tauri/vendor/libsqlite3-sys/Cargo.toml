@@ -1,0 +1,20 @@
+[package]
+name = "libsqlite3-sys"
+version = "0.35.0"
+edition = "2021"
+license = "MIT"
+description = "SQLite3 Multiple Ciphers bindings for bloody-level"
+links = "sqlite3"
+build = "build.rs"
+publish = false
+
+[features]
+default = ["min_sqlite_version_3_14_0"]
+min_sqlite_version_3_14_0 = []
+bundled = ["bundled_bindings"]
+bundled_bindings = []
+
+[build-dependencies]
+cc = "1"
+flate2 = "1"
+tar = "0.4"

@@ -16,3 +16,5 @@
 *.gguf binary
 *.bin binary
 *.pdf binary
+*.sqlite3 binary
+*.tar.gz binary

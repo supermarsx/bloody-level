@@ -142,7 +142,7 @@ fn is_repeated_pattern(password: &str) -> bool {
         return false;
     }
     for pattern_len in 1..=(len / 2) {
-        if len % pattern_len != 0 {
+        if !len.is_multiple_of(pattern_len) {
             continue;
         }
         if chars

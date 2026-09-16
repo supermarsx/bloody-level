@@ -45,6 +45,16 @@ Install the usual desktop-app toolchain:
 - Rust via `rustup`
 - Tauri system prerequisites for your OS
 
+The Rust build does not require OpenSSL, Perl, or NASM for encryption. Downloads
+use rustls through `ureq`; database encryption uses bundled SQLite3 Multiple
+Ciphers in SQLCipher v4 compatibility mode, retaining the existing vault format.
+The normal C/C++ compiler required by Tauri is still needed.
+
+The native SQLite binding uses a local Cargo patch with pinned, bundled sources;
+see [the vendor notes](src-tauri/vendor/libsqlite3-sys/README.md) for versions,
+licenses, and update instructions. The locked dependencies require Rust 1.88
+or newer.
+
 The build script attempts to download the matching pdfium sidecar into
 `src-tauri/binaries/` at build time. If that download is unavailable, install
 the matching `pdfium.dll`, `libpdfium.so`, or `libpdfium.dylib` there manually.
