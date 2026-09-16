@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use rand::RngCore;
+use rand::RngExt;
 use secrecy::SecretBox;
 use serde::{Deserialize, Serialize};
 
@@ -161,13 +161,13 @@ pub fn unlock_backoff_delay_secs(failed_unlocks: u32) -> i64 {
 
 pub fn generate_dmk() -> SecretBox<[u8; 32]> {
     let mut k = [0u8; 32];
-    rand::thread_rng().fill_bytes(&mut k);
+    rand::rng().fill(&mut k);
     SecretBox::new(Box::new(k))
 }
 
 pub fn generate_salt(len: usize) -> Vec<u8> {
     let mut s = vec![0u8; len];
-    rand::thread_rng().fill_bytes(&mut s);
+    rand::rng().fill(&mut s);
     s
 }
 

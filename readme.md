@@ -31,7 +31,7 @@ Optional model runtimes are intentionally incomplete. Tesseract OCR can be enabl
 Prerequisites:
 
 - Node.js 20 or newer
-- Rust via [`rustup`](https://rustup.rs/), with Rust 1.88 or newer for the locked dependency set
+- Rust via [`rustup`](https://rustup.rs/), with Rust 1.95 or newer for the locked dependency set
 - Tauri 2 system prerequisites for your operating system
 
 From the repository root:

@@ -1149,6 +1149,13 @@ unsafe extern "C" {
 unsafe extern "C" {
     pub fn sqlite3_error_offset(db: *mut sqlite3) -> ::std::os::raw::c_int;
 }
+unsafe extern "C" {
+    pub fn sqlite3_set_errmsg(
+        db: *mut sqlite3,
+        errcode: ::std::os::raw::c_int,
+        zErrMsg: *const ::std::os::raw::c_char,
+    ) -> ::std::os::raw::c_int;
+}
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct sqlite3_stmt {

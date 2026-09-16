@@ -174,6 +174,7 @@ pub fn render_pages_for_ocr_bytes(bytes: &[u8]) -> AppResult<Vec<RenderedPdfPage
             .render_with_config(&render_config)
             .map_err(|e| AppError::Pdf(format!("OCR render (page {idx}): {e}")))?
             .as_image()
+            .map_err(|e| AppError::Pdf(format!("OCR image (page {idx}): {e}")))?
             .into_luma8();
         let width = i32::try_from(image.width())
             .map_err(|_| AppError::Pdf(format!("OCR render (page {idx}) width exceeds i32")))?;

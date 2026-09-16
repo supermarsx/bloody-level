@@ -1,6 +1,5 @@
 use std::env;
 use std::fs;
-use std::io::Read;
 use std::path::PathBuf;
 
 fn main() {
@@ -151,14 +150,13 @@ fn download(url: &str) -> Result<Vec<u8>, String> {
 fn try_download(url: &str) -> Result<Vec<u8>, String> {
     let resp = ureq::get(url).call().map_err(|e| format!("http: {e}"))?;
     if resp.status() != 200 {
-        return Err(format!("http {}: {}", resp.status(), resp.status_text()));
+        return Err(format!("http {}", resp.status()));
     }
-    let mut buf = Vec::new();
-    resp.into_reader()
-        .take(200 * 1024 * 1024)
-        .read_to_end(&mut buf)
-        .map_err(|e| format!("read body: {e}"))?;
-    Ok(buf)
+    resp.into_body()
+        .with_config()
+        .limit(200 * 1024 * 1024)
+        .read_to_vec()
+        .map_err(|e| format!("read body: {e}"))
 }
 
 fn extract_lib_from_tgz(tgz_bytes: &[u8], lib_match: &str) -> Option<Vec<u8>> {
