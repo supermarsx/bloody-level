@@ -1,22 +1,31 @@
 site_name: bloody-level
 site_description: A private, local-first desktop app for reviewing longitudinal lab results.
+site_url: https://supermarsx.github.io/bloody-level/
 repo_name: supermarsx/bloody-level
 repo_url: https://github.com/supermarsx/bloody-level
+edit_uri: edit/master/docs/
 docs_dir: docs
 
 theme:
   name: material
   language: en
   font: false
+  logo: assets/favicon.svg
+  favicon: assets/favicon.svg
   features:
     - navigation.instant
     - navigation.instant.progress
     - navigation.sections
     - navigation.expand
     - navigation.top
+    - navigation.tracking
+    - navigation.footer
+    - toc.follow
     - search.suggest
     - search.highlight
     - search.share
+    - content.action.edit
+    - content.action.view
     - content.code.copy
     - content.code.annotate
   palette:
@@ -57,6 +66,12 @@ markdown_extensions:
 
 extra_css:
   - stylesheets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/supermarsx/bloody-level
+      name: bloody-level on GitHub
 
 nav:
   - Home: index.md

@@ -27,8 +27,8 @@ green before release builds run.
   parser-quality panel.
 - Parser acceptance tests cover realistic extracted text for headers, rows,
   prior-result columns, tier commentary filtering, and wrapped units.
-- The repository has exactly one CI/release workflow:
-  `.github/workflows/ci.yml`.
+- The repository has separate CI/release and documentation workflows:
+  `.github/workflows/ci.yml` and `.github/workflows/docs.yml`.
 - CI runs frontend format, lint, Svelte type check, Rust format, Rust clippy,
   Rust tests, and gated Tauri build artifacts.
 - Manual `workflow_dispatch` computes `YY.N` release tags, converts app metadata
@@ -141,7 +141,8 @@ Acceptance:
 
 ## CI And Release Notes
 
-The only workflow file is `.github/workflows/ci.yml`.
+The CI/release workflow is `.github/workflows/ci.yml`; the documentation site
+is built and deployed by `.github/workflows/docs.yml`.
 
 On pull requests and pushes it runs checks plus gated Tauri artifacts. On manual
 `workflow_dispatch` it computes the next `YY.N` tag for the current UTC year,

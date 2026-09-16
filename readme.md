@@ -68,6 +68,8 @@ cargo test --locked --all-targets
 
 The complete, searchable documentation lives in [docs/](docs/index.md) and is built with MkDocs Material. It is dark-first, supports light mode, uses nested navigation, and includes instant search with suggestions and highlighted results.
 
+[Read the documentation online](https://supermarsx.github.io/bloody-level/)
+
 - [Install and run](docs/getting-started/installation.md)
 - [Import and review a report](docs/user-guide/ingest.md)
 - [Privacy, encryption, and backups](docs/data-and-security/privacy.md)
