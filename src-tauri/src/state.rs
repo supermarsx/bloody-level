@@ -5,13 +5,15 @@ use crate::db::Database;
 
 pub struct AppState {
     pub data_dir: PathBuf,
+    pub resource_dir: Option<PathBuf>,
     pub db: Mutex<Option<Database>>,
 }
 
 impl AppState {
-    pub fn new(data_dir: PathBuf) -> Self {
+    pub fn new(data_dir: PathBuf, resource_dir: Option<PathBuf>) -> Self {
         Self {
             data_dir,
+            resource_dir,
             db: Mutex::new(None),
         }
     }
@@ -36,6 +38,20 @@ impl AppState {
         let bundled = self.data_dir.join("analytes.seed.json");
         if bundled.exists() {
             return Some(bundled);
+        }
+        if let Some(resource_dir) = &self.resource_dir {
+            let bundled = resource_dir.join("analytes.seed.json");
+            if bundled.exists() {
+                return Some(bundled);
+            }
+        }
+        if let Ok(exe) = std::env::current_exe() {
+            if let Some(parent) = exe.parent() {
+                let bundled = parent.join("analytes.seed.json");
+                if bundled.exists() {
+                    return Some(bundled);
+                }
+            }
         }
         let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
         let dev = manifest

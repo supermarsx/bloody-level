@@ -29,15 +29,16 @@ pub fn run() {
             std::fs::create_dir_all(data_dir.join("pdfs"))?;
             std::fs::create_dir_all(data_dir.join("models"))?;
 
+            let resource_dir = app.path().resource_dir().ok();
             // Tell the pdf module where bundled resources live so it can find
             // pdfium.dll in installed builds (build.rs places it at
             // src-tauri/binaries/, and tauri.conf.json bundles binaries/* as
             // resources, landing them at <resource_dir>/binaries/).
-            if let Ok(rd) = app.path().resource_dir() {
+            if let Some(rd) = resource_dir.clone() {
                 pdf::set_resource_dir(rd);
             }
 
-            app.manage(state::AppState::new(data_dir));
+            app.manage(state::AppState::new(data_dir, resource_dir));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

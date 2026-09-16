@@ -22,6 +22,19 @@ Keep these synchronized:
 - exact asset names and architecture labels;
 - validators, checksums, provenance, and release notes.
 
+The hosted release workflow publishes this complete asset matrix:
+
+| Platform | x64                                             | ARM64                                           |
+| -------- | ----------------------------------------------- | ----------------------------------------------- |
+| Windows  | `.exe`, `.msi`, `.zip`                          | `.exe`, `.msi`, `.zip`                          |
+| Linux    | `.AppImage`, `.deb`, `.rpm`, `.flatpak`, `.zip` | `.AppImage`, `.deb`, `.rpm`, `.flatpak`, `.zip` |
+| macOS    | `.dmg`, `.zip`                                  | `.dmg`, `.zip`                                  |
+
+Every filename includes the `YY.N` release and an explicit platform and
+architecture label. The publish job verifies the exact 20-file matrix before
+creating the GitHub Release, so a missing or duplicate package blocks
+publication.
+
 Portable archives and installer/update targets are not interchangeable. Confirm which artifacts are intended for installation, portable use, or update distribution.
 
 ## Signing

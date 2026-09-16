@@ -173,37 +173,45 @@ jobs:
     timeout-minutes: 120
     env:
       APPLE_SIGNING_ENABLED: ${{ secrets.APPLE_CERTIFICATE != '' }}
+      RELEASE_VERSION: ${{ needs.metadata.outputs.version }}
+      APP_VERSION: ${{ needs.metadata.outputs.app_version }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: Windows x64
             artifact: windows-x64
+            architecture: x64
             runner: windows-2025
             rust_target: ""
             tauri_args: ""
           - name: Windows arm64
             artifact: windows-arm64
+            architecture: arm64
             runner: windows-2025
             rust_target: aarch64-pc-windows-msvc
             tauri_args: "--target aarch64-pc-windows-msvc"
           - name: Linux x64
             artifact: linux-x64
+            architecture: x64
             runner: ubuntu-24.04
             rust_target: ""
             tauri_args: "--bundles deb,rpm,appimage"
           - name: Linux arm64
             artifact: linux-arm64
+            architecture: arm64
             runner: ubuntu-24.04-arm
             rust_target: ""
             tauri_args: "--bundles deb,rpm,appimage"
           - name: macOS arm64
             artifact: macos-arm64
+            architecture: arm64
             runner: macos-15
             rust_target: aarch64-apple-darwin
             tauri_args: "--target aarch64-apple-darwin --bundles app,dmg"
           - name: macOS x64
             artifact: macos-x64
+            architecture: x64
             runner: macos-15-intel
             rust_target: x86_64-apple-darwin
             tauri_args: "--target x86_64-apple-darwin --bundles app,dmg"
@@ -228,6 +236,14 @@ jobs:
             patchelf \
             pkg-config \
             xdg-utils
+
+      - name: Install Flatpak tooling
+        if: github.event_name == 'workflow_dispatch' && startsWith(matrix.runner, 'ubuntu-')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder zip
+          flatpak --user remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user --noninteractive -y flathub org.gnome.Platform//48 org.gnome.Sdk//48
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -311,7 +327,37 @@ jobs:
         with:
           args: ${{ matrix.tauri_args }}
 
-      - name: Upload build artifact
+      - name: Package Windows release assets
+        if: github.event_name == 'workflow_dispatch' && startsWith(matrix.runner, 'windows-')
+        shell: pwsh
+        run: >-
+          ./scripts/package-release-windows.ps1
+          -Version "$env:RELEASE_VERSION"
+          -Architecture "${{ matrix.architecture }}"
+          -TargetDirectory "src-tauri/target"
+          -OutputDirectory "release-assets"
+
+      - name: Package Linux release assets
+        if: github.event_name == 'workflow_dispatch' && startsWith(matrix.runner, 'ubuntu-')
+        shell: bash
+        run: bash scripts/package-release-linux.sh "$RELEASE_VERSION" "${{ matrix.architecture }}" src-tauri/target release-assets
+
+      - name: Package macOS release assets
+        if: github.event_name == 'workflow_dispatch' && startsWith(matrix.runner, 'macos-')
+        shell: bash
+        run: bash scripts/package-release-macos.sh "$RELEASE_VERSION" "${{ matrix.architecture }}" src-tauri/target release-assets
+
+      - name: Upload release assets
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ needs.metadata.outputs.artifact_prefix }}-${{ matrix.artifact }}
+          if-no-files-found: error
+          retention-days: 14
+          path: release-assets/*
+
+      - name: Upload CI build artifact
+        if: github.event_name != 'workflow_dispatch'
         uses: actions/upload-artifact@v7
         with:
           name: ${{ needs.metadata.outputs.artifact_prefix }}-${{ matrix.artifact }}
@@ -353,7 +399,15 @@ jobs:
           Commit: ${GITHUB_SHA}
 
           These builds are unsigned unless platform signing secrets are configured.
+
+          Assets are published for Windows x64/ARM64, Linux x64/ARM64, and macOS x64/ARM64.
+          Windows includes EXE, MSI, and ZIP; Linux includes AppImage, DEB, RPM, Flatpak,
+          and ZIP; macOS includes DMG and ZIP.
           EOF
+
+      - name: Verify complete release asset matrix
+        shell: bash
+        run: bash scripts/verify-release-assets.sh "$RELEASE_VERSION" dist
 
       - name: Create GitHub Release
         shell: bash
