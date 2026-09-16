@@ -7,6 +7,8 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
+    "docs:serve": "mkdocs serve",
+    "docs:build": "mkdocs build --strict",
     "format": "npx --yes prettier@3.9.5 --write \"**/*.{js,ts,json,md,css,html,yml,yaml}\" --ignore-path .gitignore",
     "format:check": "npx --yes prettier@3.9.5 --check \"**/*.{js,ts,json,md,css,html,yml,yaml}\" --ignore-path .gitignore",
     "lint": "npx --yes oxlint@1.74.0 src",

@@ -1,0 +1,60 @@
+/* The app is dark-first, so the documentation starts from the same visual
+   contract instead of flashing a bright page before Material initializes. */
+:root {
+  color-scheme: dark;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: #0b0d10;
+  --md-default-bg-color--light: #14171c;
+  --md-default-fg-color: #f3f4f6;
+  --md-default-fg-color--light: #c4c8d0;
+  --md-default-fg-color--lighter: #9299a6;
+  --md-code-bg-color: #111419;
+  --md-typeset-a-color: #c4b5fd;
+  --md-accent-fg-color: #c4b5fd;
+}
+
+[data-md-color-scheme="default"] {
+  color-scheme: light;
+}
+
+.md-header,
+.md-tabs {
+  background: #0b0d10;
+}
+
+[data-md-color-scheme="slate"] .md-header,
+[data-md-color-scheme="slate"] .md-tabs {
+  border-bottom: 1px solid #1f242b;
+}
+
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3 {
+  letter-spacing: -0.02em;
+}
+
+.md-typeset h1 {
+  font-weight: 700;
+}
+
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 0.55rem;
+}
+
+.md-typeset code {
+  border-radius: 0.25rem;
+}
+
+.md-search__form {
+  border-radius: 0.45rem;
+}
+
+@media screen and (max-width: 44.9844em) {
+  .md-header,
+  .md-tabs {
+    background: #0b0d10;
+  }
+}
