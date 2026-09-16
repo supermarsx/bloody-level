@@ -5,14 +5,16 @@
 [![Latest release](https://img.shields.io/github/v/release/supermarsx/bloody-level?display_name=tag&style=flat-square)](https://github.com/supermarsx/bloody-level/releases)
 [![License](https://img.shields.io/github/license/supermarsx/bloody-level?style=flat-square)](license.md)
 
-Private, local-first desktop software for turning pathology-report PDFs into a
-clear, longitudinal view of blood-work results.
+Private, local-first desktop software for health-data enthusiasts and
+professionals who want to turn pathology-report PDFs into a clear,
+longitudinal view of blood-work results.
 
 bloody-level keeps the original report beside the structured record, so you
 can move from a source document to extracted values, diagnostics, trends, and
 comparisons without handing sensitive health data to a hosted service. It is a
-personal tracking and review tool—not a diagnostic service or a replacement
-for professional medical advice.
+bloody-level is a personal tracking and review tool for enthusiasts, analysts,
+and professionals working with blood-work records—not a diagnostic service or
+a replacement for professional medical advice.
 
 ## Contents
 
@@ -32,7 +34,8 @@ for professional medical advice.
 ## What is bloody-level?
 
 Most lab reports are useful for a single appointment but awkward to compare
-over months or years. bloody-level gives those reports a private workspace:
+over months or years. bloody-level gives enthusiasts and professionals a
+private workspace for working with those reports:
 
 - import one or more PDF reports;
 - extract and normalize the values locally;
