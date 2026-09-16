@@ -240,7 +240,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && startsWith(matrix.runner, 'ubuntu-')
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder zip
+          sudo apt-get install -y --no-install-recommends elfutils flatpak flatpak-builder zip
           flatpak --user remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
           flatpak install --user --noninteractive -y flathub org.gnome.Platform//48 org.gnome.Sdk//48
 
