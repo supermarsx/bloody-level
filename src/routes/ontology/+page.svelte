@@ -6,6 +6,7 @@
   import { parseTiers, formatTierRange } from '$format/tiers';
   import AnalyteEditorDialog from '$components/analyte-editor-dialog.svelte';
   import ReferenceCard from '$components/reference-card.svelte';
+  import { openUrl } from '$api/shell';
   import { ask } from '@tauri-apps/plugin-dialog';
 
   let entries = $state<AnalyteOntologyEntry[]>([]);
@@ -31,6 +32,14 @@
   // ── Editor dialog ──────────────────────────────────────────────────────
   let editorOpen = $state(false);
   let editorTarget = $state<AnalyteOntologyEntry | null>(null);
+
+  async function openLoinc(code: string) {
+    try {
+      await openUrl(`https://loinc.org/${encodeURIComponent(code)}/`);
+    } catch (e) {
+      toasts.error(e);
+    }
+  }
 
   function openCreate() {
     editorTarget = null;
@@ -371,13 +380,12 @@
               {#if info.panel}<span>·</span><span class="ont-tag">{info.panel}</span>{/if}
               {#if info.loinc}
                 <span>·</span>
-                <a
+                <button
+                  type="button"
                   class="font-mono text-accent hover:underline"
-                  href={`https://loinc.org/${encodeURIComponent(info.loinc)}/`}
-                  target="_blank"
-                  rel="noreferrer"
-                  title="Open this code on loinc.org"
-                >LOINC {info.loinc} ↗</a>
+                  onclick={() => openLoinc(info.loinc!)}
+                  title="Open this code in the default browser"
+                >LOINC {info.loinc} ↗</button>
               {/if}
             </div>
             {#if info.method_annotation}

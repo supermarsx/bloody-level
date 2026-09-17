@@ -15,6 +15,7 @@
   import { parseTiers, matchTier, tierToFlag, formatTierRange } from '$format/tiers';
   import { defaultRefFor, flagForDefaultRef } from '$format/default-ref';
   import { exportAnalyteTimeseriesCsv } from '$api/export';
+  import { openUrl } from '$api/shell';
   import { saveTextFile } from '$format/save';
   import { setPageTitle } from '$lib/title.svelte';
   import BackButton from '$components/back-button.svelte';
@@ -323,6 +324,14 @@
   const activeSex = $derived(
     patientsWithReadings.find((x) => x.id === effectivePatient)?.sex ?? '?'
   );
+
+  async function openLoinc(code: string) {
+    try {
+      await openUrl(`https://loinc.org/${encodeURIComponent(code)}/`);
+    } catch (e) {
+      toasts.error(e);
+    }
+  }
 </script>
 
 <svelte:window onclick={onPatientPickerWindowClick} />
@@ -390,14 +399,14 @@
           {#if info.subsection}<span>·</span><span>{info.subsection}</span>{/if}
           {#if info.panel}<span>·</span><span class="pill-muted">{info.panel}</span>{/if}
           {#if info.loinc}
+            {@const loinc = info.loinc}
             <span>·</span>
-            <a
+            <button
+              type="button"
               class="font-mono text-accent hover:underline"
-              href={`https://loinc.org/${encodeURIComponent(info.loinc)}/`}
-              target="_blank"
-              rel="noreferrer"
-              title="Open this code on loinc.org"
-            >LOINC {info.loinc} ↗</a>
+              onclick={() => openLoinc(loinc)}
+              title="Open this code in the default browser"
+            >LOINC {loinc} ↗</button>
           {/if}
         </div>
       {/if}
