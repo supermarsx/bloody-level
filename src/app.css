@@ -119,6 +119,15 @@
   --chart-1: #2dd4bf;
 }
 
+:root[data-theme="light"][data-accent="slate"] {
+  --accent: 71 85 105;
+  --chart-1: #475569;
+}
+:root[data-theme="dark"][data-accent="slate"] {
+  --accent: 148 163 184;
+  --chart-1: #94a3b8;
+}
+
 /* Density — affects vertical rhythm of common spacing classes. We keep it
    light-touch to avoid breaking layouts: tighten card padding by 25% and
    line-height by ~10% in `compact`. */
@@ -225,13 +234,18 @@ body {
 .btn {
   @apply inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-md
          border border-line bg-bg2 hover:bg-bg3 transition-colors
-         text-sm font-medium select-none;
+         text-sm font-medium select-none cursor-pointer;
 }
 
 .btn-accent {
   @apply inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-md
          border border-accent bg-accent hover:bg-accent/90
-         text-sm font-medium text-white select-none transition-colors;
+         text-sm font-medium text-white select-none transition-colors cursor-pointer;
+}
+
+.btn:disabled,
+.btn-accent:disabled {
+  cursor: not-allowed;
 }
 
 /* ---------- Form primitives (theme-tokenised inputs) ---------- *

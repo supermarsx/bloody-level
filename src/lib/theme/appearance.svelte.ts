@@ -18,7 +18,7 @@ const KEYS = {
 } as const;
 
 export type AccentName =
-  "violet" | "blue" | "emerald" | "rose" | "amber" | "teal";
+  "violet" | "blue" | "emerald" | "rose" | "amber" | "teal" | "slate";
 export type Density = "comfortable" | "compact";
 export type FontScale = "tiny" | "sm" | "md" | "lg" | "gigantic";
 export type FontFamily = "sans" | "serif" | "mono";
@@ -34,6 +34,7 @@ export const ACCENT_PRESETS: {
   { id: "rose", label: "Rose", swatch: "#e11d48" },
   { id: "amber", label: "Amber", swatch: "#d97706" },
   { id: "teal", label: "Teal", swatch: "#0d9488" },
+  { id: "slate", label: "Slate", swatch: "#64748b" },
 ];
 
 class AppearanceStore {
