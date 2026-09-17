@@ -354,11 +354,67 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   color-scheme: dark;
 }
 
-/* Checkbox + radio: tint the check fill with the brand accent rather than
-   the OS blue. `accent-color` is the modern-CSS knob for this. */
-input[type="checkbox"],
+/* Checkbox + radio controls follow the app palette instead of falling back to
+   platform-blue widgets. Radios keep their native geometry; checkboxes use a
+   small themeable checkmark so they stay legible in both color schemes. */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-grid;
+  place-content: center;
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid rgb(var(--line));
+  border-radius: 0.25rem;
+  background-color: rgb(var(--bg-2));
+  color: rgb(var(--bg-1));
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+input[type="checkbox"]::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.3rem;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: scale(0) rotate(-45deg);
+  transition: transform 140ms ease;
+}
+input[type="checkbox"]:checked {
+  border-color: rgb(var(--accent));
+  background-color: rgb(var(--accent));
+  transform: scale(1.04);
+}
+input[type="checkbox"]:checked::before {
+  transform: scale(1) rotate(-45deg);
+}
+input[type="checkbox"]:hover:not(:disabled) {
+  border-color: rgb(var(--accent));
+  box-shadow: 0 0 0 3px rgb(var(--accent) / 0.12);
+}
+input[type="checkbox"]:focus-visible {
+  outline: 2px solid rgb(var(--accent));
+  outline-offset: 2px;
+}
+input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 input[type="radio"] {
   accent-color: rgb(var(--accent));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  input[type="checkbox"],
+  input[type="checkbox"]::before {
+    transition: none;
+  }
 }
 
 .pill {
