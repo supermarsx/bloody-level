@@ -10,6 +10,12 @@ use crate::error::{AppError, AppResult};
 /// after looking next to the executable.
 static APP_RESOURCE_DIR: OnceLock<PathBuf> = OnceLock::new();
 
+// pdfium-render stores its native bindings in a process-wide singleton. Keep
+// the owning Pdfium value alive too: probing it once and dropping it makes all
+// later probes report `PdfiumLibraryBindingsAlreadyInitialized` instead of
+// reusing the already-loaded library.
+static PDFIUM: OnceLock<Result<Pdfium, String>> = OnceLock::new();
+
 pub fn set_resource_dir(path: PathBuf) {
     let _ = APP_RESOURCE_DIR.set(path);
 }
@@ -35,7 +41,7 @@ pub struct RenderedPdfPageImage {
 }
 
 /// Locate and bind to pdfium.
-fn build_pdfium() -> AppResult<Pdfium> {
+fn bind_pdfium() -> AppResult<Pdfium> {
     let mut tried: Vec<String> = Vec::new();
 
     if let Ok(env_path) = std::env::var("PDFIUM_LIB_PATH") {
@@ -95,6 +101,16 @@ fn build_pdfium() -> AppResult<Pdfium> {
                 tried.join(" | ")
             )))
         }
+    }
+}
+
+fn build_pdfium() -> AppResult<&'static Pdfium> {
+    match PDFIUM.get_or_init(|| match bind_pdfium() {
+        Ok(pdfium) => Ok(pdfium),
+        Err(error) => Err(error.to_string()),
+    }) {
+        Ok(pdfium) => Ok(pdfium),
+        Err(error) => Err(AppError::Pdf(error.clone())),
     }
 }
 
