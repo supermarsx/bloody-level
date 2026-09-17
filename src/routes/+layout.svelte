@@ -81,6 +81,16 @@
     ensureThemesRegistered();
     setupGlobalErrorHandlers();
 
+    // The public demo is a real app route rendered with synthetic data. It
+    // must be viewable from the README/docs without requiring a vault or
+    // making an auth IPC call, while every normal route remains auth-gated.
+    if ($page.url.pathname.startsWith('/demo/')) {
+      unlocked = true;
+      checking = false;
+      splashVisible = false;
+      return;
+    }
+
     // When any command fails with `locked`, drop straight back to the gate.
     unsub = authEvents.on((evt) => {
       if (evt.type === 'locked') {

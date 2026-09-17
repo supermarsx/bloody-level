@@ -8,7 +8,7 @@
 
 ![bloody-level analyte detail view with a synthetic demo patient and quarterly one-year history](docs/assets/demo-analyte.png)
 
-<p align="center"><sub>Demo view with synthetic data: five readings at three-month intervals across one year.</sub></p>
+<p align="center"><sub>Captured from the built-in <code>/demo/analyte</code> view. All patient data is synthetic: five readings at three-month intervals across one year.</sub></p>
 
 Private, local-first desktop software for health-data enthusiasts and
 professionals who want to turn pathology-report PDFs into a clear,

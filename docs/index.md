@@ -6,7 +6,7 @@ Import a PDF, review the extracted values, compare trends over time, and keep th
 
 ![bloody-level analyte detail view with a synthetic demo patient and quarterly one-year history](assets/demo-analyte.png)
 
-_Demo view with synthetic data: five readings at three-month intervals across one year._
+_Captured from the built-in `/demo/analyte` view. All patient data is synthetic: five readings at three-month intervals across one year._
 
 ## The core loop
 
