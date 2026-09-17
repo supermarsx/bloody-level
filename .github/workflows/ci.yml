@@ -297,6 +297,9 @@ jobs:
           "CMAKE_TOOLCHAIN_FILE=$toolchain" >> $env:GITHUB_ENV
           "CC_aarch64_pc_windows_msvc=C:\Program Files\LLVM\bin\clang-cl.exe" >> $env:GITHUB_ENV
           "CXX_aarch64_pc_windows_msvc=C:\Program Files\LLVM\bin\clang-cl.exe" >> $env:GITHUB_ENV
+          # The llama-cpp-sys common wrapper uses C++ try/catch. clang-cl
+          # requires exception handling to be enabled explicitly.
+          "CXXFLAGS_aarch64_pc_windows_msvc=/EHsc" >> $env:GITHUB_ENV
 
       - name: Cache Rust
         uses: swatinem/rust-cache@v2
