@@ -21,7 +21,7 @@ _Captured from the built-in `/demo/analyte` view. All patient data is synthetic:
 
 - An encrypted local vault for reports, patients, audit events, and settings.
 - Support for PT-PT laboratory PDFs from CUF and Germano de Sousa.
-- Deterministic PDF extraction with optional OCR support for sparse or scanned reports.
+- Deterministic PDF extraction with the full OCR/repair feature set compiled into distributed builds; runtime assets remain opt-in and local.
 - Search across patients, analytes, and reports with keyboard navigation.
 - Charts, reference bands, deltas, gaps, report filtering, and CSV export.
 - Backup and restore from Settings, with the encrypted source PDFs preserved.

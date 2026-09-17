@@ -175,7 +175,7 @@ mod tests {
     fn temp_model_file(name: &str) -> PathBuf {
         let mut path = std::env::temp_dir();
         let unique = format!(
-            "blevel-{name}-{}-{}.gguf",
+            "bloody-level-{name}-{}-{}.gguf",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)

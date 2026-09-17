@@ -206,7 +206,7 @@
            (Dashboard → Patients → Audit, etc.) gets a fade-up transition,
            but inner navigation that stays inside one section (e.g. one
            report to another) doesn't re-mount the page and lose scroll. -->
-      <main class="flex-1 px-4 py-6 overflow-x-hidden">
+      <main class="flex-1 px-4 py-6 overflow-x-clip">
         {#key routeKey}
           <div in:fly={pageInTransition} out:fade={pageOutTransition}>
             {@render children()}

@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import * as auth from '$api/auth';
   import { AppError } from '$api/errors';
+  import Icon from './icon.svelte';
 
   let { onUnlocked } = $props<{ onUnlocked: () => void }>();
 
@@ -141,7 +142,7 @@
               stroke-linecap="round" stroke-linejoin="round" />
         <circle cx="48" cy="32" r="3" fill="url(#gateGrad)" />
       </svg>
-      <h1 class="gate__title">blevel-tracker</h1>
+      <h1 class="gate__title">bloody-level</h1>
       <p class="gate__tagline">Your lab results, longitudinal — fully local, fully encrypted.</p>
     </header>
 
@@ -150,14 +151,14 @@
         <div class="space-y-1">
           <h2 class="text-base font-semibold">Welcome — let's set up your vault</h2>
           <p class="text-xs text-fg2">
-            blevel-tracker stores everything on <em>this device only</em>. Nothing leaves your computer.
+            bloody-level stores everything on <em>this device only</em>. Nothing leaves your computer.
             Choose a password to encrypt the database — you'll need it every time you open the app.
           </p>
         </div>
 
         <div class="rounded-md border border-line/60 bg-bg2/50 p-3 text-xs text-fg2 space-y-1">
           <p class="font-medium text-fg1 flex items-center gap-1">
-            <span aria-hidden="true">🔒</span> Important — there is no recovery
+            <Icon name="lock" size={14} /> Important — there is no recovery
           </p>
           <p>If you forget this password, your data is unrecoverable. Pick something memorable but long; consider a passphrase like <span class="font-mono">"olive-piano-7-cliffside-music"</span>.</p>
         </div>
@@ -176,7 +177,7 @@
               onclick={() => (showPw = !showPw)}
               title={showPw ? 'Hide password' : 'Show password'}
               aria-label={showPw ? 'Hide password' : 'Show password'}
-            >{showPw ? '🙈' : '👁'}</button>
+            ><Icon name={showPw ? 'eye-off' : 'eye'} size={16} /></button>
           </div>
           {#if password.length > 0}
             <div class="mt-1.5 flex items-center gap-2">
@@ -250,7 +251,7 @@
               onclick={() => (showPw = !showPw)}
               title={showPw ? 'Hide password' : 'Show password'}
               aria-label={showPw ? 'Hide password' : 'Show password'}
-            >{showPw ? '🙈' : '👁'}</button>
+            ><Icon name={showPw ? 'eye-off' : 'eye'} size={16} /></button>
           </div>
         </label>
 
@@ -264,13 +265,13 @@
           <div class="gate__divider"><span>or</span></div>
           {#if (status.passkeys?.length ?? 0) <= 1}
             <button class="btn w-full flex items-center justify-center gap-2" disabled={busy} onclick={() => unlockPasskey()}>
-              <span aria-hidden="true">🔑</span> Use a passkey
+              <Icon name="key" size={15} /> Use a passkey
             </button>
           {:else}
             <div class="space-y-2">
               {#each status.passkeys as passkey}
                 <button class="btn w-full flex items-center justify-center gap-2" disabled={busy} onclick={() => unlockPasskey(passkey)}>
-                  <span aria-hidden="true">🔑</span> {passkey.label || 'Passkey'}
+                  <Icon name="key" size={15} /> {passkey.label || 'Passkey'}
                 </button>
               {/each}
             </div>
@@ -288,7 +289,7 @@
 
         {#if status && status.failed_unlocks > 0}
           <p class="text-[11px] text-warn flex items-center gap-1">
-            <span aria-hidden="true">⚠</span>
+            <Icon name="warning" size={14} />
             {status.failed_unlocks} failed attempt{status.failed_unlocks === 1 ? '' : 's'} since the last successful unlock.
             {#if backoffRemaining > 0}
               Try again in {backoffRemaining} second{backoffRemaining === 1 ? '' : 's'}.
@@ -306,10 +307,10 @@
     </div>
 
     <footer class="gate__footer">
-      <span class="gate__footer-pill"><span aria-hidden="true">🔐</span> Private</span>
-      <span class="gate__footer-pill"><span aria-hidden="true">🛡</span> Encrypted</span>
-      <span class="gate__footer-pill"><span aria-hidden="true">💾</span> Local-only</span>
-      <span class="gate__footer-pill"><span aria-hidden="true">🚫</span> No telemetry</span>
+      <span class="gate__footer-pill"><Icon name="lock" size={13} /> Private</span>
+      <span class="gate__footer-pill"><Icon name="shield" size={13} /> Encrypted</span>
+      <span class="gate__footer-pill"><Icon name="database" size={13} /> Local-only</span>
+      <span class="gate__footer-pill"><Icon name="ban" size={13} /> No telemetry</span>
     </footer>
   </div>
 </div>

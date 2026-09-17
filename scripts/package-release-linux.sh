@@ -45,26 +45,26 @@ flatpak_input="$zip_staging/flatpak-input"
 flatpak_build="$zip_staging/flatpak-build"
 flatpak_repo="$zip_staging/flatpak-repo"
 mkdir -p "$flatpak_input"
-cp "$target_directory/release/blevel-tracker" "$flatpak_input/blevel-tracker"
+cp "$target_directory/release/bloody-level" "$flatpak_input/bloody-level"
 cp "$target_directory/release/libpdfium.so" "$flatpak_input/libpdfium.so"
 cp ontology/analytes.seed.json "$flatpak_input/analytes.seed.json"
-cp src-tauri/icons/128x128.png "$flatpak_input/com.blevel.tracker.png"
+cp src-tauri/icons/128x128.png "$flatpak_input/com.bloody.level.png"
 
-cat > "$flatpak_input/com.blevel.tracker.desktop" <<'DESKTOP'
+cat > "$flatpak_input/com.bloody.level.desktop" <<'DESKTOP'
 [Desktop Entry]
 Name=bloody-level
 Comment=Local pathology-report tracker
-Exec=blevel-tracker
-Icon=com.blevel.tracker
+Exec=bloody-level
+Icon=com.bloody.level
 Terminal=false
 Type=Application
 Categories=Utility;Office;
 DESKTOP
 
-cat > "$flatpak_input/com.blevel.tracker.metainfo.xml" <<METAINFO
+cat > "$flatpak_input/com.bloody.level.metainfo.xml" <<METAINFO
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.blevel.tracker</id>
+  <id>com.bloody.level</id>
   <name>bloody-level</name>
   <summary>Local pathology-report tracker</summary>
   <metadata_license>CC0-1.0</metadata_license>
@@ -72,20 +72,20 @@ cat > "$flatpak_input/com.blevel.tracker.metainfo.xml" <<METAINFO
   <description>
     <p>Import, review, and compare blood-work reports locally with the original PDFs kept beside structured results.</p>
   </description>
-  <launchable type="desktop-id">com.blevel.tracker.desktop</launchable>
+  <launchable type="desktop-id">com.bloody.level.desktop</launchable>
   <releases>
     <release version="$version" />
   </releases>
 </component>
 METAINFO
 
-cat > "$flatpak_input/com.blevel.tracker.json" <<'MANIFEST'
+cat > "$flatpak_input/com.bloody.level.json" <<'MANIFEST'
 {
-  "app-id": "com.blevel.tracker",
+  "app-id": "com.bloody.level",
   "runtime": "org.gnome.Platform",
   "runtime-version": "48",
   "sdk": "org.gnome.Sdk",
-  "command": "blevel-tracker",
+  "command": "bloody-level",
   "finish-args": [
     "--share=ipc",
     "--socket=wayland",
@@ -95,31 +95,31 @@ cat > "$flatpak_input/com.blevel.tracker.json" <<'MANIFEST'
   ],
   "modules": [
     {
-      "name": "blevel-tracker",
+      "name": "bloody-level",
       "buildsystem": "simple",
       "build-commands": [
-        "install -Dm755 blevel-tracker /app/bin/blevel-tracker",
+        "install -Dm755 bloody-level /app/bin/bloody-level",
         "install -Dm755 libpdfium.so /app/bin/libpdfium.so",
         "install -Dm644 analytes.seed.json /app/bin/analytes.seed.json",
-        "install -Dm644 com.blevel.tracker.desktop /app/share/applications/com.blevel.tracker.desktop",
-        "install -Dm644 com.blevel.tracker.png /app/share/icons/hicolor/128x128/apps/com.blevel.tracker.png",
-        "install -Dm644 com.blevel.tracker.metainfo.xml /app/share/metainfo/com.blevel.tracker.metainfo.xml"
+        "install -Dm644 com.bloody.level.desktop /app/share/applications/com.bloody.level.desktop",
+        "install -Dm644 com.bloody.level.png /app/share/icons/hicolor/128x128/apps/com.bloody.level.png",
+        "install -Dm644 com.bloody.level.metainfo.xml /app/share/metainfo/com.bloody.level.metainfo.xml"
       ],
       "sources": [
-        { "type": "file", "path": "blevel-tracker" },
+        { "type": "file", "path": "bloody-level" },
         { "type": "file", "path": "libpdfium.so" },
         { "type": "file", "path": "analytes.seed.json" },
-        { "type": "file", "path": "com.blevel.tracker.desktop" },
-        { "type": "file", "path": "com.blevel.tracker.png" },
-        { "type": "file", "path": "com.blevel.tracker.metainfo.xml" }
+        { "type": "file", "path": "com.bloody.level.desktop" },
+        { "type": "file", "path": "com.bloody.level.png" },
+        { "type": "file", "path": "com.bloody.level.metainfo.xml" }
       ]
     }
   ]
 }
 MANIFEST
 
-flatpak-builder --force-clean --disable-rofiles-fuse --repo="$flatpak_repo" "$flatpak_build" "$flatpak_input/com.blevel.tracker.json"
-flatpak build-bundle "$flatpak_repo" "$output_directory/$prefix.flatpak" com.blevel.tracker master \
+flatpak-builder --force-clean --disable-rofiles-fuse --repo="$flatpak_repo" "$flatpak_build" "$flatpak_input/com.bloody.level.json"
+flatpak build-bundle "$flatpak_repo" "$output_directory/$prefix.flatpak" com.bloody.level master \
   --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
 
 echo "Packaged $prefix.AppImage, $prefix.deb, $prefix.rpm, $prefix.flatpak, and $prefix.zip"

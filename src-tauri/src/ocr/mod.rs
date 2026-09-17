@@ -396,7 +396,7 @@ fn create_temp_dir() -> AppResult<PathBuf> {
         .map(|d| d.as_nanos())
         .unwrap_or(0);
     let mut dir = std::env::temp_dir();
-    dir.push(format!("blevel-tracker-ocr-{}-{nanos}", std::process::id()));
+    dir.push(format!("bloody-level-ocr-{}-{nanos}", std::process::id()));
     std::fs::create_dir_all(&dir).map_err(|err| {
         AppError::Internal(format!(
             "failed to create temporary OCR directory {}: {err}",

@@ -32,9 +32,17 @@ PDFium is the primary PDF text-extraction backend. The Rust build helper tries t
 
 When a build reports that PDFium is missing, see [troubleshooting](../reference/troubleshooting.md). Do not copy a library built for another operating system or architecture.
 
-## Optional OCR and models
+## OCR and models
 
-Tesseract OCR is an optional fallback for reports that contain little extractable text. It must be compiled/enabled and available in the local environment before it can be used. The application does not silently download OCR or language-model assets at runtime.
+The distributed build compiles the complete extraction feature set: PDFium,
+Tesseract OCR, olmOCR-2 vision OCR, and Phi-4 repair support. Tesseract still
+needs a local executable and language data, while the embedded tiers need a
+compatible local model file. The application does not silently download OCR or
+language-model assets at runtime.
+
+When building from source, the embedded tiers also require a native C++ toolchain,
+CMake, and LLVM/libclang for bindgen. The CI workflow installs these prerequisites
+on every supported platform.
 
 The experimental olmOCR-2 and Phi-4 paths currently validate configuration and lifecycle state; they are not documented as a complete extraction guarantee. See [implementation status](../reference/status.md).
 

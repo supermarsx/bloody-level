@@ -7,7 +7,7 @@ const MIN_SCORE: u8 = 3;
 const MIN_ENTROPY_BITS: f64 = 50.0;
 
 const COMMON_TERMS: &[&str] = &[
-    "password", "passw0rd", "qwerty", "letmein", "welcome", "admin", "login", "secret", "blevel",
+    "password", "passw0rd", "qwerty", "letmein", "welcome", "admin", "login", "secret", "bloody",
     "tracker",
 ];
 

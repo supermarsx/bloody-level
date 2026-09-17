@@ -80,7 +80,7 @@ export async function devSkip(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 const RP_ID = "localhost";
-const RP_NAME = "blevel-tracker";
+const RP_NAME = "bloody-level";
 
 function bytesToB64(bytes: ArrayBuffer | Uint8Array): string {
   const u = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);

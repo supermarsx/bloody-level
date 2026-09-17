@@ -1,4 +1,4 @@
-# blevel-tracker — Engineering Plan
+# bloody-level — Engineering Plan
 
 A fully local, embedded desktop application that ingests clinical-pathology PDFs (CUF / Germano de Sousa format), extracts every analyte programmatically, and presents a clinician-grade longitudinal dashboard with deltas, reference bands, panels, and full dark/light theming.
 
@@ -11,7 +11,7 @@ No network calls. No cloud APIs. All inference, OCR, and storage stay on-device.
 ### Goals
 
 - Parse every analyte in every PDF with high precision via deterministic, rule-based methods.
-- Embedded-only LLM/OCR tiers — opt-in via settings, lazy-loaded, never required for the happy path.
+- Full extraction feature set compiled into distributed builds; model-backed LLM/OCR tiers remain opt-in via settings and lazy-loaded.
 - Encrypted-at-rest storage with **passkey-first** unlock and **password fallback**.
 - Clinician-grade longitudinal UI: trends, deltas, reference bands, panels, sex/age-aware ranges, unit toggles.
 - Cross-platform via Tauri 2; primary target Windows 11 (user platform).
@@ -115,7 +115,7 @@ WebAuthn PRF        Argon2id
    - Persist `credentialId`, `prfSalt`, `wrap_pk` ciphertext.
 2. **Unlock**:
    - `navigator.credentials.get()` with PRF eval → 32-byte secret.
-   - HKDF(secret, info=`"blevel-tracker DMK wrap v1"`) → KEK_PK.
+   - HKDF(secret, info=`"bloody-level DMK wrap v1"`) → KEK_PK. Existing vaults retain a compatibility fallback for the original context.
    - Decrypt `wrap_pk` → DMK.
 3. **WebView2 / WebAuthn caveat**: PRF requires WebView2 ≥ 122 + Windows Hello + a PRF-capable authenticator. If unsupported, surface a clear "passkey unavailable on this device — use password" message. Detection happens at register time.
 
@@ -635,7 +635,7 @@ A single `app.css` defines tokens for both modes. The `data-theme` attribute on 
 
 ### 11.2 ECharts theme registry
 
-Two themes (`blevel-light`, `blevel-dark`) registered at app boot. Charts read the active CSS vars and pass them to ECharts via `getComputedStyle(document.documentElement)`.
+Two themes (`bloody-level-light`, `bloody-level-dark`) registered at app boot. Charts read the active CSS vars and pass them to ECharts via `getComputedStyle(document.documentElement)`.
 
 ### 11.3 Theme rune
 
@@ -693,7 +693,7 @@ A `MediaQueryList` listener flips `data-theme` and re-applies the ECharts theme 
 ## 13. Build & Distribution
 
 - Lean installer: ~25MB Tauri binary + ~30MB Tesseract traineddata (eng+por) bundled.
-- Models **not bundled** — first-run wizard offers download to `%APPDATA%/blevel-tracker/models/` with SHA-256 verification.
+- Models **not bundled** — first-run wizard offers download to `%APPDATA%/com.bloody.level/models/` with SHA-256 verification.
 - Code-signed Windows MSI (user provides cert if desired; unsigned otherwise).
 - Auto-update **disabled** (local app, no network).
 

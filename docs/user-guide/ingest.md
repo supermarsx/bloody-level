@@ -10,7 +10,7 @@ Open [Ingest], then drop one or more PDF files onto the import area or use the f
 
 bloody-level supports Portuguese (PT-PT) pathology and laboratory PDF reports
 from CUF and Germano de Sousa. Text-based PDFs are handled by the local PDFium
-extractor. Scanned or text-poor reports can use the optional local OCR tier when
+extractor. Scanned or text-poor reports can use the locally compiled OCR tiers when
 it is configured and available.
 
 Provider layouts may vary by department, report type, and revision. After every
@@ -24,7 +24,7 @@ The pipeline records these stages:
 1. Verify that the file exists and is a PDF.
 2. Hash the source bytes with SHA-256.
 3. Extract text with PDFium.
-4. Use optional OCR when the extracted text is sparse and the selected tier is available.
+4. Use OCR when the extracted text is sparse and the selected tier is available.
 5. Parse and normalize rows against the local ontology.
 6. Write the report, rows, source copy, and audit events to the encrypted vault.
 
@@ -34,7 +34,11 @@ The source SHA-256 is the identity check for an imported file. Importing the sam
 
 ## Ingestion tiers
 
-Tier 1 uses the local PDFium path and should be the default. Tier 2 can add Tesseract OCR for scanned or text-poor reports, but only when it has been compiled/enabled and the required local executable or language data is available. Model-backed paths are optional and should be considered experimental until the app reports a complete result.
+Tier 1 uses the local PDFium path and is always available when its matching
+sidecar is present. Distributed builds also compile Tier 2 Tesseract OCR, Tier 3
+olmOCR-2 vision OCR, and Tier 4 Phi-4 repair. OCR/model execution remains
+opt-in and requires the matching local runtime assets; a compiled feature is not
+the same as a loaded or usable model.
 
 Choose the tier and model paths in Settings. The UI shows availability and diagnostics instead of silently pretending a missing backend ran.
 

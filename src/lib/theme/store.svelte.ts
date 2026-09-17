@@ -1,10 +1,13 @@
 type Mode = "light" | "dark" | "system";
 
-const STORAGE_KEY = "blevel.theme";
+const STORAGE_KEY = "bloody-level.theme";
+const LEGACY_STORAGE_KEY = "blevel.theme";
 
 function readStored(): Mode {
   if (typeof localStorage === "undefined") return "system";
-  const v = localStorage.getItem(STORAGE_KEY);
+  const v =
+    localStorage.getItem(STORAGE_KEY) ??
+    localStorage.getItem(LEGACY_STORAGE_KEY);
   return v === "light" || v === "dark" || v === "system" ? v : "system";
 }
 

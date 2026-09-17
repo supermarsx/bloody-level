@@ -12,6 +12,25 @@ mod state;
 
 use tauri::Manager;
 
+const LEGACY_APP_IDENTIFIER: &str = "com.blevel.tracker";
+
+/// Keep existing vaults usable after the product identifier changed from the
+/// original internal name to bloody-level. Only migrate when the new location
+/// does not exist, so two populated vaults are never merged or overwritten.
+fn migrate_legacy_data_dir(data_dir: &std::path::Path) -> std::io::Result<()> {
+    if data_dir.exists() {
+        return Ok(());
+    }
+    let Some(parent) = data_dir.parent() else {
+        return Ok(());
+    };
+    let legacy_dir = parent.join(LEGACY_APP_IDENTIFIER);
+    if legacy_dir.is_dir() {
+        std::fs::rename(legacy_dir, data_dir)?;
+    }
+    Ok(())
+}
+
 pub fn run() {
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -25,6 +44,7 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .setup(|app| {
             let data_dir = app.path().app_data_dir().expect("resolve app data dir");
+            migrate_legacy_data_dir(&data_dir)?;
             std::fs::create_dir_all(&data_dir)?;
             std::fs::create_dir_all(data_dir.join("pdfs"))?;
             std::fs::create_dir_all(data_dir.join("models"))?;

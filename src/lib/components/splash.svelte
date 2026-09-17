@@ -37,7 +37,7 @@
         <circle cx="48" cy="32" r="3" fill="url(#splashGrad)" class="splash__dot" />
       </svg>
     </div>
-    <div class="splash__title">blevel-tracker</div>
+    <div class="splash__title">bloody-level</div>
     <div class="splash__bar" aria-hidden="true">
       <div class="splash__bar-fill"></div>
     </div>

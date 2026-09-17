@@ -2,20 +2,20 @@
 //
 // Tauri 2 doesn't auto-mirror `document.title` into the OS window title, so
 // every meaningful navigation/state change funnels through `setTitle()` here.
-// Format:  "<page-specific>  ·  blevel-tracker [<state>]"
+// Format:  "<page-specific>  ·  bloody-level [<state>]"
 //
 // `state` surfaces transient signals: locked, ingest in flight, etc.
 
 import { isTauri } from "$api/index";
 
-const APP = "blevel-tracker";
+const APP = "bloody-level";
 
 class TitleStore {
   /** Page-specific subject — e.g. 'Hemoglobina · MARIANA' */
   subject = $state<string | null>(null);
   /** Transient status segments — `set('ingest', '3 of 12')`, `clear('ingest')`. */
   segments = $state<Record<string, string>>({});
-  /** Lock state — prepends 🔒 when true. */
+  /** Lock state — prefixes the title with a plain-text status marker. */
   locked = $state(false);
 
   setSubject(s: string | null) {
@@ -54,7 +54,7 @@ class TitleStore {
     if (stateBits.length > 0) {
       title += `  [${stateBits.join(" · ")}]`;
     }
-    if (this.locked) title = `🔒 ${title}`;
+    if (this.locked) title = `Locked · ${title}`;
     return title;
   }
 

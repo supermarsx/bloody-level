@@ -16,7 +16,7 @@ function rgb(name: string, alpha = 1): string {
 /**
  * Read the actual currently-applied theme from the document. The `mode`
  * argument passed by callers is only used for naming the registered theme
- * ('blevel-light' / 'blevel-dark'); the actual styling always reflects
+ * ('bloody-level-light' / 'bloody-level-dark'); the actual styling always reflects
  * whatever data-theme is live, because that's the only set of CSS vars
  * we can read.
  */
@@ -28,7 +28,7 @@ function activeMode(): "light" | "dark" {
 }
 
 function buildTheme(_registeredAs: "light" | "dark") {
-  // `_registeredAs` is symbolic — both `blevel-light` and `blevel-dark` get
+  // `_registeredAs` is symbolic — both `bloody-level-light` and `bloody-level-dark` get
   // the same body, reflecting the current document mode. We re-register on
   // every theme-change event so this stays correct.
   const mode = activeMode();
@@ -119,21 +119,21 @@ let registered = false;
 
 export function ensureThemesRegistered() {
   if (registered) return;
-  echarts.registerTheme("blevel-light", buildTheme("light"));
-  echarts.registerTheme("blevel-dark", buildTheme("dark"));
+  echarts.registerTheme("bloody-level-light", buildTheme("light"));
+  echarts.registerTheme("bloody-level-dark", buildTheme("dark"));
   registered = true;
 }
 
 export function reRegisterThemes() {
   // CSS vars may have changed (theme switch); re-register so future inits pick up new colors.
-  echarts.registerTheme("blevel-light", buildTheme("light"));
-  echarts.registerTheme("blevel-dark", buildTheme("dark"));
+  echarts.registerTheme("bloody-level-light", buildTheme("light"));
+  echarts.registerTheme("bloody-level-dark", buildTheme("dark"));
 }
 
 export function activeThemeName(): string {
-  if (typeof document === "undefined") return "blevel-dark";
+  if (typeof document === "undefined") return "bloody-level-dark";
   const t = document.documentElement.getAttribute("data-theme");
-  return t === "light" ? "blevel-light" : "blevel-dark";
+  return t === "light" ? "bloody-level-light" : "bloody-level-dark";
 }
 
 export const refBandColors = {

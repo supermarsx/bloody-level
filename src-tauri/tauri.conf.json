@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "blevel-tracker",
+  "productName": "bloody-level",
   "version": "0.1.0",
-  "identifier": "com.blevel.tracker",
+  "identifier": "com.bloody.level",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "blevel-tracker",
+        "title": "bloody-level",
         "width": 1440,
         "height": 900,
         "minWidth": 1100,
@@ -41,8 +41,8 @@
       "assetProtocol": {
         "enable": true,
         "scope": [
-          "$APPDATA/blevel-tracker/**",
-          "$APPLOCALDATA/blevel-tracker/**"
+          "$APPDATA/com.bloody.level/**",
+          "$APPLOCALDATA/com.bloody.level/**"
         ]
       }
     }
@@ -53,8 +53,8 @@
     "category": "Healthcare and Fitness",
     "shortDescription": "Local-only clinical lab-PDF tracker",
     "longDescription": "Ingests clinical pathology PDFs and presents longitudinal analyte trends, deltas, and reference bands. Fully local; encrypted at rest.",
-    "publisher": "blevel-tracker",
-    "copyright": "© 2026 blevel-tracker",
+    "publisher": "bloody-level maintainers",
+    "copyright": "© 2026 bloody-level",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

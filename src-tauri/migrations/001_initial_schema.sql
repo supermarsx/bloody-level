@@ -1,5 +1,5 @@
 -- 001_initial_schema.sql
--- blevel-tracker — initial encrypted schema
+-- bloody-level — initial encrypted schema
 
 CREATE TABLE patients (
     id              TEXT PRIMARY KEY,

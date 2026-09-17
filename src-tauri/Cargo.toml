@@ -1,13 +1,13 @@
 [package]
-name = "blevel-tracker"
+name = "bloody-level"
 version = "0.1.0"
 description = "Local-only clinical lab-PDF tracker with embedded OCR/LLM tiers"
-authors = ["blevel-tracker"]
+authors = ["bloody-level maintainers"]
 edition = "2021"
 rust-version = "1.95"
 
 [lib]
-name = "blevel_tracker_lib"
+name = "bloody_level_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -67,20 +67,18 @@ ahash = "0.8"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
 
-# --- Optional tiers (disabled by default; enabled per cargo feature) -------
+# --- Extraction tiers ------------------------------------------------------
 llama-cpp-2 = { version = "0.1.156", optional = true }
 
 [features]
-# Default build is lean: pdfium + encrypted SQLite + the parser. The optional tiers
-# stay opt-in because each adds significant build time and runtime requirements
-# without yet providing user-visible functionality:
+# The distributed build includes every extraction tier. Tesseract still needs
+# a local Tesseract installation and model data at runtime; the embedded tiers
+# load their model files only when explicitly used from the app.
 #
-#   --features embedded-llm         Phi-4-mini-reasoning via llama.cpp
-#                                   (~5 min first build, requires MSVC + CMake)
-#   --features embedded-ocr-vision  olmOCR-2 vision OCR (same llama.cpp runtime)
-#   --features tesseract-ocr        Tesseract OCR via the local tesseract CLI;
-#                                   needs tesseract + tessdata at runtime.
-default = []
+#   embedded-llm         Phi-4-mini-reasoning via llama.cpp
+#   embedded-ocr-vision  olmOCR-2 vision OCR (same llama.cpp runtime)
+#   tesseract-ocr        Tesseract OCR via the local tesseract CLI
+default = ["tesseract-ocr", "embedded-llm", "embedded-ocr-vision"]
 
 tesseract-ocr        = []
 embedded-llm         = ["dep:llama-cpp-2"]

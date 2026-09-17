@@ -31,7 +31,7 @@ Run Rust commands from the repository root with `--manifest-path`, or change int
 
 ## Native dependencies
 
-The build helper looks for a matching PDFium archive under `src-tauri/binaries` and can attempt a download. Keep target and architecture aligned. Optional OCR and model paths should be configured locally and must not be committed with health data or large binaries.
+The build helper looks for a matching PDFium archive under `src-tauri/binaries` and can attempt a download. Keep target and architecture aligned. The default Cargo feature set compiles all extraction tiers, so source builds also need a native C++ toolchain, CMake, and LLVM/libclang for llama.cpp bindgen. OCR executables, language data, and model paths should be configured locally and must not be committed with health data or large binaries.
 
 ## Adding a feature
 

@@ -13,13 +13,13 @@ This page describes the capability boundary users and contributors should rely o
 
 ## Available with conditions
 
-- Tesseract OCR is an optional, locally configured fallback and depends on the build and installed language data.
+- Tesseract OCR is compiled into distributed builds, but remains a locally configured fallback and depends on an installed executable and language data.
 - PDFium may need a target-matched manual library when the build-time download is unavailable.
 - Signing depends on platform credentials and repository secrets; default artifacts can be unsigned.
 
 ## In progress or experimental
 
-- olmOCR-2 and Phi-4 integrations currently cover configuration/path validation and lifecycle status rather than a complete, guaranteed extraction path.
+- olmOCR-2 and Phi-4 integrations are compiled into distributed builds, but currently cover configuration/path validation and lifecycle status rather than a complete, guaranteed extraction path.
 - Production confidence still depends on expanding synthetic and sanitized PDF fixture coverage across real-world report layouts.
 
 For the full design history and acceptance criteria, read [the original implementation plan](../implementation-plan.md).

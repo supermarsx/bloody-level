@@ -29,7 +29,7 @@
       <!-- App icon only — no wordmark to keep the bar tight. The icon is
            a stripped-down version of the same waveform used as the OS app
            icon; clicking it routes home. -->
-      <a href="/" class="shrink-0 inline-flex items-center" aria-label="blevel-tracker — home" title="blevel-tracker">
+      <a href="/" class="shrink-0 inline-flex items-center" aria-label="bloody-level — home" title="bloody-level">
         <svg viewBox="0 0 96 96" width="22" height="22" fill="none" aria-hidden="true">
           <defs>
             <linearGradient id="navGrad" x1="0" y1="0" x2="1" y2="1">
@@ -108,8 +108,8 @@
     <div class="flex items-center gap-2">
       <GlobalSearch />
       <!-- Icon-only theme cycler. The full mode label moved to the title
-           tooltip so the navbar stays compact; the emoji alone signals
-           current state at a glance. -->
+           tooltip so the navbar stays compact; the icon signals current
+           state at a glance. -->
       <button
         class="icon-btn"
         onclick={() => theme.cycle()}

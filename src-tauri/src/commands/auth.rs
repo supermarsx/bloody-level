@@ -35,6 +35,14 @@ pub struct AuthStatus {
 }
 
 const IS_DEV: bool = cfg!(debug_assertions);
+const PASSKEY_WRAP_CONTEXT: &[u8] = b"bloody-level DMK wrap v1";
+// Passkeys created by pre-rename builds use this context. Keep it as a
+// compatibility fallback so a product rename cannot strand an existing vault.
+const LEGACY_PASSKEY_WRAP_CONTEXT: &[u8] = b"blevel-tracker DMK wrap v1";
+
+fn derive_passkey_kek(prf: &[u8], context: &[u8]) -> AppResult<secrecy::SecretBox<[u8; 32]>> {
+    kdf::derive_kek_from_prf(prf, context)
+}
 
 #[tauri::command]
 pub async fn auth_status(state: State<'_, AppState>) -> AppResult<AuthStatus> {
@@ -259,7 +267,7 @@ pub async fn auth_register_passkey(
     let prf = B64
         .decode(&args.prf_output_b64)
         .map_err(|e| AppError::Base64(e.to_string()))?;
-    let pk_kek = kdf::derive_kek_from_prf(&prf, b"blevel-tracker DMK wrap v1")?;
+    let pk_kek = derive_passkey_kek(&prf, PASSKEY_WRAP_CONTEXT)?;
     let (pk_nonce, pk_ct) = wrap::wrap_dmk(&pk_kek, dmk.expose_secret())?;
 
     ks.add_passkey(Wrapper::Passkey {
@@ -310,7 +318,6 @@ pub async fn auth_unlock_passkey(
     let prf = B64
         .decode(&args.prf_output_b64)
         .map_err(|e| AppError::Base64(e.to_string()))?;
-    let kek = kdf::derive_kek_from_prf(&prf, b"blevel-tracker DMK wrap v1")?;
     let nonce = B64
         .decode(target.0)
         .map_err(|e| AppError::Base64(e.to_string()))?;
@@ -318,14 +325,17 @@ pub async fn auth_unlock_passkey(
         .decode(target.1)
         .map_err(|e| AppError::Base64(e.to_string()))?;
 
-    let dmk = match wrap::unwrap_dmk(&kek, &nonce, &ct) {
-        Ok(k) => k,
-        Err(e) => {
+    let dmk = [PASSKEY_WRAP_CONTEXT, LEGACY_PASSKEY_WRAP_CONTEXT]
+        .into_iter()
+        .find_map(|context| {
+            let kek = derive_passkey_kek(&prf, context).ok()?;
+            wrap::unwrap_dmk(&kek, &nonce, &ct).ok()
+        })
+        .ok_or_else(|| {
             ks.record_failure();
             let _ = ks.save(&ks_path);
-            return Err(e);
-        }
-    };
+            AppError::Crypto("unwrap failed (wrong passkey)".into())
+        })?;
 
     let mut db = Database::open_encrypted(&state.db_path(), &dmk)?;
     db.migrate()?;

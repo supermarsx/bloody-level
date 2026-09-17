@@ -71,8 +71,8 @@ is independent and is not affiliated with either provider.
 
 - PDF import with duplicate detection based on the source file's SHA-256.
 - PT-PT PDF support for CUF and Germano de Sousa laboratory reports.
-- Local PDFium extraction with optional Tesseract OCR for sparse or scanned
-  reports when configured.
+- Local PDFium extraction plus the full OCR/LLM feature set in distributed
+  builds. Model-backed tiers are still opt-in and load only when configured.
 - Visible parser diagnostics for unmatched analytes, missing values, unknown
   units, unparsed ranges, and low-confidence rows.
 - Source metadata and the original PDF kept close to the structured results.
@@ -94,9 +94,9 @@ is independent and is not affiliated with either provider.
 - Local model paths and ingestion status shown explicitly; missing capabilities
   are not silently presented as successful processing.
 
-Experimental olmOCR-2 and Phi-4 integrations currently cover local
-configuration and lifecycle status rather than complete vision-OCR or repair
-results. See the [implementation status](docs/reference/status.md).
+The distributed build compiles Tesseract, olmOCR-2, and Phi-4 integrations;
+Tesseract still needs its local runtime and language data, while the embedded
+tiers need their model files. See the [implementation status](docs/reference/status.md).
 
 ## Quick start
 
