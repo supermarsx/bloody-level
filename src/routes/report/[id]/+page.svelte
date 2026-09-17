@@ -24,6 +24,7 @@
   import BackButton from '$components/back-button.svelte';
   import { hrtMilestoneFor } from '$format/hrt-milestone';
   import { formatRelativeSpan } from '$format/dates';
+  import Icon from '$components/icon.svelte';
 
   // Time gap to the previous (older) report for this patient — surfaces in
   // the page header so users immediately see the cadence between draws.
@@ -328,13 +329,13 @@
           disabled={!detail.prev_report_id}
           title={detail.prev_report_id ? 'Previous report (older) for this patient' : 'No earlier report for this patient'}
           onclick={() => detail!.prev_report_id && goto(`/report/${detail!.prev_report_id}`)}
-        >← Prev</button>
+        ><Icon name="arrow-left" size={14} /> Prev</button>
         <button
           class="btn"
           disabled={!detail.next_report_id}
           title={detail.next_report_id ? 'Next report (newer) for this patient' : 'No later report for this patient'}
           onclick={() => detail!.next_report_id && goto(`/report/${detail!.next_report_id}`)}
-        >Next →</button>
+        >Next <Icon name="arrow-right" size={14} /></button>
         <button class="btn" onclick={onOpenPdf} title="Open the original PDF in your default viewer">Open PDF</button>
         <button class="btn" onclick={onExportCsv} title="Download every parsed row as CSV">Export CSV</button>
         <button class="btn" disabled={reparsing} onclick={onReparse}>

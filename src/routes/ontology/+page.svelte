@@ -8,6 +8,7 @@
   import ReferenceCard from '$components/reference-card.svelte';
   import { openUrl } from '$api/shell';
   import { ask } from '@tauri-apps/plugin-dialog';
+  import Icon from '$components/icon.svelte';
 
   let entries = $state<AnalyteOntologyEntry[]>([]);
   let loading = $state(true);
@@ -213,7 +214,10 @@
       <button class="btn" disabled={reloading} onclick={reloadOntology}>
         {reloading ? 'Reloading…' : 'Reload from seed'}
       </button>
-      <button class="btn-accent" onclick={openCreate}>+ New analyte</button>
+      <button class="btn-accent" onclick={openCreate}>
+        <Icon name="plus" size={14} />
+        New analyte
+      </button>
     </div>
   </div>
 
@@ -261,22 +265,22 @@
     <div class="card p-6 text-sm text-fg2">Loading…</div>
   {:else}
     <!-- ─── Two-pane layout: list on left, detail on right ─── -->
-    <section class="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-4">
+    <section class="ontology-layout grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-4">
       <!-- LIST -->
       <div class="card overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="text-fg2 text-xs uppercase tracking-wide">
             <tr class="border-b border-line">
               <th class="px-3 py-2 text-left cursor-pointer" onclick={() => toggleSort('section')}>
-                Section {sortKey === 'section' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                Section {#if sortKey === 'section'}<Icon name={sortDir === 'asc' ? 'arrow-up' : 'arrow-down'} size={12} />{/if}
               </th>
               <th class="px-3 py-2 text-left cursor-pointer" onclick={() => toggleSort('pt_name')}>
-                Analyte {sortKey === 'pt_name' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                Analyte {#if sortKey === 'pt_name'}<Icon name={sortDir === 'asc' ? 'arrow-up' : 'arrow-down'} size={12} />{/if}
               </th>
               <th class="px-3 py-2 text-left">Default ref</th>
               <th class="px-3 py-2 text-left">Flags</th>
               <th class="px-3 py-2 text-right cursor-pointer" onclick={() => toggleSort('results')}>
-                Used {sortKey === 'results' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                Used {#if sortKey === 'results'}<Icon name={sortDir === 'asc' ? 'arrow-up' : 'arrow-down'} size={12} />{/if}
               </th>
               <th class="px-3 py-2 text-left">Source</th>
               <th class="px-3 py-2 text-left w-20"></th>
@@ -360,7 +364,7 @@
       </div>
 
       <!-- DETAIL PANEL -->
-      <div class="card p-4 space-y-3 sticky top-16 self-start min-h-[20rem]">
+      <aside class="ontology-detail card p-4 space-y-3" aria-label="Selected analyte details">
         {#if !selectedId}
           <p class="text-sm text-fg2">Select an analyte from the list to inspect its full ontology entry.</p>
         {:else if loadingDetail || !selectedInfo}
@@ -371,7 +375,7 @@
           <header class="space-y-1">
             <div class="flex items-baseline justify-between gap-2 flex-wrap">
               <h2 class="text-lg font-semibold">{info.pt_name}</h2>
-              <a class="text-xs text-accent hover:underline" href={`/analyte/${info.id}`}>Open analyte page →</a>
+              <a class="text-xs text-accent hover:underline inline-flex items-center gap-1" href={`/analyte/${info.id}`}>Open analyte page <Icon name="arrow-right" size={12} /></a>
             </div>
             <div class="text-xs text-fg3 flex items-center gap-1.5 flex-wrap">
               <span class="font-mono">{info.id}</span>
@@ -385,7 +389,7 @@
                   class="cursor-pointer font-mono text-accent hover:underline"
                   onclick={() => openLoinc(info.loinc!)}
                   title="Open this code in the default browser"
-                >LOINC {info.loinc} ↗</button>
+                >LOINC {info.loinc} <Icon name="external" size={12} /></button>
               {/if}
             </div>
             {#if info.method_annotation}
@@ -478,7 +482,7 @@
             </section>
           {/if}
         {/if}
-      </div>
+      </aside>
     </section>
   {/if}
 </div>
@@ -536,6 +540,24 @@
   .ont-row:hover { background: rgb(var(--bg-3) / 0.5); }
   .ont-row--active { background: rgb(var(--accent) / 0.10); }
   .ont-row--active:hover { background: rgb(var(--accent) / 0.14); }
+
+  /* The list can be much taller than the viewport. Keep the selected entry
+     beside it while the document scrolls, but give the detail pane its own
+     bounded scroll when the entry itself is long. `overflow-x: clip` on the
+     app main region keeps this sticky positioning relative to the document. */
+  .ontology-layout { align-items: start; }
+  .ontology-detail {
+    position: sticky;
+    top: 4rem;
+    align-self: start;
+    max-height: calc(100vh - 5rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+  @media (max-width: 1023px) {
+    .ontology-detail { position: static; max-height: none; overflow-y: visible; }
+  }
 
   .ont-tag {
     display: inline-flex;

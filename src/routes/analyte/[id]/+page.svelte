@@ -21,6 +21,7 @@
   import BackButton from '$components/back-button.svelte';
   import { listOntologyEntries, type AnalyteOntologyEntry } from '$api/analyte-info';
   import ReferenceCard from '$components/reference-card.svelte';
+  import Icon, { type IconName } from '$components/icon.svelte';
   import { ask } from '@tauri-apps/plugin-dialog';
   import { chartPrefs } from '$charts/prefs.svelte';
 
@@ -221,7 +222,7 @@
 
   $effect(() => { if (analyteId) refresh(); });
 
-  // Window title: "Hemoglobina · MARIANA · blevel-tracker" so the OS bar
+  // Window title: "Hemoglobina · MARIANA · bloody-level" so the OS bar
   // tells users which analyte they're inspecting at a glance.
   $effect(() => {
     const name = info?.pt_name ?? analyteId;
@@ -356,7 +357,7 @@
               <span class="truncate {activePatient ? '' : 'text-fg3'}">
                 {activePatient ? `${activePatient.name} (${activePatient.count})` : 'Select patient…'}
               </span>
-              <span aria-hidden="true" class="shrink-0 text-fg3">⌄</span>
+              <Icon name="chevron-down" size={14} />
             </button>
             {#if patientMenuOpen}
               <div class="analyte-patient-menu" role="presentation">
@@ -406,7 +407,7 @@
               class="cursor-pointer font-mono text-accent hover:underline"
               onclick={() => openLoinc(loinc)}
               title="Open this code in the default browser"
-            >LOINC {loinc} ↗</button>
+            >LOINC {loinc} <Icon name="external" size={14} /></button>
           {/if}
         </div>
       {/if}
@@ -605,15 +606,15 @@
       <span class="ref-source-bar__label">Reference source</span>
       <div class="seg seg--inline">
         {#each [
-          { id: 'auto',    label: '⚖ Auto',         hint: 'Library when usable, fall back to printed' },
-          { id: 'library', label: '📖 Library',     hint: 'Always use the analyte ontology' },
-          { id: 'printed', label: '🧾 Per-report',  hint: 'Always use the lab\'s printed range' }
+          { id: 'auto',    label: 'Auto',       icon: 'scale'   as IconName, hint: 'Library when usable, fall back to printed' },
+          { id: 'library', label: 'Library',    icon: 'library' as IconName, hint: 'Always use the analyte ontology' },
+          { id: 'printed', label: 'Per-report', icon: 'receipt' as IconName, hint: 'Always use the lab\'s printed range' }
         ] as opt}
           <button type="button"
                   class="seg__opt {chartPrefs.referenceSource === opt.id ? 'seg__opt--on' : ''}"
                   title={opt.hint}
                   onclick={() => chartPrefs.setReferenceSource(opt.id as 'auto' | 'library' | 'printed')}>
-            {opt.label}
+            <Icon name={opt.icon} size={14} /> {opt.label}
           </button>
         {/each}
       </div>
@@ -648,7 +649,7 @@
               <th class="text-left px-3 py-2">Date</th>
               <th class="text-left px-3 py-2"
                   title="Time elapsed since the previous reading for this patient. d = days, w = weeks, mo = months, y = years.">
-                Δt <span class="text-fg3 text-[10px]" aria-hidden="true">ⓘ</span>
+                Δt <Icon name="info" size={12} />
               </th>
               <th class="text-left px-3 py-2">Patient</th>
               <th class="text-right px-3 py-2">Value</th>

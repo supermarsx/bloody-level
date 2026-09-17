@@ -6,6 +6,7 @@
   import * as reparse from '$api/reparse';
   import { AppError } from '$api/errors';
   import { toasts } from '../../lib/toasts/store.svelte';
+  import Icon from '$components/icon.svelte';
   import { formatDate } from '$format/dates';
   import PatientPickerDialog from '$components/patient-picker-dialog.svelte';
 
@@ -353,7 +354,7 @@
                       class="btn"
                       onclick={() => (filterPatient = filterPatient === p.id ? null : p.id)}
                       title="Filter reports below"
-                    >{filterPatient === p.id ? '✓ Filtered' : 'Filter'}</button>
+                    >{#if filterPatient === p.id}<Icon name="check" size={13} /> Filtered{:else}<Icon name="filter" size={13} /> Filter{/if}</button>
                     <button class="btn" onclick={() => startEditPatient(p)}>Edit</button>
                     {#if patients.length > 1}
                       <button class="btn" onclick={() => openMergeFor(p)} title="Merge this patient into another (e.g. name change)">

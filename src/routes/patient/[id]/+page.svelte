@@ -23,6 +23,7 @@
   import { hrtMilestoneFor } from '$format/hrt-milestone';
   import FlagPill from '$charts/flag-pill.svelte';
   import { formatNumber, formatDelta } from '$format/numbers';
+  import Icon, { type IconName } from '$components/icon.svelte';
 
   let patientId = $derived($page.params.id ?? '');
   let reports = $state<ReportSummary[]>([]);
@@ -32,6 +33,13 @@
   let abnormalAnalyteIds = $state<Set<string>>(new Set());
   let subclinicalAnalyteIds = $state<Set<string>>(new Set());
   let dashboardLoading = $state(false);
+
+  function sexIcon(sex: string): IconName {
+    return sex === 'm' ? 'male' : sex === 'f' ? 'female' : sex === 'x' ? 'gender' : 'info';
+  }
+  function sexLabel(sex: string): string {
+    return sex === 'm' ? 'Male' : sex === 'f' ? 'Female' : sex === 'x' ? 'Other' : 'Unknown';
+  }
 
   type AnalyteCategory = 'abnormal' | 'elevated' | 'subclinical';
   type TrendWindowDays = 30 | 90 | 180 | 365;
@@ -425,10 +433,7 @@
                     class="sex-pill sex-pill--{patient.sex}"
                     onclick={startEdit}
                     title="Click to change — sex is the global truth driving every flag derivation. Edit it through the patient metadata form.">
-              {patient.sex === 'm' ? '♂ Male'
-               : patient.sex === 'f' ? '♀ Female'
-               : patient.sex === 'x' ? '⚧ Other'
-               : '? Unknown'}
+              <Icon name={sexIcon(patient.sex)} size={13} /> {sexLabel(patient.sex)}
             </button>
           {/if}
           <span>{patient.report_count} report{patient.report_count === 1 ? '' : 's'}</span>
@@ -536,12 +541,11 @@
           <span class="edit-field__label">Sex</span>
           <div class="edit-segmented" role="radiogroup" aria-label="Sex">
             {#each ['m','f','x','?'] as v}
-              {@const labels: Record<string, string> = { m: '♂ Male', f: '♀ Female', x: '⚧ Other', '?': '? Unknown' }}
               <button type="button" role="radio"
                       aria-checked={editForm.sex === v}
                       class="edit-segmented__opt {editForm.sex === v ? 'edit-segmented__opt--on' : ''}"
                       onclick={() => (editForm.sex = v as 'm' | 'f' | 'x' | '?')}>
-                {labels[v]}
+                <Icon name={sexIcon(v)} size={13} /> {sexLabel(v)}
               </button>
             {/each}
           </div>

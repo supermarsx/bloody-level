@@ -4,6 +4,7 @@
   import { flip } from 'svelte/animate';
   import { toasts, type Toast } from '../toasts/store.svelte';
   import { appearance } from '$theme/appearance.svelte';
+  import Icon from '$components/icon.svelte';
 
   function classFor(kind: Toast['kind']): string {
     switch (kind) {
@@ -111,7 +112,7 @@
             class="text-xs text-fg3 hover:text-fg1 px-1"
             onclick={() => toasts.dismiss(t.id)}
             aria-label="Dismiss"
-          >×</button>
+          ><Icon name="x" size={14} /></button>
         </div>
       </div>
     </div>

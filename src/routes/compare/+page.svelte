@@ -9,6 +9,7 @@
   import { LocalChartPrefs, type ChartPrefsLike, chartPrefs } from '$charts/prefs.svelte';
   import { comparePresets, EMPTY_FILTERS, type ComparePreset } from '$charts/compare-presets.svelte';
   import { toasts } from '../../lib/toasts/store.svelte';
+  import Icon from '$components/icon.svelte';
 
   // The Compare view does multi-analyte overlay for a single patient.
   // Cross-patient comparison of the same analyte is intentionally out of scope:
@@ -1062,7 +1063,7 @@
             <span class="truncate {activePatient ? '' : 'text-fg3'}">
               {activePatient ? `${activePatient.display_name} (${activePatient.report_count})` : 'Select…'}
             </span>
-            <span aria-hidden="true" class="shrink-0 text-fg3">⌄</span>
+            <Icon name="chevron-down" size={14} />
           </button>
 
           {#if patientMenuOpen}
@@ -1202,17 +1203,17 @@
                      drag affordance; the arrows offer a keyboard / touch
                      alternative for users who can't drag. -->
                 <span class="cursor-grab active:cursor-grabbing text-fg3 hover:text-fg1 select-none px-1"
-                      title="Drag to reorder">⋮⋮</span>
+                      title="Drag to reorder"><Icon name="grip" size={15} /></span>
                 <button type="button"
                         class="reorder-btn"
                         onclick={(e) => { e.stopPropagation(); moveAnalyte(idx, -1); }}
                         disabled={idx === 0}
-                        title="Move up">↑</button>
+                        title="Move up"><Icon name="arrow-up" size={14} /></button>
                 <button type="button"
                         class="reorder-btn"
                         onclick={(e) => { e.stopPropagation(); moveAnalyte(idx, +1); }}
                         disabled={idx === cards.length - 1}
-                        title="Move down">↓</button>
+                        title="Move down"><Icon name="arrow-down" size={14} /></button>
               </div>
               <!-- Right-side cluster — analyte name first, then stats. The
                    `ml-auto` on this wrapper pushes the whole cluster to the

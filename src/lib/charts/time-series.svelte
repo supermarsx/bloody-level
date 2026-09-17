@@ -9,6 +9,7 @@
   } from '$theme/echarts-themes';
   import { toasts } from '../toasts/store.svelte';
   import { chartPrefs, type ChartPrefsLike } from './prefs.svelte';
+  import Icon from '$components/icon.svelte';
 
   type Point = {
     date: string;
@@ -850,13 +851,13 @@
             class="ts-btn {showSymbols ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setShowSymbols(!showSymbols)}
             title="Toggle the dot at each reading. {persistHint}">
-      •
+      <Icon name="dot" size={14} />
     </button>
     <button type="button"
             class="ts-btn {showBands ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setShowBands(!showBands)}
             title="Toggle reference band(s). {persistHint}">
-      ⇆
+      <Icon name="layers" size={14} />
     </button>
     <button type="button"
             class="ts-btn {scale === 'log' ? 'ts-btn--on' : ''}"
@@ -868,43 +869,43 @@
             class="ts-btn {showTrendLine ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setShowTrendLine(!showTrendLine)}
             title="Overlay a linear-regression trend line. {persistHint}">
-      ⤴
+      <Icon name="trend-up" size={14} />
     </button>
     <button type="button"
             class="ts-btn {showTodayLine ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setShowTodayLine(!showTodayLine)}
             title="Show a vertical reference line at today's date. {persistHint}">
-      📍
+      <Icon name="pin" size={14} />
     </button>
     <button type="button"
             class="ts-btn {showMeanLine ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setShowMeanLine(!showMeanLine)}
             title="Show a horizontal line at the mean of visible readings. {persistHint}">
-      μ
+      Mean
     </button>
     <button type="button"
             class="ts-btn {showMinMaxMarkers ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setShowMinMaxMarkers(!showMinMaxMarkers)}
             title="Pin the highest and lowest readings. {persistHint}">
-      ⇕
+      <Icon name="minmax" size={14} />
     </button>
     <button type="button"
             class="ts-btn {colorByFlag ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setColorByFlag(!colorByFlag)}
             title="Tint each point by its flag (low / normal / high / critical). {persistHint}">
-      🎯
+      <Icon name="target" size={14} />
     </button>
     <button type="button"
             class="ts-btn {useNicknames ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setUseNicknames(!useNicknames)}
             title="Show report nicknames on the X axis (when set on the source report). Falls back to the date for unlabelled reports. {persistHint}">
-      🏷
+      <Icon name="tag" size={14} />
     </button>
     <button type="button"
             class="ts-btn {prefs.scrollZoom ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setScrollZoom(!prefs.scrollZoom)}
             title="Toggle mouse-wheel zoom inside the chart (off by default — wheel scrolls the page). {persistHint}">
-      🖱
+      <Icon name="mouse" size={14} />
     </button>
     <!-- Cycle X-axis label mode: auto → rotate → hide → auto. The icon
          glyph reflects the current state so the chart's chrome doubles
@@ -922,14 +923,14 @@
                   ? 'X-axis labels: rotated 35°. Click to hide entirely (date still on hover).'
                   : 'X-axis labels: hidden — hover the line for the exact date. Click to restore auto.'
             }>
-      {xLabelMode === 'auto' ? '⇲' : xLabelMode === 'rotate' ? '⤢' : '∅'}
+      {#if xLabelMode === 'auto'}<Icon name="arrow-right" size={14} />{:else if xLabelMode === 'rotate'}<Icon name="arrow-up" size={14} />{:else}<Icon name="x" size={14} />{/if}
     </button>
 
     <span class="ts-sep" aria-hidden="true"></span>
 
-    <button type="button" class="ts-btn" onclick={copyPng}    title="Copy chart to clipboard as PNG">⧉ Copy</button>
-    <button type="button" class="ts-btn" onclick={downloadPng} title="Save chart as PNG">⤓ PNG</button>
-    <button type="button" class="ts-btn" onclick={exportCsvFromChart} title="Export plotted points as CSV">⤓ CSV</button>
+    <button type="button" class="ts-btn" onclick={copyPng}    title="Copy chart to clipboard as PNG"><Icon name="copy" size={13} /> Copy</button>
+    <button type="button" class="ts-btn" onclick={downloadPng} title="Save chart as PNG"><Icon name="download" size={13} /> PNG</button>
+    <button type="button" class="ts-btn" onclick={exportCsvFromChart} title="Export plotted points as CSV"><Icon name="download" size={13} /> CSV</button>
   </div>
 
   <div class="ts-host" style="height: {height}px;" bind:this={host}></div>

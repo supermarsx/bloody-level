@@ -8,6 +8,7 @@
   import { formatDate } from '$format/dates';
   import PatientPickerDialog from '$components/patient-picker-dialog.svelte';
   import { ageFromDob } from '$format/dates';
+  import Icon, { type IconName } from '$components/icon.svelte';
 
   type SortKey = 'name' | 'reports' | 'latest' | 'abnormal' | 'critical' | 'analytes';
 
@@ -15,6 +16,13 @@
   let loading = $state(true);
   let sortKey = $state<SortKey>('latest');
   let sortDir = $state<'asc' | 'desc'>('desc');
+
+  function sexIcon(sex: string): IconName {
+    return sex === 'm' ? 'male' : sex === 'f' ? 'female' : sex === 'x' ? 'gender' : 'info';
+  }
+  function sexLabel(sex: string): string {
+    return sex === 'm' ? 'Male' : sex === 'f' ? 'Female' : sex === 'x' ? 'Other' : 'Unknown';
+  }
 
   // ── Filter bar (collapsed by default; "Filters" button toggles) ────────
   let filtersOpen = $state(false);
@@ -433,10 +441,10 @@
             <span class="filter-field__label">Sex</span>
             <select class="filter-field__input" bind:value={f.sex}>
               <option value="">Any</option>
-              <option value="m">♂ Male</option>
-              <option value="f">♀ Female</option>
-              <option value="x">⚧ Other</option>
-              <option value="?">? Unknown</option>
+              <option value="m">Male</option>
+              <option value="f">Female</option>
+              <option value="x">Other</option>
+              <option value="?">Unknown</option>
             </select>
           </label>
 
@@ -520,10 +528,10 @@
                   onclick={() => toggleSort(key)}>
                 {label}
                 {#if sortKey === key}
-                  <span class="text-fg3">{sortDir === 'asc' ? '↑' : '↓'}</span>
+                  <Icon name={sortDir === 'asc' ? 'arrow-up' : 'arrow-down'} size={12} />
                 {/if}
                 {#if help}
-                  <span class="text-fg3 text-[10px] ml-0.5" aria-hidden="true">ⓘ</span>
+                  <Icon name="info" size={12} />
                 {/if}
               </th>
             {/snippet}
@@ -682,12 +690,11 @@
                         <span class="edit-field__label">Sex</span>
                         <div class="edit-segmented" role="radiogroup" aria-label="Sex">
                           {#each ['m','f','x','?'] as v}
-                            {@const labels: Record<string, string> = { m: '♂ Male', f: '♀ Female', x: '⚧ Other', '?': '? Unknown' }}
                             <button type="button" role="radio"
                                     aria-checked={editForm.sex === v}
                                     class="edit-segmented__opt {editForm.sex === v ? 'edit-segmented__opt--on' : ''}"
                                     onclick={() => (editForm.sex = v as admin.PatientSex)}>
-                              {labels[v]}
+                              <Icon name={sexIcon(v)} size={13} /> {sexLabel(v)}
                             </button>
                           {/each}
                         </div>

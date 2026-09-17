@@ -24,6 +24,7 @@ let flushHandle: ReturnType<typeof setTimeout> | null = null;
 const PREFIX_LABEL: Record<string, string> = {
   appearance: "Appearance",
   chart: "Chart preference",
+  dashboard: "Dashboard",
 };
 
 function summariseKeys(keys: string[]): string {

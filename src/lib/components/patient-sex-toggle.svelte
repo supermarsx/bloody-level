@@ -5,6 +5,7 @@
   // — never the per-PDF inferred value.
   import * as admin from '$api/records-admin';
   import { toasts } from '../toasts/store.svelte';
+  import Icon, { type IconName } from './icon.svelte';
 
   let {
     patientId,
@@ -22,11 +23,11 @@
 
   let busy = $state(false);
 
-  const options: { value: admin.PatientSex; label: string; icon: string }[] = [
-    { value: 'm', label: 'Male',    icon: '♂' },
-    { value: 'f', label: 'Female',  icon: '♀' },
-    { value: 'x', label: 'Other',   icon: '⚧' },
-    { value: '?', label: 'Unknown', icon: '?' }
+  const options: { value: admin.PatientSex; label: string; icon: IconName }[] = [
+    { value: 'm', label: 'Male',    icon: 'male' },
+    { value: 'f', label: 'Female',  icon: 'female' },
+    { value: 'x', label: 'Other',   icon: 'gender' },
+    { value: '?', label: 'Unknown', icon: 'info' }
   ];
 
   async function setSex(next: admin.PatientSex) {
@@ -58,7 +59,7 @@
       onclick={() => setSex(opt.value)}
       title="Set sex to {opt.label}"
     >
-      <span aria-hidden="true" class="sex-toggle__icon">{opt.icon}</span>
+      <span class="sex-toggle__icon"><Icon name={opt.icon} size={14} /></span>
       <span>{opt.label}</span>
     </button>
   {/each}

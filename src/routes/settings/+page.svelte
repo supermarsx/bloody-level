@@ -10,6 +10,8 @@
   import * as analyteApi from '$api/analyte-info';
   import { appearance, ACCENT_PRESETS, type AccentName, type Density, type FontScale, type FontFamily } from '$theme/appearance.svelte';
   import { openUrl } from '$api/shell';
+  import Icon, { type IconName } from '$components/icon.svelte';
+  import { dashboardPrefs, DASHBOARD_SECTIONS } from '$lib/dashboard/prefs.svelte';
 
   // ── Library credits — typed once so each row is a real link ───────────
   type Credit = { name: string; note: string; url: string };
@@ -403,21 +405,23 @@
   }
 
   onMount(refresh);
+  onMount(() => dashboardPrefs.load());
 
   // ── Tab navigation ─────────────────────────────────────────────────────
   // Tab id is reflected in the URL hash so deep-linking works (e.g.
   // `/settings#charts` opens directly to the chart pane). Falls back to
   // the first tab when the hash is unknown / missing.
-  type TabId = 'appearance' | 'charts' | 'comparison' | 'ingestion' | 'ontology' | 'storage' | 'about' | 'advanced';
-  const tabs: { id: TabId; label: string; hint: string; icon: string }[] = [
-    { id: 'appearance', label: 'Appearance', hint: 'Theme & visual',          icon: '🎨' },
-    { id: 'charts',     label: 'Charts',     hint: 'Zoom, sliders, labels',   icon: '📈' },
-    { id: 'comparison', label: 'Comparison', hint: 'Presets & filter sets',   icon: '🔬' },
-    { id: 'ingestion',  label: 'Ingestion',  hint: 'PDF / OCR / LLM tiers',   icon: '📥' },
-    { id: 'ontology',   label: 'Ontology',   hint: 'Analyte registry',        icon: '📖' },
-    { id: 'storage',    label: 'Storage',    hint: 'Paths & sizes',           icon: '💾' },
-    { id: 'about',      label: 'About',      hint: 'Build & environment',     icon: 'ℹ️' },
-    { id: 'advanced',   label: 'Advanced',   hint: 'Raw settings JSON',       icon: '🛠' }
+  type TabId = 'appearance' | 'dashboard' | 'charts' | 'comparison' | 'ingestion' | 'ontology' | 'storage' | 'about' | 'advanced';
+  const tabs: { id: TabId; label: string; hint: string; icon: IconName }[] = [
+    { id: 'appearance', label: 'Appearance', hint: 'Theme & visual',          icon: 'palette' },
+    { id: 'dashboard',  label: 'Dashboard',  hint: 'Home layout',              icon: 'dashboard' },
+    { id: 'charts',     label: 'Charts',     hint: 'Zoom, sliders, labels',   icon: 'chart' },
+    { id: 'comparison', label: 'Comparison', hint: 'Presets & filter sets',   icon: 'flask' },
+    { id: 'ingestion',  label: 'Ingestion',  hint: 'PDF / OCR / LLM tiers',   icon: 'download' },
+    { id: 'ontology',   label: 'Ontology',   hint: 'Analyte registry',        icon: 'book' },
+    { id: 'storage',    label: 'Storage',    hint: 'Paths & sizes',           icon: 'database' },
+    { id: 'about',      label: 'About',      hint: 'Build & environment',     icon: 'info' },
+    { id: 'advanced',   label: 'Advanced',   hint: 'Raw settings JSON',       icon: 'settings' }
   ];
 
   let activeTab = $state<TabId>('appearance');
@@ -454,7 +458,7 @@
         <button type="button"
                 class="settings__tab {activeTab === t.id ? 'settings__tab--active' : ''}"
                 onclick={() => selectTab(t.id)}>
-          <span class="settings__tab-icon" aria-hidden="true">{t.icon}</span>
+            <span class="settings__tab-icon"><Icon name={t.icon} size={16} /></span>
           <span class="settings__tab-body">
             <span class="settings__tab-label">{t.label}</span>
             <span class="settings__tab-hint">{t.hint}</span>
@@ -477,7 +481,7 @@
               <button type="button"
                       class="seg__opt {theme.mode === m ? 'seg__opt--on' : ''}"
                       onclick={() => theme.set(m as 'system' | 'light' | 'dark')}>
-                {m === 'system' ? '🖥 System' : m === 'light' ? '☀ Light' : '🌙 Dark'}
+                {#if m === 'system'}<Icon name="monitor" size={14} /> System{:else if m === 'light'}<Icon name="sun" size={14} /> Light{:else}<Icon name="moon" size={14} /> Dark{/if}
               </button>
             {/each}
           </div>
@@ -612,6 +616,70 @@
         </section>
       {/if}
 
+      {#if activeTab === 'dashboard'}
+        <section class="card p-5 space-y-4">
+          <div>
+            <h2 class="text-sm font-semibold">Dashboard layout</h2>
+            <p class="text-xs text-fg2">
+              Choose which sections appear on the home dashboard and use the arrows to set their order.
+              Preferences are stored locally with the rest of your encrypted app settings.
+            </p>
+          </div>
+
+          <div class="dashboard-sections">
+            {#each dashboardPrefs.order as section, index (section)}
+              {@const meta = DASHBOARD_SECTIONS.find((item) => item.id === section)!}
+              <div class="dashboard-section-row">
+                <label class="row dashboard-section-row__toggle">
+                  <input type="checkbox" checked={dashboardPrefs.visible[section]} onchange={() => dashboardPrefs.toggle(section)} />
+                  <span class="row__body">
+                    <span class="row__title">{meta.label}</span>
+                    <span class="row__hint">{meta.hint}</span>
+                  </span>
+                </label>
+                <div class="dashboard-section-row__actions" aria-label="Reorder {meta.label}">
+                  <button type="button" class="mini-btn" disabled={index === 0} onclick={() => dashboardPrefs.move(section, -1)} title="Move up" aria-label="Move {meta.label} up"><Icon name="chevron-up" size={14} /></button>
+                  <button type="button" class="mini-btn" disabled={index === dashboardPrefs.order.length - 1} onclick={() => dashboardPrefs.move(section, 1)} title="Move down" aria-label="Move {meta.label} down"><Icon name="chevron-down" size={14} /></button>
+                </div>
+              </div>
+            {/each}
+          </div>
+        </section>
+
+        <section class="card p-5 space-y-4">
+          <div>
+            <h2 class="text-sm font-semibold">Dashboard item limits</h2>
+            <p class="text-xs text-fg2">These limits only change how many cards or rows are shown; the underlying records stay untouched.</p>
+          </div>
+          <label class="row">
+            <span class="row__body"><span class="row__title">Recent abnormal flags</span><span class="row__hint">Maximum patient cards in the spotlight.</span></span>
+            <input class="settings-number" type="number" min="1" max="50" value={dashboardPrefs.spotlightLimit} onchange={(e) => dashboardPrefs.setLimit('spotlight', Number((e.currentTarget as HTMLInputElement).value))} />
+          </label>
+          <label class="row">
+            <span class="row__body"><span class="row__title">Recent reports</span><span class="row__hint">Newest imported reports listed on the dashboard.</span></span>
+            <input class="settings-number" type="number" min="1" max="50" value={dashboardPrefs.reportLimit} onchange={(e) => dashboardPrefs.setLimit('reports', Number((e.currentTarget as HTMLInputElement).value))} />
+          </label>
+          <label class="row">
+            <span class="row__body"><span class="row__title">Recent activity</span><span class="row__hint">Latest audit events requested for the dashboard.</span></span>
+            <input class="settings-number" type="number" min="1" max="50" value={dashboardPrefs.activityLimit} onchange={(e) => dashboardPrefs.setLimit('activity', Number((e.currentTarget as HTMLInputElement).value))} />
+          </label>
+          <label class="row">
+            <span class="row__body"><span class="row__title">Patients</span><span class="row__hint">Patient cards shown after sorting by most recent activity.</span></span>
+            <select class="settings-number" value={dashboardPrefs.patientLimit} onchange={(e) => dashboardPrefs.setLimit('patients', Number((e.currentTarget as HTMLSelectElement).value))}>
+              <option value="0">All patients</option>
+              <option value="6">6 patients</option>
+              <option value="12">12 patients</option>
+              <option value="24">24 patients</option>
+              <option value="50">50 patients</option>
+              <option value="100">100 patients</option>
+            </select>
+          </label>
+          <div class="flex justify-end pt-1">
+            <button type="button" class="btn" onclick={() => dashboardPrefs.reset()}>Reset dashboard</button>
+          </div>
+        </section>
+      {/if}
+
       {#if activeTab === 'charts'}
         <section class="card p-5 space-y-3">
           <div>
@@ -665,14 +733,14 @@
           </div>
           <div class="seg">
             {#each [
-              { id: 'auto',    label: '⚖ Auto'         },
-              { id: 'library', label: '📖 Library'     },
-              { id: 'printed', label: '🧾 Per-report'  }
+              { id: 'auto',    label: 'Auto',       icon: 'scale'   as IconName },
+              { id: 'library', label: 'Library',    icon: 'library' as IconName },
+              { id: 'printed', label: 'Per-report', icon: 'receipt' as IconName }
             ] as opt}
               <button type="button"
                       class="seg__opt {chartPrefs.referenceSource === opt.id ? 'seg__opt--on' : ''}"
                       onclick={() => chartPrefs.setReferenceSource(opt.id as 'auto' | 'library' | 'printed')}>
-                {opt.label}
+                <Icon name={opt.icon} size={14} /> {opt.label}
               </button>
             {/each}
           </div>
@@ -1203,7 +1271,7 @@
                     {/if}
                     {#if p.source === 'user'}
                       <button class="btn text-[11px] px-2 py-1 text-crit border-crit/40 hover:bg-crit/10"
-                              onclick={() => deletePreset(p)} title="Delete this preset">×</button>
+                              onclick={() => deletePreset(p)} title="Delete this preset"><Icon name="trash" size={14} /></button>
                     {/if}
                   </div>
                 </div>
@@ -1230,9 +1298,9 @@
                                   <span class="text-fg3 ml-1 font-mono">{aid}</span>
                                 </span>
                                 <span class="flex items-center gap-1 shrink-0">
-                                  <button class="reorder-btn-mini" onclick={() => moveEditorAnalyte(idx, -1)} disabled={idx === 0} title="Move up">↑</button>
-                                  <button class="reorder-btn-mini" onclick={() => moveEditorAnalyte(idx, +1)} disabled={idx === editorForm.ids.length - 1} title="Move down">↓</button>
-                                  <button class="reorder-btn-mini text-crit" onclick={() => toggleEditorAnalyte(aid)} title="Remove">×</button>
+                                  <button class="reorder-btn-mini" onclick={() => moveEditorAnalyte(idx, -1)} disabled={idx === 0} title="Move up"><Icon name="arrow-up" size={12} /></button>
+                                  <button class="reorder-btn-mini" onclick={() => moveEditorAnalyte(idx, +1)} disabled={idx === editorForm.ids.length - 1} title="Move down"><Icon name="arrow-down" size={12} /></button>
+                                  <button class="reorder-btn-mini text-crit" onclick={() => toggleEditorAnalyte(aid)} title="Remove"><Icon name="x" size={12} /></button>
                                 </span>
                               </li>
                             {/each}
@@ -1367,9 +1435,9 @@
                               <span class="text-fg3 ml-1 font-mono">{aid}</span>
                             </span>
                             <span class="flex items-center gap-1 shrink-0">
-                              <button class="reorder-btn-mini" onclick={() => moveEditorAnalyte(idx, -1)} disabled={idx === 0}>↑</button>
-                              <button class="reorder-btn-mini" onclick={() => moveEditorAnalyte(idx, +1)} disabled={idx === editorForm.ids.length - 1}>↓</button>
-                              <button class="reorder-btn-mini text-crit" onclick={() => toggleEditorAnalyte(aid)}>×</button>
+                              <button class="reorder-btn-mini" onclick={() => moveEditorAnalyte(idx, -1)} disabled={idx === 0}><Icon name="arrow-up" size={12} /></button>
+                              <button class="reorder-btn-mini" onclick={() => moveEditorAnalyte(idx, +1)} disabled={idx === editorForm.ids.length - 1}><Icon name="arrow-down" size={12} /></button>
+                              <button class="reorder-btn-mini text-crit" onclick={() => toggleEditorAnalyte(aid)}><Icon name="x" size={12} /></button>
                             </span>
                           </li>
                         {/each}
@@ -1814,7 +1882,7 @@
                 <circle cx="48" cy="32" r="4" fill="url(#aboutGrad)"/>
               </svg>
               <div class="flex-1 min-w-0">
-                <h2 class="text-base font-semibold">blevel-tracker</h2>
+                <h2 class="text-base font-semibold">bloody-level</h2>
                 <p class="text-xs text-fg2">Local-only clinical lab-PDF tracker with embedded OCR/LLM tiers.</p>
               </div>
               <span class="font-mono text-xs text-fg3 self-start">v{info.version}</span>
@@ -1851,11 +1919,11 @@
             <h2 class="text-sm font-semibold">Privacy &amp; security</h2>
             <p class="text-xs text-fg2">Every byte stays on this device. There is no telemetry, no cloud sync, no analytics.</p>
             <ul class="text-xs text-fg2 space-y-1">
-              <li>🔐 <strong>SQLCipher</strong> — full-database encryption with a per-vault key.</li>
-              <li>🛡 <strong>Argon2id</strong> KDF derives the data master key from your password.</li>
-              <li>🛡 <strong>XChaCha20-Poly1305</strong> wraps the DMK, with HKDF-SHA-256 sub-derivation.</li>
-              <li>🔑 <strong>WebAuthn / Passkey</strong> support for password-less unlock (PRF extension).</li>
-              <li>🚫 <strong>Zero network</strong>: pdfium downloads are build-time only; no runtime egress.</li>
+              <li><Icon name="lock" size={14} /> <strong>SQLCipher</strong> — full-database encryption with a per-vault key.</li>
+              <li><Icon name="shield" size={14} /> <strong>Argon2id</strong> KDF derives the data master key from your password.</li>
+              <li><Icon name="shield" size={14} /> <strong>XChaCha20-Poly1305</strong> wraps the DMK, with HKDF-SHA-256 sub-derivation.</li>
+              <li><Icon name="key" size={14} /> <strong>WebAuthn / Passkey</strong> support for password-less unlock (PRF extension).</li>
+              <li><Icon name="ban" size={14} /> <strong>Zero network</strong>: pdfium downloads are build-time only; no runtime egress.</li>
             </ul>
           </section>
 
@@ -1863,7 +1931,7 @@
           <section class="card p-5 space-y-4">
             <h2 class="text-sm font-semibold">Built with</h2>
             <p class="text-xs text-fg2">
-              The work of these projects is what makes blevel-tracker possible. Each is bundled or
+              The work of these projects is what makes bloody-level possible. Each is bundled or
               linked under its own license.
             </p>
 
@@ -1879,7 +1947,7 @@
                                 onclick={() => visit(item.url)}
                                 title="Open {item.url}">
                           <span class="credits-link__name">{item.name}</span>
-                          <span class="credits-link__icon" aria-hidden="true">↗</span>
+                          <span class="credits-link__icon"><Icon name="external" size={12} /></span>
                           <span class="credits-link__note">{item.note}</span>
                         </button>
                       </li>
@@ -1899,9 +1967,9 @@
             <h2 class="text-sm font-semibold">Author &amp; attribution</h2>
             <dl class="dl">
               <dt>Author</dt>
-              <dd>blevel-tracker maintainers</dd>
+              <dd>bloody-level maintainers</dd>
               <dt>Copyright</dt>
-              <dd>© 2026 blevel-tracker</dd>
+              <dd>© 2026 bloody-level</dd>
               <dt>Disclaimer</dt>
               <dd class="text-fg2">
                 This software is for personal record-keeping and trend visualisation only.
@@ -1975,7 +2043,7 @@
     background: rgb(var(--accent) / 0.14);
     color: rgb(var(--accent));
   }
-  .settings__tab-icon { font-size: 1rem; line-height: 1; }
+  .settings__tab-icon { display: inline-flex; color: currentColor; line-height: 1; }
   .settings__tab-body { display: flex; flex-direction: column; gap: 0.05rem; min-width: 0; }
   .settings__tab-label { font-size: 0.85rem; font-weight: 600; }
   .settings__tab-hint  { font-size: 0.65rem; color: rgb(var(--fg-3)); }
@@ -2014,6 +2082,29 @@
   }
   .row__hint { font-size: 0.7rem; color: rgb(var(--fg-3)); line-height: 1.35; }
   .row__hint--error { color: rgb(var(--crit)); }
+  .dashboard-sections { display: flex; flex-direction: column; gap: 0.25rem; }
+  .dashboard-section-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0;
+    border-top: 1px solid rgb(var(--line));
+  }
+  .dashboard-section-row:first-child { border-top: 0; padding-top: 0; }
+  .dashboard-section-row__toggle { flex: 1; min-width: 0; border-top: 0; padding: 0; }
+  .dashboard-section-row__actions { display: inline-flex; align-items: center; gap: 0.3rem; flex: 0 0 auto; }
+  .dashboard-section-row__actions .mini-btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.3rem; }
+  .settings-number {
+    width: 7rem;
+    flex: 0 0 auto;
+    padding: 0.4rem 0.55rem;
+    border: 1px solid rgb(var(--line));
+    border-radius: 0.4rem;
+    background: rgb(var(--bg-1));
+    color: rgb(var(--fg-1));
+    font-size: 0.8rem;
+  }
+  .settings-number:focus { outline: none; border-color: rgb(var(--accent)); box-shadow: 0 0 0 3px rgb(var(--accent) / 0.18); }
   .tier-actions {
     display: inline-flex;
     align-items: center;

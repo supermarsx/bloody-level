@@ -6,6 +6,7 @@
   import { toasts } from '../../../lib/toasts/store.svelte';
   import { formatDate, formatDateLong, formatRelativeSpan } from '$format/dates';
   import { formatNumber } from '$format/numbers';
+  import Icon from '$components/icon.svelte';
 
   // This is deliberately explicit and deterministic: the screenshot and the
   // public demo route always show the same fictional patient and values.
@@ -34,7 +35,7 @@
 </script>
 
 <svelte:head>
-  <title>TSH · Alex Silva · Demo | blevel-tracker</title>
+  <title>TSH · Alex Silva · Demo | bloody-level</title>
 </svelte:head>
 
 <div class="mx-auto max-w-screen-2xl space-y-4">
@@ -61,10 +62,10 @@
         <div class="select flex items-center gap-2 px-3 py-2 text-sm" aria-label="Demo patient">
           <span class="text-fg3">Patient</span>
           <span class="font-medium">Alex Silva</span>
-          <span class="text-fg3">⌄</span>
+          <Icon name="chevron-down" size={14} />
         </div>
         <button type="button" class="btn cursor-pointer text-xs" onclick={openLoinc} title="Open LOINC 3016-3 in the default browser">
-          LOINC 3016-3 ↗
+          LOINC 3016-3 <Icon name="external" size={14} />
         </button>
       </div>
     </div>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { formatNumber, formatPercent } from '$format/numbers';
+  import Icon from '$components/icon.svelte';
 
   let {
     current,
@@ -28,7 +29,7 @@
 
 {#if delta}
   <span class="inline-flex items-center gap-1 text-xs font-medium {colorClass}">
-    {#if delta.dir === 'up'}▲{:else if delta.dir === 'down'}▼{:else}→{/if}
+    {#if delta.dir === 'up'}<Icon name="arrow-up" size={12} />{:else if delta.dir === 'down'}<Icon name="arrow-down" size={12} />{:else}<Icon name="arrow-right" size={12} />{/if}
     <span>{formatNumber(delta.abs)}</span>
     <span class="text-fg3">({formatPercent(delta.pct)})</span>
   </span>
