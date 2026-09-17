@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import TimeSeries from '$charts/time-series.svelte';
   import { listPatients, analyteTimeseries, listFlaggedAnalytes,
            type PatientSummary, type AnalyteReading, type FlaggedAnalytesResult } from '$api/reports';
@@ -19,6 +19,11 @@
   let analytes = $state<AnalyteOntologyEntry[]>([]);
 
   let patientId = $state<string>('');
+  let patientSearch = $state('');
+  let patientMenuOpen = $state(false);
+  let patientActiveIndex = $state(-1);
+  let patientPickerElement = $state<HTMLElement | null>(null);
+  let patientSearchElement = $state<HTMLInputElement | null>(null);
   // Ordered list of selected analytes — array (not Set) so the user can
   // drag / arrow-button to reorder. The picker derives a Set view from
   // this for O(1) "is selected" checks.
@@ -412,6 +417,65 @@
 
   const activePatient = $derived(patients.find((p) => p.id === patientId) ?? null);
 
+  const filteredPatients = $derived.by(() => {
+    const q = patientSearch.trim().toLowerCase();
+    if (!q) return patients;
+    return patients.filter((p) =>
+      p.display_name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q)
+    );
+  });
+
+  async function openPatientMenu() {
+    patientMenuOpen = true;
+    patientActiveIndex = -1;
+    await tick();
+    patientSearchElement?.focus();
+  }
+
+  function closePatientMenu() {
+    patientMenuOpen = false;
+    patientActiveIndex = -1;
+  }
+
+  function selectPatient(id: string) {
+    patientId = id;
+    patientSearch = '';
+    closePatientMenu();
+  }
+
+  function onPatientPickerWindowClick(event: MouseEvent) {
+    if (patientMenuOpen && patientPickerElement && !patientPickerElement.contains(event.target as Node)) {
+      closePatientMenu();
+    }
+  }
+
+  function onPatientSearchKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closePatientMenu();
+      return;
+    }
+    if (event.key === 'ArrowDown' && filteredPatients.length > 0) {
+      event.preventDefault();
+      patientActiveIndex = (patientActiveIndex + 1) % filteredPatients.length;
+      return;
+    }
+    if (event.key === 'ArrowUp' && filteredPatients.length > 0) {
+      event.preventDefault();
+      patientActiveIndex = patientActiveIndex <= 0
+        ? filteredPatients.length - 1
+        : patientActiveIndex - 1;
+      return;
+    }
+    if (event.key === 'Enter') {
+      const patient = filteredPatients[patientActiveIndex >= 0 ? patientActiveIndex : 0];
+      if (patient) {
+        event.preventDefault();
+        selectPatient(patient.id);
+      }
+    }
+  }
+
   const filteredAnalytes = $derived.by(() => {
     const q = analyteFilter.trim().toLowerCase();
     return analytes
@@ -795,6 +859,8 @@
   );
 </script>
 
+<svelte:window onclick={onPatientPickerWindowClick} />
+
 <div class="space-y-3">
   <header class="flex items-baseline justify-between gap-3 flex-wrap">
     <div>
@@ -984,12 +1050,52 @@
     <div class="space-y-3">
       <label class="flex flex-col gap-1 text-xs text-fg2">
         <span>Patient</span>
-        <select class="select" bind:value={patientId}>
-          <option value="" disabled>Select…</option>
-          {#each patients as p}
-            <option value={p.id}>{p.display_name} ({p.report_count})</option>
-          {/each}
-        </select>
+        <div class="relative" bind:this={patientPickerElement}>
+          <button
+            type="button"
+            class="select flex w-full items-center justify-between gap-2 text-left cursor-pointer"
+            aria-haspopup="listbox"
+            aria-expanded={patientMenuOpen}
+            aria-controls="compare-patient-options"
+            onclick={() => patientMenuOpen ? closePatientMenu() : openPatientMenu()}
+          >
+            <span class="truncate {activePatient ? '' : 'text-fg3'}">
+              {activePatient ? `${activePatient.display_name} (${activePatient.report_count})` : 'Select…'}
+            </span>
+            <span aria-hidden="true" class="shrink-0 text-fg3">⌄</span>
+          </button>
+
+          {#if patientMenuOpen}
+            <div class="absolute left-0 right-0 z-30 mt-1 card p-2 shadow-lg bg-bg2">
+              <input
+                type="search"
+                class="input w-full"
+                placeholder="Search patients…"
+                aria-label="Search patients"
+                bind:value={patientSearch}
+                bind:this={patientSearchElement}
+                onkeydown={onPatientSearchKeydown}
+              />
+              <div id="compare-patient-options" class="mt-1 max-h-60 overflow-y-auto" role="listbox" aria-label="Patients">
+                {#each filteredPatients as p, index (p.id)}
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={p.id === patientId}
+                    class="w-full rounded px-2 py-1.5 text-left text-xs hover:bg-bg3 {index === patientActiveIndex ? 'bg-bg3' : ''}"
+                    onmousedown={(event) => { event.preventDefault(); selectPatient(p.id); }}
+                  >
+                    <span class="block truncate font-medium">{p.display_name}</span>
+                    <span class="block text-[10px] text-fg3">{p.report_count} report{p.report_count === 1 ? '' : 's'} · {p.id}</span>
+                  </button>
+                {/each}
+                {#if filteredPatients.length === 0}
+                  <div class="px-2 py-3 text-center text-xs text-fg3">No patients match.</div>
+                {/if}
+              </div>
+            </div>
+          {/if}
+        </div>
       </label>
 
       <div class="flex flex-col gap-1 text-xs text-fg2">
