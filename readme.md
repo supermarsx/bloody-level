@@ -6,6 +6,10 @@
 [![License](https://img.shields.io/github/license/supermarsx/bloody-level?style=flat-square)](license.md)
 [![Made with Tauri](https://img.shields.io/badge/Made%20with-Tauri%202-FFC131?logo=tauri&logoColor=black&style=flat-square)](https://v2.tauri.app/)
 
+![bloody-level analyte detail view with a synthetic demo patient and quarterly one-year history](docs/assets/demo-analyte.png)
+
+<p align="center"><sub>Demo view with synthetic data: five readings at three-month intervals across one year.</sub></p>
+
 Private, local-first desktop software for health-data enthusiasts and
 professionals who want to turn pathology-report PDFs into a clear,
 longitudinal view of blood-work results.

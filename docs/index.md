@@ -4,6 +4,10 @@ Local-first blood-test tracking for people who want a clear history of their own
 
 Import a PDF, review the extracted values, compare trends over time, and keep the original report beside the structured record. The application is designed for private review and organization; it is not a diagnostic service.
 
+![bloody-level analyte detail view with a synthetic demo patient and quarterly one-year history](assets/demo-analyte.png)
+
+_Demo view with synthetic data: five readings at three-month intervals across one year._
+
 ## The core loop
 
 | Step       | What happens                                                                                |
