@@ -63,6 +63,20 @@ export async function analyteTimeseries(
   });
 }
 
+export interface PatientAnalyteSummary {
+  analyte_id: string;
+  analyte_name: string;
+  readings: AnalyteReading[];
+}
+
+export async function patientAnalyteSummaries(
+  patientId: string,
+): Promise<PatientAnalyteSummary[]> {
+  return invoke<PatientAnalyteSummary[]>("patient_analyte_summaries", {
+    patientId,
+  });
+}
+
 export interface FlaggedAnalytesResult {
   abnormal: string[];
   subclinical: string[];

@@ -2,7 +2,16 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { ask } from '@tauri-apps/plugin-dialog';
-  import { listReports, listPatients, type ReportSummary, type PatientSummary } from '$api/reports';
+  import {
+    listReports,
+    listPatients,
+    patientAnalyteSummaries,
+    listFlaggedAnalytes,
+    type ReportSummary,
+    type PatientSummary,
+    type AnalyteReading,
+    type PatientAnalyteSummary,
+  } from '$api/reports';
   import * as admin from '$api/records-admin';
   import { AppError } from '$api/errors';
   import { toasts } from '../../../lib/toasts/store.svelte';
@@ -12,11 +21,40 @@
   import BackButton from '$components/back-button.svelte';
   import HrtSection from '$components/hrt-section.svelte';
   import { hrtMilestoneFor } from '$format/hrt-milestone';
+  import FlagPill from '$charts/flag-pill.svelte';
+  import { formatNumber, formatDelta } from '$format/numbers';
 
   let patientId = $derived($page.params.id ?? '');
   let reports = $state<ReportSummary[]>([]);
   let patient = $state<PatientSummary | null>(null);
   let err = $state<AppError | null>(null);
+  let analyteSummaries = $state<PatientAnalyteSummary[]>([]);
+  let abnormalAnalyteIds = $state<Set<string>>(new Set());
+  let subclinicalAnalyteIds = $state<Set<string>>(new Set());
+  let dashboardLoading = $state(false);
+
+  type AnalyteCategory = 'abnormal' | 'elevated' | 'subclinical';
+  type TrendWindowDays = 30 | 90 | 180 | 365;
+  type PatientAnalyteCard = {
+    id: string;
+    name: string;
+    readings: AnalyteReading[];
+    latest: AnalyteReading;
+    previous: AnalyteReading | null;
+    delta: ReturnType<typeof formatDelta> | null;
+    category: AnalyteCategory | null;
+  };
+
+  let reportFilter = $state('');
+  let analyteFilter = $state('');
+  let analyteCategory = $state<'all' | AnalyteCategory>('all');
+  let trendWindowDays = $state<TrendWindowDays>(365);
+  const trendWindows: { id: TrendWindowDays; label: string }[] = [
+    { id: 30, label: '30 days' },
+    { id: 90, label: '3 months' },
+    { id: 180, label: '6 months' },
+    { id: 365, label: '1 year' },
+  ];
 
   // ── Edit metadata (inline form) ────────────────────────────────────────
   let editing = $state(false);
@@ -42,11 +80,21 @@
 
   async function refresh() {
     err = null;
+    dashboardLoading = true;
     try {
-      const [reps, patients] = await Promise.all([listReports(patientId), listPatients()]);
+      const [reps, patients, summaries, flagged] = await Promise.all([
+        listReports(patientId),
+        listPatients(),
+        patientAnalyteSummaries(patientId),
+        listFlaggedAnalytes(patientId),
+      ]);
       reports = reps;
       patient = patients.find((p) => p.id === patientId) ?? null;
+      analyteSummaries = summaries;
+      abnormalAnalyteIds = new Set(flagged.abnormal);
+      subclinicalAnalyteIds = new Set(flagged.subclinical);
     } catch (e) { err = AppError.fromUnknown(e); }
+    finally { dashboardLoading = false; }
   }
 
   $effect(() => { if (patientId) refresh(); });
@@ -198,6 +246,137 @@
       toasts.success('Report deleted');
       await refresh();
     } catch (e) { toasts.error(e); }
+  }
+
+  const filteredReports = $derived.by(() => {
+    const q = reportFilter.trim().toLowerCase();
+    if (!q) return reports;
+    return reports.filter((r) =>
+      [r.nickname, r.collection_date_iso, r.id, r.annotations]
+        .some((value) => value?.toLowerCase().includes(q))
+    );
+  });
+
+  const analyteCards = $derived.by<PatientAnalyteCard[]>(() => {
+    return analyteSummaries.flatMap((summary) => {
+      const readings = summary.readings.filter((r) => !r.inline_prior);
+      const latest = readings.at(-1);
+      if (!latest) return [];
+      const numeric = readings.filter((r) => r.value != null);
+      const current = numeric.at(-1);
+      const previous = numeric.length > 1 ? numeric.at(-2) ?? null : null;
+      const delta = current && previous
+        ? formatDelta(current.value as number, previous.value as number)
+        : null;
+      const latestFlag = latest.flag ?? null;
+      const category: AnalyteCategory | null = latestFlag === 'high' || latestFlag === 'critical_high'
+        ? 'elevated'
+        : abnormalAnalyteIds.has(summary.analyte_id)
+          ? 'abnormal'
+          : subclinicalAnalyteIds.has(summary.analyte_id)
+            ? 'subclinical'
+            : null;
+      return [{
+        id: summary.analyte_id,
+        name: summary.analyte_name,
+        readings,
+        latest,
+        previous,
+        delta,
+        category,
+      }];
+    });
+  });
+
+  const flaggedAnalytes = $derived.by(() => {
+    const q = analyteFilter.trim().toLowerCase();
+    return analyteCards
+      .filter((a) => a.category !== null)
+      .filter((a) => analyteCategory === 'all' || a.category === analyteCategory)
+      .filter((a) => !q || a.name.toLowerCase().includes(q) || a.id.toLowerCase().includes(q))
+      .sort((a, b) => b.latest.date.localeCompare(a.latest.date) || a.name.localeCompare(b.name));
+  });
+
+  const trendCards = $derived.by<PatientAnalyteCard[]>(() => {
+    const dates = analyteCards
+      .map((a) => Date.parse(a.latest.date))
+      .filter((date) => Number.isFinite(date));
+    const anchor = dates.length > 0 ? Math.max(...dates) : Date.now();
+    const cutoff = anchor - Math.min(trendWindowDays, 365) * 24 * 60 * 60 * 1000;
+
+    return analyteCards.flatMap((analyte) => {
+      const readings = analyte.readings.filter((reading) => {
+        const timestamp = Date.parse(reading.date);
+        return Number.isFinite(timestamp) && timestamp >= cutoff;
+      });
+      const latest = readings.at(-1);
+      if (!latest) return [];
+      const numeric = readings.filter((reading) => reading.value != null);
+      const current = numeric.at(-1);
+      const previous = numeric.length > 1 ? numeric.at(-2) ?? null : null;
+      return [{
+        ...analyte,
+        readings,
+        latest,
+        previous,
+        delta: current && previous
+          ? formatDelta(current.value as number, previous.value as number)
+          : null,
+      }];
+    });
+  });
+
+  function setTrendWindow(value: number) {
+    const candidate = trendWindows.find((window) => window.id === value)?.id;
+    trendWindowDays = candidate ?? 365;
+  }
+
+  const mainAnalytes = $derived(
+    [...trendCards]
+      .sort((a, b) => b.readings.length - a.readings.length || a.name.localeCompare(b.name))
+      .slice(0, 6)
+  );
+
+  const biggestDeltas = $derived(
+    [...trendCards]
+      .filter((a) => a.delta !== null)
+      .sort((a, b) => {
+        const aMagnitude = Math.abs(a.delta!.pct) || Math.abs(a.delta!.abs);
+        const bMagnitude = Math.abs(b.delta!.pct) || Math.abs(b.delta!.abs);
+        return bMagnitude - aMagnitude;
+      })
+      .slice(0, 6)
+  );
+
+  function sparklinePoints(readings: AnalyteReading[]): string {
+    const values = readings
+      .filter((r) => r.value != null)
+      .map((r) => r.value as number);
+    if (values.length < 2) return '';
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = max - min || 1;
+    return values.map((value, index) => {
+      const x = (index / (values.length - 1)) * 100;
+      const y = 25 - ((value - min) / span) * 20;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+  }
+
+  function readingValue(reading: AnalyteReading): string {
+    return reading.value != null ? formatNumber(reading.value) : reading.qualitative ?? '—';
+  }
+
+  function categoryLabel(category: AnalyteCategory | null): string {
+    return category === 'elevated' ? 'Elevated'
+      : category === 'subclinical' ? 'Subclinical'
+        : 'Abnormal';
+  }
+
+  function categoryCount(category: 'all' | AnalyteCategory): number {
+    return category === 'all'
+      ? analyteCards.filter((a) => a.category !== null).length
+      : analyteCards.filter((a) => a.category === category).length;
   }
 
   // The header title prefers the nickname if set; the canonical name then
@@ -450,18 +629,31 @@
 
   {#if err}<div class="card p-3 text-sm text-crit">{err.message}</div>{/if}
 
-  <!-- ─── Reports list ─── -->
-  {#if reports.length === 0 && !err}
-    <div class="card p-6 text-sm text-fg2">No reports yet for this patient.</div>
-  {:else}
-    <section class="space-y-2">
-      <h2 class="text-sm font-semibold">Reports ({reports.length})</h2>
-      <div class="card divide-y divide-line">
-        {#each reports as r, i}
+  <!-- ─── Patient dashboard ─── -->
+  {#if patient}
+    <section class="patient-dashboard-grid">
+      <!-- Reports column -->
+      <section class="dashboard-column">
+        <header class="dashboard-column__header">
+          <div>
+            <h2 class="text-sm font-semibold">Reports <span class="text-fg3">({filteredReports.length}/{reports.length})</span></h2>
+            <p class="dashboard-column__hint">Recent source documents and review status.</p>
+          </div>
+          <input class="input dashboard-filter" type="search" placeholder="Filter reports…" aria-label="Filter patient reports" bind:value={reportFilter} />
+        </header>
+
+        {#if reports.length === 0 && !err}
+          <div class="dashboard-empty">No reports yet for this patient.</div>
+        {:else if filteredReports.length === 0}
+          <div class="dashboard-empty">No reports match “{reportFilter}”.</div>
+        {:else}
+          <div class="card dashboard-list divide-y divide-line">
+        {#each filteredReports as r}
           {@const milestone = hrtMilestoneFor(r.collection_date_iso, patient?.hrt_start_iso ?? null)}
           <!-- reports are newest-first → the "previous" (in time) report is
                the one one slot DOWN in the array. -->
-          {@const prevReport = reports[i + 1]}
+          {@const reportIndex = reports.findIndex((report) => report.id === r.id)}
+          {@const prevReport = reports[reportIndex + 1]}
           {@const sinceLast = prevReport
             ? formatRelativeSpan(prevReport.collection_date_iso, r.collection_date_iso)
             : null}
@@ -572,11 +764,299 @@
           </div>
         {/each}
       </div>
+        {/if}
+      </section>
+
+      <!-- Signals column -->
+      <section class="dashboard-column">
+        <header class="dashboard-column__header">
+          <div>
+            <h2 class="text-sm font-semibold">Signals <span class="text-fg3">({flaggedAnalytes.length})</span></h2>
+            <p class="dashboard-column__hint">Review-worthy analytes from the latest history.</p>
+          </div>
+        </header>
+
+        <div class="dashboard-segmented" role="tablist" aria-label="Filter analyte signals">
+          {#each [
+            { id: 'all', label: 'All' },
+            { id: 'abnormal', label: 'Abnormal' },
+            { id: 'elevated', label: 'Elevated' },
+            { id: 'subclinical', label: 'Subclinical' },
+          ] as option}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={analyteCategory === option.id}
+              class="dashboard-segmented__option {analyteCategory === option.id ? 'dashboard-segmented__option--active' : ''}"
+              onclick={() => (analyteCategory = option.id as 'all' | AnalyteCategory)}
+            >
+              {option.label} <span class="tabular-nums">{categoryCount(option.id as 'all' | AnalyteCategory)}</span>
+            </button>
+          {/each}
+        </div>
+        <input class="input w-full mb-2" type="search" placeholder="Search analytes…" aria-label="Search flagged analytes" bind:value={analyteFilter} />
+
+        {#if dashboardLoading}
+          <div class="dashboard-empty">Loading analyte signals…</div>
+        {:else if flaggedAnalytes.length === 0}
+          <div class="dashboard-empty">No analytes match this filter.</div>
+        {:else}
+          <div class="dashboard-list space-y-1">
+            {#each flaggedAnalytes as analyte (analyte.id)}
+              <a class="signal-row" href={`/analyte/${analyte.id}?patient=${patientId}`}>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <span class="truncate text-xs font-medium">{analyte.name}</span>
+                    <span class="signal-category signal-category--{analyte.category}">{categoryLabel(analyte.category)}</span>
+                  </div>
+                  <div class="text-[10px] text-fg3 mt-0.5">
+                    {readingValue(analyte.latest)} {analyte.latest.unit ?? ''} · {formatDate(analyte.latest.date)}
+                  </div>
+                </div>
+                <FlagPill flag={analyte.latest.flag} />
+              </a>
+            {/each}
+          </div>
+        {/if}
+      </section>
+
+      <!-- Trends column -->
+      <section class="dashboard-column">
+        <header class="dashboard-column__header">
+          <div>
+            <h2 class="text-sm font-semibold">Trends</h2>
+            <p class="dashboard-column__hint">Most measured analytes and largest changes.</p>
+          </div>
+          <label class="trend-window">
+            <span>Window</span>
+            <select
+              class="select trend-window__select"
+              value={trendWindowDays}
+              aria-label="Trend time window"
+              onchange={(event) => setTrendWindow(Number((event.currentTarget as HTMLSelectElement).value))}
+            >
+              {#each trendWindows as window}
+                <option value={window.id}>{window.label}</option>
+              {/each}
+            </select>
+          </label>
+        </header>
+
+        <div class="trend-group">
+          <h3 class="trend-group__title">Main analytes</h3>
+          {#if mainAnalytes.length === 0}
+            <div class="dashboard-empty">No numeric history yet.</div>
+          {:else}
+            <div class="space-y-1">
+              {#each mainAnalytes as analyte (analyte.id)}
+                <a class="trend-row" href={`/analyte/${analyte.id}?patient=${patientId}`}>
+                  <div class="flex items-baseline justify-between gap-2 min-w-0">
+                    <span class="truncate text-xs font-medium">{analyte.name}</span>
+                    <span class="shrink-0 text-[10px] text-fg2 tabular-nums">{readingValue(analyte.latest)} {analyte.latest.unit ?? ''}</span>
+                  </div>
+                  <svg class="sparkline" viewBox="0 0 100 28" preserveAspectRatio="none" aria-label={`${analyte.name} trend`} role="img">
+                    <polyline points={sparklinePoints(analyte.readings)} fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" />
+                  </svg>
+                </a>
+              {/each}
+            </div>
+          {/if}
+        </div>
+
+        <div class="trend-group">
+          <h3 class="trend-group__title">Biggest deltas</h3>
+          {#if biggestDeltas.length === 0}
+            <div class="dashboard-empty">Need at least two numeric readings.</div>
+          {:else}
+            <div class="space-y-1">
+              {#each biggestDeltas as analyte (analyte.id)}
+                <a class="trend-row" href={`/analyte/${analyte.id}?patient=${patientId}`}>
+                  <div class="flex items-baseline justify-between gap-2 min-w-0">
+                    <span class="truncate text-xs font-medium">{analyte.name}</span>
+                    {#if analyte.delta}
+                      <span class="shrink-0 text-[10px] tabular-nums {analyte.delta.dir === 'up' ? 'text-crit' : analyte.delta.dir === 'down' ? 'text-accent' : 'text-fg3'}">
+                        {analyte.delta.abs > 0 ? '+' : ''}{formatNumber(analyte.delta.abs)} ({analyte.delta.pct > 0 ? '+' : ''}{analyte.delta.pct.toFixed(0)}%)
+                      </span>
+                    {/if}
+                  </div>
+                  <svg class="sparkline sparkline--delta" viewBox="0 0 100 28" preserveAspectRatio="none" aria-label={`${analyte.name} delta trend`} role="img">
+                    <polyline points={sparklinePoints(analyte.readings)} fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" />
+                  </svg>
+                </a>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      </section>
     </section>
   {/if}
 </div>
 
 <style>
+  .patient-dashboard-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: start;
+  }
+  .dashboard-column {
+    min-width: 0;
+    min-height: 22rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding: 0.85rem;
+    border: 1px solid rgb(var(--line));
+    border-radius: 0.6rem;
+    background: rgb(var(--bg-1));
+  }
+  .dashboard-column__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.65rem;
+  }
+  .dashboard-column__hint {
+    margin-top: 0.15rem;
+    color: rgb(var(--fg-3));
+    font-size: 0.65rem;
+    line-height: 1.3;
+  }
+  .trend-window {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    flex: 0 0 auto;
+    color: rgb(var(--fg-3));
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .trend-window__select {
+    min-width: 5.8rem;
+    padding: 0.25rem 1.45rem 0.25rem 0.4rem;
+    color: rgb(var(--fg-1));
+    font-size: 0.65rem;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  .dashboard-filter {
+    width: 8.5rem;
+    min-width: 0;
+    font-size: 0.7rem;
+  }
+  .dashboard-list {
+    min-height: 0;
+    max-height: 34rem;
+    overflow-y: auto;
+  }
+  .dashboard-empty {
+    padding: 1.5rem 0.5rem;
+    color: rgb(var(--fg-3));
+    font-size: 0.7rem;
+    text-align: center;
+  }
+  .dashboard-segmented {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .dashboard-segmented__option {
+    flex: 1 1 auto;
+    padding: 0.3rem 0.45rem;
+    border: 1px solid rgb(var(--line));
+    border-radius: 0.35rem;
+    color: rgb(var(--fg-2));
+    background: rgb(var(--bg-2));
+    font-size: 0.65rem;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
+  .dashboard-segmented__option:hover,
+  .dashboard-segmented__option--active {
+    border-color: rgb(var(--accent) / 0.55);
+    color: rgb(var(--accent));
+    background: rgb(var(--accent) / 0.12);
+  }
+  .signal-row,
+  .trend-row {
+    display: block;
+    min-width: 0;
+    padding: 0.45rem;
+    border: 1px solid transparent;
+    border-radius: 0.4rem;
+    color: rgb(var(--fg-1));
+    transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+  }
+  .signal-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .signal-row:hover,
+  .trend-row:hover {
+    border-color: rgb(var(--accent) / 0.35);
+    background: rgb(var(--bg-2));
+    transform: translateX(2px);
+  }
+  .signal-category {
+    flex: 0 0 auto;
+    padding: 0.08rem 0.3rem;
+    border-radius: 9999px;
+    font-size: 0.55rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .signal-category--abnormal {
+    color: rgb(var(--warn));
+    background: rgb(var(--warn) / 0.12);
+  }
+  .signal-category--elevated {
+    color: rgb(var(--crit));
+    background: rgb(var(--crit) / 0.12);
+  }
+  .signal-category--subclinical {
+    color: rgb(var(--accent));
+    background: rgb(var(--accent) / 0.12);
+  }
+  .trend-group {
+    padding-top: 0.2rem;
+  }
+  .trend-group + .trend-group {
+    margin-top: 0.35rem;
+    padding-top: 0.65rem;
+    border-top: 1px dashed rgb(var(--line));
+  }
+  .trend-group__title {
+    margin-bottom: 0.3rem;
+    color: rgb(var(--fg-2));
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .sparkline {
+    display: block;
+    width: 100%;
+    height: 1.65rem;
+    margin-top: 0.25rem;
+    color: rgb(var(--accent));
+    opacity: 0.9;
+  }
+  .sparkline--delta { color: rgb(var(--warn)); }
+  @media (max-width: 1050px) {
+    .patient-dashboard-grid { grid-template-columns: 1fr 1fr; }
+    .dashboard-column:last-child { grid-column: 1 / -1; }
+  }
+  @media (max-width: 680px) {
+    .patient-dashboard-grid { grid-template-columns: 1fr; }
+    .dashboard-column:last-child { grid-column: auto; }
+    .dashboard-column__header { flex-direction: column; }
+    .dashboard-filter { width: 100%; }
+  }
+
   /* ── Edit-metadata card ───────────────────────────────────────────────
      Mirrors the inline panel on the Patients list so the editing UX is
      consistent across both surfaces. */

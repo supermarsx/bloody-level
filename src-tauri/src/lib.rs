@@ -57,6 +57,7 @@ pub fn run() {
             commands::reports::list_patients,
             commands::reports::list_reports,
             commands::reports::analyte_timeseries,
+            commands::reports::patient_analyte_summaries,
             commands::reports::list_flagged_analytes,
             commands::tiers::tier_status_tesseract,
             commands::tiers::tier_status_llm,

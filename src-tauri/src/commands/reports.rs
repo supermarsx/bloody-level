@@ -1,4 +1,5 @@
 use serde::Serialize;
+use std::collections::BTreeMap;
 use tauri::State;
 
 use crate::error::{AppError, AppResult};
@@ -189,6 +190,72 @@ pub async fn analyte_timeseries(
             .collect::<Result<_, _>>()?
     };
     Ok(rows)
+}
+
+#[derive(Serialize)]
+pub struct PatientAnalyteSummary {
+    pub analyte_id: String,
+    pub analyte_name: String,
+    pub readings: Vec<AnalyteReading>,
+}
+
+/// Return every canonical analyte series for one patient in a single query.
+/// The patient page uses this snapshot for flagged-analyte cards, sparklines,
+/// and delta ranking without creating one IPC round-trip per analyte.
+#[tauri::command]
+pub async fn patient_analyte_summaries(
+    state: State<'_, AppState>,
+    patient_id: String,
+) -> AppResult<Vec<PatientAnalyteSummary>> {
+    let guard = state.db.lock().await;
+    let db = guard.as_ref().ok_or(AppError::Locked)?;
+    let mut stmt = db.conn.prepare(
+        "SELECT res.analyte_id, COALESCE(a.pt_name, res.analyte_id),
+                res.collection_date_iso, res.value_numeric, res.value_qualitative,
+                res.unit, res.ref_low, res.ref_high, res.flag,
+                p.id, p.display_name, p.sex, res.method_annotation,
+                res.report_id, r.nickname, res.inline_prior_pdf
+         FROM results_canonical res
+         JOIN reports r ON r.id = res.report_id
+         JOIN patients p ON p.id = r.patient_id
+         LEFT JOIN analytes a ON a.id = res.analyte_id
+         WHERE p.id = ?1 AND res.analyte_id IS NOT NULL
+         ORDER BY res.analyte_id, res.collection_date_iso ASC, res.id ASC",
+    )?;
+
+    let mut grouped: BTreeMap<String, PatientAnalyteSummary> = BTreeMap::new();
+    let mut rows = stmt.query([patient_id])?;
+    while let Some(row) = rows.next()? {
+        let analyte_id: String = row.get(0)?;
+        let analyte_name: String = row.get(1)?;
+        let reading = AnalyteReading {
+            date: row.get(2)?,
+            value: row.get(3)?,
+            qualitative: row.get(4)?,
+            unit: row.get(5)?,
+            ref_low: row.get(6)?,
+            ref_high: row.get(7)?,
+            flag: row.get(8)?,
+            patient_id: row.get(9)?,
+            patient_name: row.get(10)?,
+            patient_sex: row.get(11)?,
+            method: row.get(12)?,
+            source_report_id: row.get(13)?,
+            source_report_nickname: row.get(14)?,
+            inline_prior: row.get::<_, i64>(15)? != 0,
+        };
+        grouped
+            .entry(analyte_id.clone())
+            .or_insert_with(|| PatientAnalyteSummary {
+                analyte_id,
+                analyte_name,
+                readings: Vec::new(),
+            })
+            .readings
+            .push(reading);
+    }
+
+    Ok(grouped.into_values().collect())
 }
 
 #[derive(Serialize)]
