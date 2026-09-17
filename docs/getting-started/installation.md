@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- Windows, macOS, or Linux supported by Tauri 2.
+- Windows, macOS 10.15 or newer, or Linux supported by Tauri 2.
 - Node.js 20 or newer and npm.
 - Rust through `rustup`, with a toolchain compatible with the repository's `rust-toolchain.toml` (currently Rust 1.95 or newer).
 - The native build prerequisites listed by [Tauri's prerequisites guide](https://v2.tauri.app/start/prerequisites/).

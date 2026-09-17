@@ -291,13 +291,6 @@ jobs:
           # compiler for the C/C++ dependency.
           "CMAKE_GENERATOR_TOOLSET=ClangCL,host=x64" >> $env:GITHUB_ENV
 
-      - name: Configure macOS deployment target
-        if: startsWith(matrix.runner, 'macos-')
-        shell: bash
-        run: |
-          # llama.cpp uses std::filesystem, which requires macOS 10.15+.
-          echo "MACOSX_DEPLOYMENT_TARGET=10.15" >> "$GITHUB_ENV"
-
       - name: Cache Rust
         uses: swatinem/rust-cache@v2
         with:
