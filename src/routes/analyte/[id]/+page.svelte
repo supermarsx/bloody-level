@@ -403,7 +403,7 @@
             <span>·</span>
             <button
               type="button"
-              class="font-mono text-accent hover:underline"
+              class="cursor-pointer font-mono text-accent hover:underline"
               onclick={() => openLoinc(loinc)}
               title="Open this code in the default browser"
             >LOINC {loinc} ↗</button>

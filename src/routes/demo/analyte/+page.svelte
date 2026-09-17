@@ -63,7 +63,7 @@
           <span class="font-medium">Alex Silva</span>
           <span class="text-fg3">⌄</span>
         </div>
-        <button type="button" class="btn text-xs" onclick={openLoinc} title="Open LOINC 3016-3 in the default browser">
+        <button type="button" class="btn cursor-pointer text-xs" onclick={openLoinc} title="Open LOINC 3016-3 in the default browser">
           LOINC 3016-3 ↗
         </button>
       </div>
