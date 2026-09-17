@@ -218,6 +218,37 @@ pub async fn auth_lock(state: State<'_, AppState>) -> AppResult<()> {
     Ok(())
 }
 
+/// Permanently remove this local instance so a user who cannot unlock it can
+/// start again. The frontend must obtain an explicit confirmation first, and
+/// the command repeats that check so an accidental IPC call cannot wipe data.
+#[tauri::command]
+pub async fn auth_reset_instance(state: State<'_, AppState>, confirm: bool) -> AppResult<()> {
+    if !confirm {
+        return Err(AppError::BadRequest(
+            "instance reset requires explicit confirmation".into(),
+        ));
+    }
+
+    {
+        let guard = state.db.lock().await;
+        if guard.is_some() {
+            return Err(AppError::BadRequest(
+                "Lock the vault before resetting the instance.".into(),
+            ));
+        }
+    }
+
+    if state.data_dir.exists() {
+        std::fs::remove_dir_all(&state.data_dir)
+            .map_err(|e| AppError::Internal(format!("remove instance data: {e}")))?;
+    }
+    std::fs::create_dir_all(state.pdf_dir())
+        .map_err(|e| AppError::Internal(format!("recreate PDF directory: {e}")))?;
+    std::fs::create_dir_all(state.models_dir())
+        .map_err(|e| AppError::Internal(format!("recreate models directory: {e}")))?;
+    Ok(())
+}
+
 // PRF output reaches Rust over Tauri IPC as base64 bytes. This is a
 // same-process boundary (WebView2 ↔ Tauri core), so the secret never leaves the
 // process — equivalent to passing it across a function call. Acceptable.

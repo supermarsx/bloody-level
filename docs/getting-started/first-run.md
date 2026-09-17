@@ -6,6 +6,8 @@ On first launch, bloody-level asks you to create the password that protects the 
 
 Choose a password you can retain safely. There is no server-side password reset because the vault is local and encrypted. A forgotten password can make the encrypted data unrecoverable.
 
+If the password cannot be recovered, the welcome screen provides **Reset this instance**. This permanently removes the encrypted database, password, passkeys, imported reports, PDFs, and local model files from the device. It is protected by an explicit confirmation and cannot be undone, so use a vault export or backup first whenever possible.
+
 ## Optional passkey unlock
 
 After the password is set, you can register a passkey when the platform WebView and authenticator support the required PRF operation. On Windows this commonly means Windows Hello or another compatible authenticator. Passkey registration is an additional unlock route; it does not remove the vault password.

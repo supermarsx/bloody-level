@@ -67,6 +67,7 @@ pub fn run() {
             commands::auth::auth_unlock_password,
             commands::auth::auth_change_password,
             commands::auth::auth_lock,
+            commands::auth::auth_reset_instance,
             commands::auth::auth_register_passkey,
             commands::auth::auth_unlock_passkey,
             commands::settings::settings_get,

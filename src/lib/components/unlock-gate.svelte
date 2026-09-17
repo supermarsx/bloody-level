@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import * as auth from '$api/auth';
   import { AppError } from '$api/errors';
+  import { ask } from '@tauri-apps/plugin-dialog';
   import Icon from './icon.svelte';
 
   let { onUnlocked } = $props<{ onUnlocked: () => void }>();
@@ -12,6 +13,7 @@
   let confirmPassword = $state('');
   let showPw = $state(false);
   let busy = $state(false);
+  let resetting = $state(false);
   let err = $state<AppError | null>(null);
 
   async function refresh() {
@@ -116,7 +118,41 @@
     } catch (e) { err = AppError.fromUnknown(e); }
     finally { busy = false; }
   }
+
+  async function resetInstance() {
+    if (busy || resetting) return;
+    const confirmed = await ask(
+      'Reset this bloody-level instance?\n\n' +
+      'This permanently removes the encrypted database, password, passkeys, imported reports, PDFs, and local model files from this device. Forgotten passwords cannot be recovered.\n\n' +
+      'This cannot be undone. Continue?',
+      { title: 'Reset instance', kind: 'warning' }
+    );
+    if (!confirmed) return;
+
+    resetting = true;
+    err = null;
+    try {
+      await auth.resetInstance();
+      password = '';
+      confirmPassword = '';
+      await refresh();
+    } catch (e) {
+      err = AppError.fromUnknown(e);
+    } finally {
+      resetting = false;
+    }
+  }
+
+  function blockContextMenu(event: MouseEvent) {
+    event.preventDefault();
+  }
+
+  function keepContextMenu(event: MouseEvent) {
+    event.stopPropagation();
+  }
 </script>
+
+<svelte:window oncontextmenu={blockContextMenu} />
 
 <div class="gate">
   <div class="gate__bg" aria-hidden="true">
@@ -171,6 +207,7 @@
               class="block w-full bg-bg1 border border-line rounded-md pl-3 pr-9 py-2 text-sm focus:outline-none focus:border-accent"
               bind:value={password}
               autocomplete="new-password"
+              oncontextmenu={keepContextMenu}
               placeholder="At least 10 characters; longer is much better"
             />
             <button type="button" class="gate__pw-toggle"
@@ -203,6 +240,7 @@
             class="mt-1 block w-full bg-bg1 border border-line rounded-md px-3 py-2 text-sm focus:outline-none focus:border-accent {confirmPassword && !passwordsMatch ? 'border-crit' : ''}"
             bind:value={confirmPassword}
             autocomplete="new-password"
+            oncontextmenu={keepContextMenu}
             onkeydown={(e) => e.key === 'Enter' && setupPassword()}
             placeholder="Type it again"
           />
@@ -244,6 +282,7 @@
               class="block w-full bg-bg1 border border-line rounded-md pl-3 pr-9 py-2 text-sm focus:outline-none focus:border-accent"
               bind:value={password}
               autocomplete="current-password"
+              oncontextmenu={keepContextMenu}
               onkeydown={(e) => e.key === 'Enter' && password && !busy && unlockPassword()}
               placeholder="Your vault password"
             />
@@ -260,6 +299,19 @@
           disabled={busy || !password}
           onclick={unlockPassword}
         >{busy ? 'Unlocking…' : 'Unlock'}</button>
+
+        <div class="gate__reset-area">
+          <button
+            type="button"
+            class="gate__reset"
+            disabled={busy || resetting}
+            onclick={resetInstance}
+          >
+            <Icon name="trash" size={14} />
+            {resetting ? 'Resetting instance…' : 'Reset this instance'}
+          </button>
+          <p>Use only if the vault password cannot be recovered.</p>
+        </div>
 
         {#if status?.has_passkey}
           <div class="gate__divider"><span>or</span></div>
@@ -327,8 +379,7 @@
     user-select: none;
     -webkit-user-select: none;
   }
-  .gate input,
-  .gate textarea {
+  .gate input {
     user-select: text;
     -webkit-user-select: text;
   }
@@ -337,6 +388,39 @@
     inset: 0;
     pointer-events: none;
     overflow: hidden;
+  }
+  .gate__reset-area {
+    display: grid;
+    justify-items: center;
+    gap: 0.25rem;
+    margin-top: -0.25rem;
+  }
+  .gate__reset {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 0;
+    padding: 0.25rem 0.5rem;
+    color: rgb(var(--fg-3));
+    background: transparent;
+    border-radius: 0.375rem;
+    font-size: 0.6875rem;
+    cursor: pointer;
+    transition: color 140ms ease, background-color 140ms ease;
+  }
+  .gate__reset:hover:not(:disabled),
+  .gate__reset:focus-visible {
+    color: rgb(var(--crit));
+    background: rgb(var(--crit) / 0.1);
+  }
+  .gate__reset:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  .gate__reset-area p {
+    margin: 0;
+    color: rgb(var(--fg-3));
+    font-size: 0.625rem;
   }
   .gate__blob {
     position: absolute;

@@ -44,6 +44,10 @@ export async function lock(): Promise<void> {
   await invoke("auth_lock", undefined, { silentAuth: true });
 }
 
+export async function resetInstance(): Promise<void> {
+  await invoke("auth_reset_instance", { confirm: true }, { silentAuth: true });
+}
+
 export async function registerPasskey(args: {
   label: string;
   credential_id_b64: string;
