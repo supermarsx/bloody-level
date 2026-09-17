@@ -3,8 +3,10 @@ set(CMAKE_SYSTEM_PROCESSOR arm64)
 
 set(target arm64-pc-windows-msvc)
 
-set(CMAKE_C_COMPILER clang)
-set(CMAKE_CXX_COMPILER clang++)
+# The cmake crate contributes MSVC-style flags for windows-msvc targets.
+# clang-cl consumes those flags while still using LLVM for ARM64 codegen.
+set(CMAKE_C_COMPILER clang-cl)
+set(CMAKE_CXX_COMPILER clang-cl)
 set(CMAKE_C_COMPILER_TARGET ${target})
 set(CMAKE_CXX_COMPILER_TARGET ${target})
 
