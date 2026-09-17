@@ -143,7 +143,7 @@
         <circle cx="48" cy="32" r="3" fill="url(#gateGrad)" />
       </svg>
       <h1 class="gate__title">bloody-level</h1>
-      <p class="gate__tagline">Your lab results, longitudinal — fully local, fully encrypted.</p>
+      <p class="gate__tagline">Lab results, longitudinal — fully local, fully encrypted.</p>
     </header>
 
     <div class="card gate__card">
@@ -324,6 +324,13 @@
     padding: 1.5rem;
     overflow: hidden;
     background: rgb(var(--bg-1));
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .gate input,
+  .gate textarea {
+    user-select: text;
+    -webkit-user-select: text;
   }
   .gate__bg {
     position: absolute;

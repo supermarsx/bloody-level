@@ -1,6 +1,6 @@
 # bloody-level
 
-Local-first blood-test tracking for people who want a clear history of their own results.
+Local-first blood-test tracking for enthusiasts and professionals who need a clear longitudinal view of blood-work records.
 
 Import a PDF, review the extracted values, compare trends over time, and keep the original report beside the structured record. The application is designed for private review and organization; it is not a diagnostic service.
 
