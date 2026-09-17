@@ -369,7 +369,16 @@
               {#if info.section}<span>·</span><span>{info.section}</span>{/if}
               {#if info.subsection}<span>·</span><span>{info.subsection}</span>{/if}
               {#if info.panel}<span>·</span><span class="ont-tag">{info.panel}</span>{/if}
-              {#if info.loinc}<span>·</span><span class="font-mono">LOINC {info.loinc}</span>{/if}
+              {#if info.loinc}
+                <span>·</span>
+                <a
+                  class="font-mono text-accent hover:underline"
+                  href={`https://loinc.org/${encodeURIComponent(info.loinc)}/`}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Open this code on loinc.org"
+                >LOINC {info.loinc} ↗</a>
+              {/if}
             </div>
             {#if info.method_annotation}
               <p class="text-[11px] text-fg3 font-mono">{info.method_annotation}</p>

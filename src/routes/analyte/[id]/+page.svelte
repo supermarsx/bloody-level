@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { page } from '$app/stores';
   import TimeSeries from '$charts/time-series.svelte';
   import FlagPill from '$charts/flag-pill.svelte';
@@ -56,17 +56,100 @@
   // We never silently mix patients in the chart or table; if a user explicitly
   // wants the cross-patient view they can choose "All patients".
   const effectivePatient = $derived(
-    selectedPatient ?? patientsWithReadings[0]?.id ?? null
+    selectedPatient && patientsWithReadings.some((p) => p.id === selectedPatient)
+      ? selectedPatient
+      : patientsWithReadings[0]?.id ?? null
   );
+
+  let patientSearch = $state('');
+  let patientMenuOpen = $state(false);
+  let patientActiveIndex = $state(-1);
+  let patientPickerElement = $state<HTMLElement | null>(null);
+  let patientSearchElement = $state<HTMLInputElement | null>(null);
+
+  const activePatient = $derived(
+    patientsWithReadings.find((p) => p.id === effectivePatient) ?? null
+  );
+
+  const filteredPatients = $derived.by(() => {
+    const query = patientSearch.trim().toLowerCase();
+    if (!query) return patientsWithReadings;
+    return patientsWithReadings.filter((p) =>
+      p.name.toLowerCase().includes(query) || p.id.toLowerCase().includes(query)
+    );
+  });
+
+  async function openPatientMenu() {
+    patientMenuOpen = true;
+    patientActiveIndex = -1;
+    await tick();
+    patientSearchElement?.focus();
+  }
+
+  function closePatientMenu() {
+    patientMenuOpen = false;
+    patientActiveIndex = -1;
+  }
+
+  function selectPatient(id: string) {
+    selectedPatient = id;
+    patientSearch = '';
+    closePatientMenu();
+  }
+
+  function onPatientPickerWindowClick(event: MouseEvent) {
+    if (patientMenuOpen && patientPickerElement && !patientPickerElement.contains(event.target as Node)) {
+      closePatientMenu();
+    }
+  }
+
+  function onPatientSearchKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closePatientMenu();
+      return;
+    }
+    if (event.key === 'ArrowDown' && filteredPatients.length > 0) {
+      event.preventDefault();
+      patientActiveIndex = (patientActiveIndex + 1) % filteredPatients.length;
+      return;
+    }
+    if (event.key === 'ArrowUp' && filteredPatients.length > 0) {
+      event.preventDefault();
+      patientActiveIndex = patientActiveIndex <= 0
+        ? filteredPatients.length - 1
+        : patientActiveIndex - 1;
+      return;
+    }
+    if (event.key === 'Enter') {
+      const patient = filteredPatients[patientActiveIndex >= 0 ? patientActiveIndex : 0];
+      if (patient) {
+        event.preventDefault();
+        selectPatient(patient.id);
+      }
+    }
+  }
+
+  onMount(() => {
+    selectedPatient = $page.url.searchParams.get('patient');
+  });
 
   // Strictly single-patient. The chart and stats below combine values into a
   // single line/series, so silently mixing patients would conflate distinct
   // people's trends. The picker above lets the user switch.
   const readings = $derived(
-    allReadings.filter((r) => r.patient_id === effectivePatient)
+    allReadings
+      .filter((r) => r.patient_id === effectivePatient)
+      .sort((a, b) => a.date.localeCompare(b.date))
   );
 
-  const visibleReadings = $derived(showPriors ? readings : readings.filter((r) => !r.inline_prior));
+  // The table is intentionally newest-first for review. Chart/statistics
+  // consumers use the chronological copy so the line and first/latest values
+  // still read left-to-right in time.
+  const visibleReadings = $derived(
+    [...(showPriors ? readings : readings.filter((r) => !r.inline_prior))].reverse()
+  );
+  const chronologicalVisibleReadings = $derived([...visibleReadings].reverse());
 
   async function refresh() {
     err = null;
@@ -146,7 +229,7 @@
   });
 
   const points = $derived(
-    visibleReadings
+    chronologicalVisibleReadings
       .filter((r) => r.value != null)
       .map((r) => ({
         date: r.date,
@@ -170,7 +253,7 @@
     // Pick the dominant patient sex among visible readings (works whether the
     // page is filtered to one patient or showing many).
     const sexCounts: Record<string, number> = {};
-    for (const r of visibleReadings) {
+    for (const r of chronologicalVisibleReadings) {
       const s = r.patient_sex ?? '?';
       sexCounts[s] = (sexCounts[s] ?? 0) + 1;
     }
@@ -202,28 +285,28 @@
     }
 
     // 3. Fallback: first printed range we observed
-    const bounds = visibleReadings.find((r) => r.ref_low != null || r.ref_high != null);
+    const bounds = chronologicalVisibleReadings.find((r) => r.ref_low != null || r.ref_high != null);
     if (!bounds) return [];
     return [{ low: bounds.ref_low, high: bounds.ref_high, tier: 'normal' as const }];
   });
 
-  const unit = $derived(prettyUnit(visibleReadings.find((r) => r.unit)?.unit ?? null));
+  const unit = $derived(prettyUnit(chronologicalVisibleReadings.find((r) => r.unit)?.unit ?? null));
   const displayName = $derived(info?.pt_name ?? analyteId);
 
   // Compact stats for the snapshot row.
   const stats = $derived.by(() => {
-    const numeric = visibleReadings.filter((r) => r.value != null).map((r) => r.value as number);
+    const numeric = chronologicalVisibleReadings.filter((r) => r.value != null).map((r) => r.value as number);
     if (numeric.length === 0) return null;
     const sum = numeric.reduce((s, v) => s + v, 0);
     return {
       n: numeric.length,
       latest: numeric[numeric.length - 1],
-      latestDate: visibleReadings[visibleReadings.length - 1].date,
+      latestDate: chronologicalVisibleReadings[chronologicalVisibleReadings.length - 1].date,
       min: Math.min(...numeric),
       max: Math.max(...numeric),
       mean: sum / numeric.length,
       first: numeric[0],
-      firstDate: visibleReadings[0].date
+      firstDate: chronologicalVisibleReadings[0].date
     };
   });
 
@@ -242,6 +325,8 @@
   );
 </script>
 
+<svelte:window onclick={onPatientPickerWindowClick} />
+
 <div class="space-y-4">
   <div>
     <BackButton fallback="/" />
@@ -249,16 +334,52 @@
       <h1 class="text-xl font-semibold">{displayName}</h1>
       <div class="flex items-center gap-2">
         {#if patientsWithReadings.length > 0}
-          <select
-            class="select text-xs"
-            value={effectivePatient ?? ''}
-            onchange={(e) => (selectedPatient = (e.target as HTMLSelectElement).value || null)}
-            title="Choose which patient's readings to display. Trends are always patient-scoped — values from different patients are never combined into the same line."
-          >
-            {#each patientsWithReadings as p}
-              <option value={p.id}>{p.name} ({p.count})</option>
-            {/each}
-          </select>
+          <div class="relative" bind:this={patientPickerElement}>
+            <button
+              type="button"
+              class="select analyte-patient-picker"
+              aria-haspopup="listbox"
+              aria-expanded={patientMenuOpen}
+              aria-controls="analyte-patient-options"
+              title="Choose which patient's readings to display. Trends are always patient-scoped — values from different patients are never combined into the same line."
+              onclick={() => patientMenuOpen ? closePatientMenu() : openPatientMenu()}
+            >
+              <span class="truncate {activePatient ? '' : 'text-fg3'}">
+                {activePatient ? `${activePatient.name} (${activePatient.count})` : 'Select patient…'}
+              </span>
+              <span aria-hidden="true" class="shrink-0 text-fg3">⌄</span>
+            </button>
+            {#if patientMenuOpen}
+              <div class="analyte-patient-menu" role="presentation">
+                <input
+                  type="search"
+                  class="input w-full"
+                  placeholder="Search patients…"
+                  aria-label="Search patients for this analyte"
+                  bind:value={patientSearch}
+                  bind:this={patientSearchElement}
+                  onkeydown={onPatientSearchKeydown}
+                />
+                <div id="analyte-patient-options" class="analyte-patient-options" role="listbox" aria-label="Patients with readings for this analyte">
+                  {#each filteredPatients as p, index (p.id)}
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={p.id === effectivePatient}
+                      class="analyte-patient-option {index === patientActiveIndex ? 'analyte-patient-option--active' : ''}"
+                      onmousedown={(event) => { event.preventDefault(); selectPatient(p.id); }}
+                    >
+                      <span class="block truncate font-medium">{p.name}</span>
+                      <span class="block text-[10px] text-fg3">{p.count} reading{p.count === 1 ? '' : 's'} · {p.id}</span>
+                    </button>
+                  {/each}
+                  {#if filteredPatients.length === 0}
+                    <div class="px-2 py-3 text-center text-xs text-fg3">No patients match.</div>
+                  {/if}
+                </div>
+              </div>
+            {/if}
+          </div>
         {/if}
         <button class="btn text-xs" onclick={onExportCsv} disabled={readings.length === 0}
           title="Download all readings of this analyte as CSV">Export CSV</button>
@@ -268,7 +389,16 @@
           {#if info.section}<span class="font-mono">{info.section}</span>{/if}
           {#if info.subsection}<span>·</span><span>{info.subsection}</span>{/if}
           {#if info.panel}<span>·</span><span class="pill-muted">{info.panel}</span>{/if}
-          {#if info.loinc}<span>·</span><span class="font-mono">LOINC {info.loinc}</span>{/if}
+          {#if info.loinc}
+            <span>·</span>
+            <a
+              class="font-mono text-accent hover:underline"
+              href={`https://loinc.org/${encodeURIComponent(info.loinc)}/`}
+              target="_blank"
+              rel="noreferrer"
+              title="Open this code on loinc.org"
+            >LOINC {info.loinc} ↗</a>
+          {/if}
         </div>
       {/if}
     </div>
@@ -551,7 +681,7 @@
                   : chartPrefs.referenceSource === 'library'
                     ? derivedFlag
                     : (derivedFlag ?? r.flag)}
-              {@const prevReading = i > 0 ? visibleReadings[i - 1] : null}
+              {@const prevReading = i + 1 < visibleReadings.length ? visibleReadings[i + 1] : null}
               {@const tDelta = prevReading ? formatRelativeSpan(prevReading.date, r.date) : null}
               <tr class="border-b border-line/50 hover:bg-bg3/50 {r.inline_prior ? 'opacity-70' : ''}">
                 <td class="px-3 py-2 tabular-nums">{formatDate(r.date)}</td>
@@ -566,7 +696,7 @@
                 <td class="px-3 py-2 text-right tabular-nums">{formatNumber(r.value)}</td>
                 <td class="px-3 py-2 text-fg2">{prettyUnit(r.unit)}</td>
                 <td class="px-3 py-2 text-right">
-                  <DeltaBadge current={r.value} previous={i > 0 ? visibleReadings[i - 1].value : null} />
+                  <DeltaBadge current={r.value} previous={prevReading?.value ?? null} />
                 </td>
                 <td class="px-3 py-2"><FlagPill flag={finalFlag} /></td>
                 <td class="px-3 py-2 text-fg3 truncate" title={r.method ?? ''}>{r.method ?? '—'}</td>
@@ -584,6 +714,54 @@
 </div>
 
 <style>
+  .analyte-patient-picker {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.55rem;
+    width: 14rem;
+    max-width: min(14rem, 42vw);
+    padding: 0.4rem 0.55rem;
+    text-align: left;
+    cursor: pointer;
+  }
+  .analyte-patient-menu {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 0.25rem);
+    right: 0;
+    width: 19rem;
+    max-width: min(19rem, 80vw);
+    padding: 0.5rem;
+    border: 1px solid rgb(var(--line));
+    border-radius: 0.5rem;
+    background: rgb(var(--bg-2));
+    box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 0.25);
+  }
+  .analyte-patient-options {
+    max-height: 15rem;
+    margin-top: 0.25rem;
+    overflow-y: auto;
+  }
+  .analyte-patient-option {
+    display: block;
+    width: 100%;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid transparent;
+    border-radius: 0.35rem;
+    color: rgb(var(--fg-1));
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+  }
+  .analyte-patient-option:hover,
+  .analyte-patient-option--active {
+    border-color: rgb(var(--accent) / 0.35);
+    background: rgb(var(--accent) / 0.12);
+    transform: translateX(2px);
+  }
+
   /* Reference-source selector that sits right above the chart. Same
      visual vocabulary as the Settings page's segmented controls, but
      compact and inline so it doesn't crowd the analyte header. */
