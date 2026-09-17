@@ -88,7 +88,7 @@
             {@const idx = baseIdx + i}
             <button
               type="button"
-              class="w-full text-left px-3 py-1.5 hover:bg-bg2 border-b border-line/30 {idx === activeIdx ? 'bg-bg2' : ''}"
+              class="search-result w-full text-left px-3 py-1.5 border-b border-line/30 {idx === activeIdx ? 'bg-bg2' : ''}"
               onmousedown={(e) => { e.preventDefault(); go(h.href); }}
             >
               <div class="text-sm">{h.label}</div>
@@ -103,3 +103,26 @@
     </div>
   {/if}
 </div>
+
+<style>
+  .search-result {
+    border-left: 2px solid transparent;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease,
+      transform 150ms ease;
+  }
+
+  .search-result:hover,
+  .search-result:focus-visible {
+    background-color: rgb(var(--bg-2));
+    border-left-color: rgb(var(--accent));
+    color: rgb(var(--fg-1));
+    transform: translateX(3px);
+  }
+
+  .search-result:active {
+    transform: translateX(1px) scale(0.99);
+  }
+</style>
