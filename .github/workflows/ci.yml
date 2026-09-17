@@ -296,22 +296,18 @@ jobs:
         with:
           workspaces: ./src-tauri -> target
 
-      - name: Clear cached ARM64 CMake build directory
+      - name: Clear cached ARM64 target build
         if: startsWith(matrix.runner, 'windows-') && matrix.architecture == 'arm64'
         shell: pwsh
         run: |
           # The llama.cpp build switches from MSVC to ClangCL on ARM64. A
-          # restored CMake cache may retain the old generator toolset, so
-          # remove only that dependency's generated build directory before
-          # reconfiguring it with the current toolchain.
-          $buildRoot = Join-Path $PWD 'src-tauri/target/aarch64-pc-windows-msvc/release/build'
-          Get-ChildItem -LiteralPath $buildRoot -Directory -Filter 'llama-cpp-sys-*' -ErrorAction SilentlyContinue |
-            ForEach-Object {
-              $cmakeBuild = Join-Path $_.FullName 'out/build'
-              if (Test-Path -LiteralPath $cmakeBuild) {
-                Remove-Item -LiteralPath $cmakeBuild -Recurse -Force
-              }
-            }
+          # restored Rust target cache may retain the old generator toolset.
+          # Remove only the ARM64 target output before reconfiguring it with
+          # the current toolchain; the host target remains cached.
+          $targetRoot = Join-Path $PWD 'src-tauri/target/aarch64-pc-windows-msvc'
+          if (Test-Path -LiteralPath $targetRoot) {
+            Remove-Item -LiteralPath $targetRoot -Recurse -Force
+          }
 
       - name: Install frontend dependencies
         run: npm ci
