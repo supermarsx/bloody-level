@@ -16,6 +16,7 @@ Import a PDF, review the extracted values, compare trends over time, and keep th
 ## What is included
 
 - An encrypted local vault for reports, patients, audit events, and settings.
+- Support for PT-PT laboratory PDFs from CUF and Germano de Sousa.
 - Deterministic PDF extraction with optional OCR support for sparse or scanned reports.
 - Search across patients, analytes, and reports with keyboard navigation.
 - Charts, reference bands, deltas, gaps, report filtering, and CSV export.
@@ -31,6 +32,8 @@ Import a PDF, review the extracted values, compare trends over time, and keep th
 - [Set up a development environment](developer/local-development.md)
 
 Use the search button or press `/` in the documentation site to find a topic instantly. The navigation is grouped by task, with expandable subsections for user, security, developer, and reference material.
+
+For source-specific guidance, see [supported report sources](user-guide/ingest.md#supported-report-sources).
 
 ## Scope and limitations
 

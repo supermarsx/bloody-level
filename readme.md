@@ -10,17 +10,18 @@ Private, local-first desktop software for health-data enthusiasts and
 professionals who want to turn pathology-report PDFs into a clear,
 longitudinal view of blood-work results.
 
-bloody-level keeps the original report beside the structured record, so you
-can move from a source document to extracted values, diagnostics, trends, and
+bloody-level keeps the original report beside the structured record, so you can
+move from a source document to extracted values, diagnostics, trends, and
 comparisons without handing sensitive health data to a hosted service. It is a
-bloody-level is a personal tracking and review tool for enthusiasts, analysts,
-and professionals working with blood-work records—not a diagnostic service or
-a replacement for professional medical advice.
+personal tracking and review tool for enthusiasts, analysts, and professionals
+working with blood-work records—not a diagnostic service or a replacement for
+professional medical advice.
 
 ## Contents
 
 - [What is bloody-level?](#what-is-bloody-level)
 - [Features](#features)
+- [Supported report sources](#supported-report-sources)
 - [Quick start](#quick-start)
 - [The review workflow](#the-review-workflow)
 - [Privacy and data boundaries](#privacy-and-data-boundaries)
@@ -48,11 +49,24 @@ private workspace for working with those reports:
 The application is designed for one person and one device. It has no required
 account, telemetry, analytics, cloud sync, or runtime network service.
 
+## Supported report sources
+
+bloody-level supports Portuguese (PT-PT) pathology and laboratory PDF reports
+from CUF and Germano de Sousa. Import machine-readable PDFs directly; optional
+OCR can help with scanned or text-poor reports when it is configured locally.
+
+Report layouts can change between departments, report types, and provider
+revisions. Always compare extracted values, units, flags, and reference ranges
+with the original PDF before using them for discussion or personal decisions.
+CUF and Germano de Sousa are referenced as document sources only; bloody-level
+is independent and is not affiliated with either provider.
+
 ## Features
 
 ### Import and review
 
 - PDF import with duplicate detection based on the source file's SHA-256.
+- PT-PT PDF support for CUF and Germano de Sousa laboratory reports.
 - Local PDFium extraction with optional Tesseract OCR for sparse or scanned
   reports when configured.
 - Visible parser diagnostics for unmatched analytes, missing values, unknown

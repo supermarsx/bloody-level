@@ -6,6 +6,19 @@ Ingest turns a source report into a stored report, structured rows, and review d
 
 Open [Ingest], then drop one or more PDF files onto the import area or use the file picker. Batch imports are processed sequentially so each file has a clear result and progress state.
 
+## Supported report sources
+
+bloody-level supports Portuguese (PT-PT) pathology and laboratory PDF reports
+from CUF and Germano de Sousa. Text-based PDFs are handled by the local PDFium
+extractor. Scanned or text-poor reports can use the optional local OCR tier when
+it is configured and available.
+
+Provider layouts may vary by department, report type, and revision. After every
+import, compare the patient, date, analyte names, values, units, flags, and
+reference ranges with the original PDF. CUF and Germano de Sousa are document
+sources referenced for compatibility; bloody-level is independent and is not
+affiliated with either provider.
+
 The pipeline records these stages:
 
 1. Verify that the file exists and is a PDF.
