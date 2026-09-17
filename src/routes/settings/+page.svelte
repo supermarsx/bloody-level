@@ -543,9 +543,11 @@
           </div>
           <div class="seg">
             {#each [
+              { id: 'tiny', label: 'Aa Tiny  · 12 px' },
               { id: 'sm', label: 'Aa Small  · 14 px' },
               { id: 'md', label: 'Aa Normal · 15 px' },
-              { id: 'lg', label: 'Aa Large  · 16 px' }
+              { id: 'lg', label: 'Aa Large  · 16 px' },
+              { id: 'gigantic', label: 'Aa Gigantic · 20 px' }
             ] as opt}
               <button type="button"
                       class="seg__opt {appearance.fontScale === opt.id ? 'seg__opt--on' : ''}"

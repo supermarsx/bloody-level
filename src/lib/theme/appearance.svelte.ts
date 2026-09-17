@@ -20,7 +20,7 @@ const KEYS = {
 export type AccentName =
   "violet" | "blue" | "emerald" | "rose" | "amber" | "teal";
 export type Density = "comfortable" | "compact";
-export type FontScale = "sm" | "md" | "lg";
+export type FontScale = "tiny" | "sm" | "md" | "lg" | "gigantic";
 export type FontFamily = "sans" | "serif" | "mono";
 
 export const ACCENT_PRESETS: {

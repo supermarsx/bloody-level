@@ -141,6 +141,9 @@ body {
 /* Font scale — multiplies the base body font-size. Components that use
    `text-xs/sm/base` Tailwind classes inherit naturally because Tailwind
    sizes are derived from the root. */
+:root[data-font-scale="tiny"] {
+  font-size: 12px;
+}
 :root[data-font-scale="sm"] {
   font-size: 14px;
 }
@@ -150,6 +153,9 @@ body {
 }
 :root[data-font-scale="lg"] {
   font-size: 16px;
+}
+:root[data-font-scale="gigantic"] {
+  font-size: 20px;
 }
 
 /* Font family choice. `sans` is the default; the others swap the body
