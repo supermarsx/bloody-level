@@ -262,6 +262,12 @@ jobs:
           "LIBCLANG_PATH=C:\Program Files\LLVM\bin" >> $env:GITHUB_ENV
           "CMAKE=C:\Program Files\CMake\bin\cmake.exe" >> $env:GITHUB_ENV
           "C:\Program Files\CMake\bin" >> $env:GITHUB_PATH
+          if ('${{ matrix.architecture }}' -eq 'arm64') {
+            # llama.cpp's ARM backend rejects the MSVC compiler. ClangCL keeps
+            # the Visual Studio ARM64 SDK/linker while providing a supported
+            # compiler for the C/C++ dependency.
+            "CMAKE_GENERATOR_TOOLSET=ClangCL,host=x64" >> $env:GITHUB_ENV
+          }
 
       - name: Install LLVM for llama.cpp bindgen
         if: startsWith(matrix.runner, 'macos-')
@@ -271,6 +277,8 @@ jobs:
           llvm_prefix="$(brew --prefix llvm)"
           echo "LIBCLANG_PATH=${llvm_prefix}/lib" >> "$GITHUB_ENV"
           echo "${llvm_prefix}/bin" >> "$GITHUB_PATH"
+          # llama.cpp uses std::filesystem, which requires macOS 10.15+.
+          echo "MACOSX_DEPLOYMENT_TARGET=10.15" >> "$GITHUB_ENV"
 
       - name: Set up Rust
         if: matrix.rust_target == ''
