@@ -31,3 +31,8 @@ export async function getAll(): Promise<Record<string, unknown>> {
   }
   return out;
 }
+
+/** Reset preferences without touching vault records or authentication. */
+export async function resetAll(): Promise<void> {
+  await invoke("settings_reset_all");
+}

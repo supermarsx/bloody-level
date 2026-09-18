@@ -14,6 +14,14 @@ use tauri::Manager;
 
 const LEGACY_APP_IDENTIFIER: &str = "com.blevel.tracker";
 
+/// Relaunch the native process so the webview and all native services start
+/// from a clean state. `AppHandle::restart` performs the platform-specific
+/// executable handoff (including installed macOS app bundles).
+#[tauri::command]
+fn restart_app(app: tauri::AppHandle) {
+    app.restart();
+}
+
 /// Keep existing vaults usable after the product identifier changed from the
 /// original internal name to bloody-level. Only migrate when the new location
 /// does not exist, so two populated vaults are never merged or overwritten.
@@ -70,9 +78,11 @@ pub fn run() {
             commands::auth::auth_reset_instance,
             commands::auth::auth_register_passkey,
             commands::auth::auth_unlock_passkey,
+            restart_app,
             commands::settings::settings_get,
             commands::settings::settings_set,
             commands::settings::settings_get_all,
+            commands::settings::settings_reset_all,
             commands::ingest::ingest_pdf,
             commands::ingest::ingest_pdfs,
             commands::reports::list_patients,

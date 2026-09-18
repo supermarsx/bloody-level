@@ -2,7 +2,7 @@
 name = "bloody-level"
 version = "0.1.0"
 description = "Local-only clinical lab-PDF tracker with embedded OCR/LLM tiers"
-authors = ["bloody-level maintainers"]
+authors = ["supermarsx and maintainers"]
 edition = "2021"
 rust-version = "1.95"
 

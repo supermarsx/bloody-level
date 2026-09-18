@@ -9,9 +9,10 @@
   import { comparePresets, EMPTY_FILTERS, type ComparePreset, type ComparePresetFilters, type EditablePreset } from '$charts/compare-presets.svelte';
   import * as analyteApi from '$api/analyte-info';
   import { appearance, ACCENT_PRESETS, type AccentName, type Density, type FontScale, type FontFamily } from '$theme/appearance.svelte';
-  import { openUrl } from '$api/shell';
+  import { openFileExternal, openUrl } from '$api/shell';
   import Icon, { type IconName } from '$components/icon.svelte';
   import { dashboardPrefs, DASHBOARD_SECTIONS } from '$lib/dashboard/prefs.svelte';
+  import { discardPending } from '$api/debounced-settings';
 
   // ── Library credits — typed once so each row is a real link ───────────
   type Credit = { name: string; note: string; url: string };
@@ -69,9 +70,10 @@
     catch (e) { toasts.error(e); }
   }
   import { toasts } from '../../lib/toasts/store.svelte';
-  import { goto } from '$app/navigation';
+  import { goto, replaceState } from '$app/navigation';
   import { ask, open as openDialog } from '@tauri-apps/plugin-dialog';
   import * as auth from '$api/auth';
+  import * as lifecycle from '$api/lifecycle';
 
   // ── Loaded data ────────────────────────────────────────────────────────
   let tess   = $state<tiers.TierStatus | null>(null);
@@ -188,6 +190,15 @@
       toasts.error(e);
     } finally {
       exporting = false;
+    }
+  }
+
+  async function onOpenDataFolder() {
+    if (!info?.data_dir) return;
+    try {
+      await openFileExternal(info.data_dir);
+    } catch (e) {
+      toasts.error(e);
     }
   }
 
@@ -404,6 +415,79 @@
     finally { reloading = false; }
   }
 
+  // ── App lifecycle ─────────────────────────────────────────────────────
+  type LifecycleAction = 'frontend' | 'app' | 'reset' | 'defaults';
+  let lifecycleAction = $state<LifecycleAction | null>(null);
+
+  function onRestartFrontend() {
+    if (lifecycleAction) return;
+    lifecycleAction = 'frontend';
+    toasts.info('Restarting frontend', 'Reloading the current window…', 1500);
+    // Let the toast paint before replacing the webview document.
+    setTimeout(() => lifecycle.restartFrontend(), 80);
+  }
+
+  async function onRestartApp() {
+    if (lifecycleAction) return;
+    const ok = await ask(
+      'Restart bloody-level now?\n\n' +
+      'Any unsaved changes in the current view will be discarded. The local vault will remain intact.',
+      { title: 'Restart app', kind: 'warning' }
+    );
+    if (!ok) return;
+    lifecycleAction = 'app';
+    try {
+      await lifecycle.restartApp();
+    } catch (e) {
+      lifecycleAction = null;
+      toasts.error(e);
+    }
+  }
+
+  async function onResetApp() {
+    if (lifecycleAction) return;
+    const ok = await ask(
+      'Reset this local bloody-level instance?\n\n' +
+      'This permanently removes the encrypted vault, password, passkeys, imported reports, PDFs, models, and settings from this device. It cannot be undone. Export a backup first if you may need this data later.',
+      { title: 'Reset local app', kind: 'warning' }
+    );
+    if (!ok) return;
+    lifecycleAction = 'reset';
+    try {
+      // The backend refuses to remove an open vault. Locking first also
+      // releases the SQLite handle on Windows before deleting its directory.
+      await auth.lock();
+      await auth.resetInstance();
+      toasts.success('Local app reset', 'Starting the welcome screen…', 2500);
+      setTimeout(() => {
+        if (typeof window !== 'undefined') window.location.assign('/');
+      }, 80);
+    } catch (e) {
+      lifecycleAction = null;
+      toasts.error(e);
+    }
+  }
+
+  async function onResetDefaults() {
+    if (lifecycleAction) return;
+    const ok = await ask(
+      'Reset all bloody-level preferences to their bundled defaults?\n\n' +
+      'This clears appearance, dashboard, chart, compare, OCR, and other settings. Your vault, reports, PDFs, models, and authentication remain untouched.',
+      { title: 'Reset all preferences', kind: 'warning' }
+    );
+    if (!ok) return;
+    lifecycleAction = 'defaults';
+    try {
+      discardPending();
+      await settings.resetAll();
+      toasts.success('Preferences reset', 'Reloading bloody-level with the bundled defaults…');
+      setTimeout(() => lifecycle.restartFrontend(), 80);
+    } catch (e) {
+      lifecycleAction = null;
+      toasts.error(e);
+    }
+  }
+
   onMount(refresh);
   onMount(() => dashboardPrefs.load());
 
@@ -438,7 +522,7 @@
   function selectTab(id: TabId) {
     activeTab = id;
     if (typeof window !== 'undefined') {
-      history.replaceState(null, '', `${window.location.pathname}#${id}`);
+      replaceState(`${window.location.pathname}#${id}`, {});
     }
   }
 </script>
@@ -1216,12 +1300,12 @@
               </p>
             </div>
             <div class="flex items-center gap-2">
-              <button class="btn text-xs" onclick={startCreatePreset}>＋ New preset</button>
+              <button class="btn text-xs" onclick={startCreatePreset}><Icon name="plus" size={13} /> New preset</button>
               <button class="btn text-xs"
                       onclick={resetAllPresets}
                       disabled={Object.keys(comparePresets.bundledOverrides).length === 0}
                       title="Restore every bundled preset to its original definition. User presets are kept.">
-                ↻ Reset bundled
+                <Icon name="refresh" size={13} /> Reset bundled
               </button>
             </div>
           </div>
@@ -1248,7 +1332,7 @@
                         <span class="pill-muted text-[10px]">bundled</span>
                       {/if}
                       {#if hasFilters}
-                        <span class="pill-muted text-[10px] text-warn" title="Sets filter overrides on click">⚐ filters</span>
+                        <span class="pill-muted text-[10px] text-warn inline-flex items-center gap-1" title="Sets filter overrides on click"><Icon name="filter" size={11} /> filters</span>
                       {/if}
                     </div>
                     <div class="text-fg3 text-[11px] mt-0.5">
@@ -1267,7 +1351,7 @@
                       {editing ? 'Cancel' : 'Edit'}
                     </button>
                     {#if overridden}
-                      <button class="btn text-[11px] px-2 py-1" onclick={() => resetPreset(p)} title="Restore bundled defaults">↻</button>
+                      <button class="btn text-[11px] px-2 py-1" onclick={() => resetPreset(p)} title="Restore bundled defaults"><Icon name="refresh" size={14} /></button>
                     {/if}
                     {#if p.source === 'user'}
                       <button class="btn text-[11px] px-2 py-1 text-crit border-crit/40 hover:bg-crit/10"
@@ -1699,9 +1783,14 @@
                 <h2 class="text-sm font-semibold">Storage paths &amp; sizes</h2>
                 <p class="text-xs text-fg2">Where data lives on this device. Everything is encrypted at rest.</p>
               </div>
-              <button class="btn text-xs" onclick={refresh} disabled={loadingStorage}>
-                {loadingStorage ? 'Refreshing…' : 'Refresh'}
-              </button>
+               <div class="flex flex-wrap gap-2">
+                 <button class="btn text-xs" onclick={onOpenDataFolder}>
+                   <Icon name="external" size={14} /> Open data folder
+                 </button>
+                 <button class="btn text-xs" onclick={refresh} disabled={loadingStorage}>
+                   {loadingStorage ? 'Refreshing…' : 'Refresh'}
+                 </button>
+               </div>
             </div>
             <dl class="dl">
               <dt>Data dir</dt>
@@ -1724,7 +1813,7 @@
                 <div class="font-mono break-all">{info.keystore_path}</div>
                 <div class="text-fg3 text-[11px] mt-0.5">{appInfo.formatBytes(info.keystore_size_bytes)}</div>
               </dd>
-              <dt>PDF cache</dt>
+              <dt>Encrypted PDF cache</dt>
               <dd>
                 <div class="font-mono break-all">{info.pdf_dir}</div>
                 <div class="text-fg3 text-[11px] mt-0.5">
@@ -1891,10 +1980,12 @@
 
           <!-- ─── Build / environment ─── -->
           <section class="card p-5 space-y-3">
-            <h2 class="text-sm font-semibold">Build &amp; environment</h2>
+            <h2 class="text-sm font-semibold about-inline-label"><Icon name="info" size={15} /> Build &amp; environment</h2>
             <dl class="dl">
               <dt>Target</dt>
               <dd class="font-mono break-all">{info.target_triple}</dd>
+              <dt><span class="about-inline-label"><Icon name="tag" size={13} /> Version</span></dt>
+              <dd class="font-mono">v{info.version}</dd>
               <dt>Build profile</dt>
               <dd>{info.build_profile}{info.features.debug_assertions ? ' · debug-assertions' : ''}</dd>
               <dt>Frontend</dt>
@@ -1916,14 +2007,15 @@
 
           <!-- ─── Privacy & security stack ─── -->
           <section class="card p-5 space-y-3">
-            <h2 class="text-sm font-semibold">Privacy &amp; security</h2>
-            <p class="text-xs text-fg2">Every byte stays on this device. There is no telemetry, no cloud sync, no analytics.</p>
-            <ul class="text-xs text-fg2 space-y-1">
-              <li><Icon name="lock" size={14} /> <strong>SQLCipher</strong> — full-database encryption with a per-vault key.</li>
-              <li><Icon name="shield" size={14} /> <strong>Argon2id</strong> KDF derives the data master key from your password.</li>
-              <li><Icon name="shield" size={14} /> <strong>XChaCha20-Poly1305</strong> wraps the DMK, with HKDF-SHA-256 sub-derivation.</li>
-              <li><Icon name="key" size={14} /> <strong>WebAuthn / Passkey</strong> support for password-less unlock (PRF extension).</li>
-              <li><Icon name="ban" size={14} /> <strong>Zero network</strong>: pdfium downloads are build-time only; no runtime egress.</li>
+            <h2 class="text-sm font-semibold about-inline-label"><Icon name="shield" size={15} /> Privacy &amp; security</h2>
+            <p class="text-xs text-fg2">The vault and managed PDF cache stay on this device. There is no telemetry, no cloud sync, no analytics.</p>
+            <ul class="privacy-list text-xs text-fg2 space-y-1">
+              <li><span class="privacy-list__icon"><Icon name="lock" size={14} /></span><span><strong>SQLCipher</strong> — full-database encryption with a per-vault key.</span></li>
+              <li><span class="privacy-list__icon"><Icon name="file" size={14} /></span><span><strong>Encrypted PDF cache</strong> — source copies use XChaCha20-Poly1305 with a vault-derived key.</span></li>
+              <li><span class="privacy-list__icon"><Icon name="shield" size={14} /></span><span><strong>Argon2id</strong> KDF derives the data master key from your password.</span></li>
+              <li><span class="privacy-list__icon"><Icon name="shield" size={14} /></span><span><strong>XChaCha20-Poly1305</strong> wraps the DMK, with HKDF-SHA-256 sub-derivation.</span></li>
+              <li><span class="privacy-list__icon"><Icon name="key" size={14} /></span><span><strong>WebAuthn / Passkey</strong> support for password-less unlock (PRF extension).</span></li>
+              <li><span class="privacy-list__icon"><Icon name="ban" size={14} /></span><span><strong>Zero network</strong>: pdfium downloads are build-time only; no runtime egress.</span></li>
             </ul>
           </section>
 
@@ -1967,9 +2059,9 @@
             <h2 class="text-sm font-semibold">Author &amp; attribution</h2>
             <dl class="dl">
               <dt>Author</dt>
-              <dd>bloody-level maintainers</dd>
+              <dd>supermarsx and maintainers</dd>
               <dt>Copyright</dt>
-              <dd>© 2026 bloody-level</dd>
+              <dd>© 2026 supermarsx</dd>
               <dt>Disclaimer</dt>
               <dd class="text-fg2">
                 This software is for personal record-keeping and trend visualisation only.
@@ -1982,6 +2074,58 @@
       {/if}
 
       {#if activeTab === 'advanced'}
+        <section class="card p-5 space-y-4">
+          <div>
+            <h2 class="text-sm font-semibold">App lifecycle</h2>
+            <p class="text-xs text-fg2">
+              Refresh the interface, relaunch the native app, or start over with a new empty local instance.
+              Your vault is unchanged by the first two actions.
+            </p>
+          </div>
+
+          <div class="lifecycle-actions">
+            <div class="lifecycle-action">
+              <div class="lifecycle-action__copy">
+                <div class="row__title"><Icon name="settings" size={15} /> Reset all preferences</div>
+                <div class="row__hint">Restore appearance, dashboard, charts, compare presets, and tier preferences without deleting vault data.</div>
+              </div>
+              <button class="btn" type="button" disabled={lifecycleAction !== null} onclick={onResetDefaults}>
+                {lifecycleAction === 'defaults' ? 'Resetting…' : 'Reset defaults'}
+              </button>
+            </div>
+
+            <div class="lifecycle-action">
+              <div class="lifecycle-action__copy">
+                <div class="row__title"><Icon name="monitor" size={15} /> Restart frontend</div>
+                <div class="row__hint">Reload the current webview and preserve the running native process.</div>
+              </div>
+              <button class="btn" type="button" disabled={lifecycleAction !== null} onclick={onRestartFrontend}>
+                {lifecycleAction === 'frontend' ? 'Reloading…' : 'Restart frontend'}
+              </button>
+            </div>
+
+            <div class="lifecycle-action">
+              <div class="lifecycle-action__copy">
+                <div class="row__title"><Icon name="settings" size={15} /> Restart whole app</div>
+                <div class="row__hint">Close and relaunch bloody-level, including its native services.</div>
+              </div>
+              <button class="btn" type="button" disabled={lifecycleAction !== null} onclick={onRestartApp}>
+                {lifecycleAction === 'app' ? 'Restarting…' : 'Restart app'}
+              </button>
+            </div>
+
+            <div class="lifecycle-action lifecycle-action--danger">
+              <div class="lifecycle-action__copy">
+                <div class="row__title"><Icon name="trash" size={15} /> Reset local app</div>
+                <div class="row__hint">Permanently delete this local instance and return to the first-run welcome screen.</div>
+              </div>
+              <button class="btn btn-danger" type="button" disabled={lifecycleAction !== null} onclick={onResetApp}>
+                {lifecycleAction === 'reset' ? 'Resetting…' : 'Reset app'}
+              </button>
+            </div>
+          </div>
+        </section>
+
         <section class="card p-5 space-y-3">
           <div>
             <h2 class="text-sm font-semibold">Raw settings</h2>
@@ -2054,6 +2198,31 @@
     flex-direction: column;
     gap: 1rem;
     min-width: 0;
+  }
+
+  .lifecycle-actions { display: flex; flex-direction: column; }
+  .privacy-list li { display: flex; align-items: flex-start; gap: 0.45rem; }
+  .privacy-list__icon { display: inline-flex; flex: 0 0 auto; margin-top: 0.1rem; color: rgb(var(--accent)); }
+  .about-inline-label { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .lifecycle-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.8rem 0;
+    border-top: 1px solid rgb(var(--line));
+  }
+  .lifecycle-action:first-child { border-top: 0; padding-top: 0; }
+  .lifecycle-action__copy { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+  .lifecycle-action .row__title { align-items: center; gap: 0.4rem; }
+  .lifecycle-action--danger .row__title { color: rgb(var(--crit)); }
+  .btn-danger {
+    border-color: rgb(var(--crit) / 0.5);
+    color: rgb(var(--crit));
+  }
+  .btn-danger:hover:not(:disabled) { background: rgb(var(--crit) / 0.1); border-color: rgb(var(--crit)); }
+  @media (max-width: 520px) {
+    .lifecycle-action { align-items: flex-start; flex-direction: column; }
   }
 
   /* ── Row primitive (label + control on one line) ── */

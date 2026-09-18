@@ -234,13 +234,20 @@ body {
 .btn {
   @apply inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-md
          border border-line bg-bg2 hover:bg-bg3 transition-colors
-         text-sm font-medium select-none cursor-pointer;
+         text-sm font-medium select-none cursor-pointer whitespace-nowrap;
+  flex-wrap: nowrap;
 }
 
 .btn-accent {
   @apply inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-md
          border border-accent bg-accent hover:bg-accent/90
-         text-sm font-medium text-white select-none transition-colors cursor-pointer;
+         text-sm font-medium text-white select-none transition-colors cursor-pointer whitespace-nowrap;
+  flex-wrap: nowrap;
+}
+
+.btn > svg,
+.btn-accent > svg {
+  flex: 0 0 auto;
 }
 
 .btn:disabled,

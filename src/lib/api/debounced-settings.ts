@@ -85,6 +85,15 @@ export async function flushNow(): Promise<void> {
   await doFlush();
 }
 
+/** Discard queued writes when a destructive preference reset supersedes them. */
+export function discardPending(): void {
+  if (flushHandle) {
+    clearTimeout(flushHandle);
+    flushHandle = null;
+  }
+  pending.clear();
+}
+
 // Fire any pending writes when the page is about to unload, so a user
 // quitting the app right after flipping a toggle still sees their
 // preference persisted on next launch.

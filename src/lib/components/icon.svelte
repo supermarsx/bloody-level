@@ -15,6 +15,7 @@
     | 'database'
     | 'dot'
     | 'download'
+    | 'edit'
     | 'external'
     | 'eye'
     | 'eye-off'
@@ -38,10 +39,12 @@
     | 'pin'
     | 'plus'
     | 'receipt'
+    | 'refresh'
     | 'save'
     | 'scale'
     | 'settings'
     | 'shield'
+    | 'star'
     | 'sun'
     | 'tag'
     | 'target'
@@ -117,6 +120,9 @@
     <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
   {:else if name === 'download'}
     <path d="M12 4v11m-4-4 4 4 4-4M5 20h14" />
+  {:else if name === 'edit'}
+    <path d="m4 16-.8 4.8L8 20l10.8-10.8a2.8 2.8 0 0 0-4-4L4 16Z" />
+    <path d="m13.5 6.5 4 4" />
   {:else if name === 'external'}
     <path d="M14 5h5v5m0-5-8 8" />
     <path d="M18 13v4a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" />
@@ -186,6 +192,8 @@
   {:else if name === 'shield'}
     <path d="M12 3 19 6v5c0 4.7-3 8.2-7 10-4-1.8-7-5.3-7-10V6l7-3Z" />
     <path d="m9 12 2 2 4-4" />
+  {:else if name === 'star'}
+    <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" />
   {:else if name === 'sun'}
     <circle cx="12" cy="12" r="3.5" />
     <path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" />
@@ -198,6 +206,9 @@
     <circle cx="12" cy="12" r="1" fill="currentColor" />
   {:else if name === 'trash'}
     <path d="M5 7h14m-9 0V4h4v3m-8 0 1 13h10l1-13M10 11v5m4-5v5" />
+  {:else if name === 'refresh'}
+    <path d="M20 11a8 8 0 0 0-14.7-4L3 9m0-5v5h5" />
+    <path d="M4 13a8 8 0 0 0 14.7 4L21 15m0 5v-5h-5" />
   {:else if name === 'warning'}
     <path d="m12 3 9 17H3L12 3Z" />
     <path d="M12 9v5m0 3v.1" />

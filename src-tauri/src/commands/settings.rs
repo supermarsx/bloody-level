@@ -58,3 +58,13 @@ pub async fn settings_get_all(state: State<'_, AppState>) -> AppResult<Vec<Setti
         .collect::<Result<Vec<_>, _>>()?;
     Ok(rows)
 }
+
+/// Remove user preferences only. Vault records, ontology edits, backups,
+/// models, and authentication material are deliberately unaffected.
+#[tauri::command]
+pub async fn settings_reset_all(state: State<'_, AppState>) -> AppResult<()> {
+    let guard = state.db.lock().await;
+    let db = guard.as_ref().ok_or(AppError::Locked)?;
+    db.conn.execute("DELETE FROM settings", [])?;
+    Ok(())
+}

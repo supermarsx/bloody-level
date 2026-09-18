@@ -406,7 +406,7 @@
             class="text-xs text-fg3 hover:text-accent ml-1"
             onclick={startEditNickname}
             title={patient?.nickname ? 'Edit nickname' : 'Add a friendly nickname for this patient'}
-          >{patient?.nickname ? '✎ rename' : '＋ nickname'}</button>
+          ><Icon name={patient?.nickname ? 'edit' : 'plus'} size={13} /> {patient?.nickname ? 'rename' : 'nickname'}</button>
         {:else}
           <!-- svelte-ignore a11y_autofocus -->
           <input
@@ -743,7 +743,7 @@
                   {#if r.nickname}{formatDate(r.collection_date_iso)} · {/if}
                   {r.row_count} rows · tier {r.ingest_tier} · conf {(r.doc_confidence * 100).toFixed(0)}%
                   {#if r.annotations}
-                    <span class="text-fg2">· ✎ annotated</span>
+                    <span class="text-fg2 inline-flex items-center gap-1">· <Icon name="edit" size={11} /> annotated</span>
                   {/if}
                   {#if sinceLast}
                     <span class="span-pill" title="Time since the previous report ({formatDate(prevReport.collection_date_iso)})">

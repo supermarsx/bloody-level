@@ -53,8 +53,8 @@
     "category": "Healthcare and Fitness",
     "shortDescription": "Local-only clinical lab-PDF tracker",
     "longDescription": "Ingests clinical pathology PDFs and presents longitudinal analyte trends, deltas, and reference bands. Fully local; encrypted at rest.",
-    "publisher": "bloody-level maintainers",
-    "copyright": "© 2026 bloody-level",
+    "publisher": "supermarsx and maintainers",
+    "copyright": "© 2026 supermarsx",
     "macOS": {
       "minimumSystemVersion": "10.15"
     },

@@ -1116,16 +1116,16 @@
                       ? `${(p as { hint?: string }).hint ?? ''}${dynamicEmpty ? ' — none for this patient.' : ` (${count} for this patient)`}`
                       : `${count} analyte${count === 1 ? '' : 's'}`) + (hasFilters ? ' · sets filters' : '')}>
               {#if p.kind === 'dynamic'}
-                <span class="text-[9px]">●</span>
+                <Icon name="dot" size={10} />
               {:else if p.source === 'user'}
-                <span class="text-[9px] text-accent">★</span>
+                <Icon name="star" size={10} />
               {/if}
               <span>{p.name}</span>
               {#if count > 0}
                 <span class="text-[9px] text-fg3 tabular-nums">{count}</span>
               {/if}
               {#if hasFilters}
-                <span class="text-[9px] text-warn" title="This preset also sets filters">⚐</span>
+                <Icon name="filter" size={10} title="This preset also sets filters" />
               {/if}
             </button>
           {/each}
@@ -1246,7 +1246,8 @@
                            : "Reading from the global default. Tick to give this chart its own isolated copy."}>
                     <input type="checkbox" checked={isolated}
                            onchange={() => toggleIsolatedFor(c.id)} />
-                    <span>{isolated ? '⚙ custom' : 'global'}</span>
+                    {#if isolated}<Icon name="settings" size={12} />{/if}
+                    <span>{isolated ? 'custom' : 'global'}</span>
                   </label>
                   {#if isolated}
                     <button class="text-[11px] text-accent hover:underline"

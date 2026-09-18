@@ -294,7 +294,7 @@
               class="text-xs text-fg3 hover:text-accent ml-1"
               onclick={startEditNickname}
               title={detail.report.nickname ? 'Edit nickname' : 'Add a friendly nickname for this report'}
-            >{detail.report.nickname ? '✎ rename' : '＋ nickname'}</button>
+            ><Icon name={detail.report.nickname ? 'edit' : 'plus'} size={13} /> {detail.report.nickname ? 'rename' : 'nickname'}</button>
           {/if}
         {:else}
           Report {reportId}
