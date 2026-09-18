@@ -7,6 +7,7 @@
 // `state` surfaces transient signals: locked, ingest in flight, etc.
 
 import { isTauri } from "$api/index";
+import { untrack } from "svelte";
 
 const APP = "bloody-level";
 
@@ -27,14 +28,18 @@ class TitleStore {
     this.flush();
   }
   set(key: string, value: string) {
-    this.segments = { ...this.segments, [key]: value };
+    // Title updates may be triggered by a $effect. Keep the segment mutation
+    // untracked so that effect only depends on its own input state (for
+    // example, ingest batch progress) and cannot subscribe to this write.
+    untrack(() => {
+      this.segments[key] = value;
+    });
     this.flush();
   }
   clear(key: string) {
-    if (!(key in this.segments)) return;
-    const next = { ...this.segments };
-    delete next[key];
-    this.segments = next;
+    untrack(() => {
+      delete this.segments[key];
+    });
     this.flush();
   }
 
