@@ -83,6 +83,47 @@ pub fn encrypt_file(source: &Path, destination: &Path, key: &SecretBox<[u8; 32]>
     Ok(())
 }
 
+/// Re-encrypt every managed PDF with a replacement cache key. The new bytes
+/// are staged before any existing cache file is replaced.
+pub fn reencrypt_cache(
+    dir: &Path,
+    old_key: &SecretBox<[u8; 32]>,
+    new_key: &SecretBox<[u8; 32]>,
+) -> AppResult<()> {
+    if !dir.exists() {
+        return Ok(());
+    }
+    let mut staged = Vec::new();
+    let result = (|| {
+        for entry in fs::read_dir(dir)? {
+            let path = entry?.path();
+            let is_pdf = path
+                .extension()
+                .and_then(|extension| extension.to_str())
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("pdf"));
+            if !is_pdf || !path.is_file() {
+                continue;
+            }
+            let plaintext = decrypt_file(&path, old_key)?;
+            let encrypted = encrypted_bytes(&plaintext, new_key)?;
+            let temporary = temporary_path(&path);
+            fs::write(&temporary, encrypted)?;
+            staged.push((path, temporary));
+        }
+        for (path, temporary) in &staged {
+            fs::remove_file(path)?;
+            fs::rename(temporary, path)?;
+        }
+        Ok(())
+    })();
+    if result.is_err() {
+        for (_, temporary) in staged {
+            let _ = fs::remove_file(temporary);
+        }
+    }
+    result
+}
+
 /// Convert PDF files written by pre-encryption builds. Unlocking fails if a
 /// conversion cannot complete, so the application never proceeds while a
 /// known managed PDF remains plaintext.
@@ -167,5 +208,17 @@ mod tests {
         assert!(fs::read(&legacy).unwrap().starts_with(MAGIC));
         assert_eq!(fs::read(&other).unwrap(), b"leave alone");
         assert_eq!(migrate_plaintext_pdf_cache(dir.path(), &key(9)).unwrap(), 0);
+    }
+
+    #[test]
+    fn reencrypts_managed_pdfs_with_a_new_key() {
+        let dir = tempdir().unwrap();
+        let cached = dir.path().join("cached.pdf");
+        fs::write(&cached, b"%PDF source").unwrap();
+        encrypt_file(&cached, &cached, &key(7)).unwrap();
+
+        reencrypt_cache(dir.path(), &key(7), &key(8)).unwrap();
+        assert!(decrypt_file(&cached, &key(7)).is_err());
+        assert_eq!(decrypt_file(&cached, &key(8)).unwrap(), b"%PDF source");
     }
 }

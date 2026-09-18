@@ -52,6 +52,17 @@ impl Database {
         super::migrations::run(&mut self.conn)
     }
 
+    pub fn rekey(&self, key: &SecretBox<[u8; 32]>) -> AppResult<()> {
+        let raw_key = Zeroizing::new(format!("x'{}'", hex_lower(key.expose_secret()).as_str()));
+        self.conn.pragma_update(None, "rekey", raw_key.as_str())?;
+        self.conn
+            .query_row("SELECT count(*) FROM sqlite_master", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .map_err(|_| AppError::Crypto("database rekey verification failed".into()))?;
+        Ok(())
+    }
+
     pub fn ensure_ontology(&self, seed_path: Option<&Path>) -> AppResult<usize> {
         let Some(path) = seed_path else {
             return Ok(0);
@@ -176,6 +187,24 @@ mod tests {
         assert_eq!(std::fs::read(&path).unwrap(), before);
         assert_eq!(
             read_marker(&Database::open_encrypted(&path, &key()).unwrap()),
+            MARKER
+        );
+    }
+
+    #[test]
+    fn rekey_changes_the_database_key_without_losing_data() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("vault.db");
+        let old_key = key();
+        let new_key = SecretBox::new(Box::new([0x18; 32]));
+        let db = Database::open_encrypted(&path, &old_key).unwrap();
+        write_marker(&db);
+        db.rekey(&new_key).unwrap();
+        drop(db);
+
+        assert!(Database::open_encrypted(&path, &old_key).is_err());
+        assert_eq!(
+            read_marker(&Database::open_encrypted(&path, &new_key).unwrap()),
             MARKER
         );
     }

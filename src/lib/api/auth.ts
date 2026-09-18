@@ -12,6 +12,8 @@ export interface AuthStatus {
   is_dev: boolean;
   os_vault_configured: boolean;
   os_vault_auto_unlock: boolean;
+  os_vault_supported: boolean;
+  os_vault_platform: string;
 }
 
 export interface PasskeySummary {
@@ -27,6 +29,10 @@ export async function status(): Promise<AuthStatus> {
 
 export async function setupPassword(password: string): Promise<void> {
   await invoke("auth_setup_password", { password });
+}
+
+export async function setupOsVault(): Promise<void> {
+  await invoke("auth_setup_os_vault");
 }
 
 export async function unlockPassword(password: string): Promise<void> {
@@ -59,9 +65,22 @@ export async function registerPasskey(args: {
   credential_id_b64: string;
   prf_salt_b64: string;
   prf_output_b64: string;
-  current_password: string;
+  current_password?: string;
 }): Promise<void> {
   await invoke("auth_register_passkey", { args });
+}
+
+export async function removePasskey(credentialIdB64: string): Promise<void> {
+  await invoke("auth_remove_passkey", {
+    args: { credential_id_b64: credentialIdB64 },
+  });
+}
+
+export async function rotateMasterKey(args: {
+  current_password?: string;
+  passkeys: Array<{ credential_id_b64: string; prf_output_b64: string }>;
+}): Promise<void> {
+  await invoke("auth_rotate_master_key", { args });
 }
 
 export async function unlockPasskey(args: {

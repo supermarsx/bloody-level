@@ -34,6 +34,8 @@ pub struct AuthStatus {
     pub is_dev: bool,
     pub os_vault_configured: bool,
     pub os_vault_auto_unlock: bool,
+    pub os_vault_supported: bool,
+    pub os_vault_platform: String,
 }
 
 const IS_DEV: bool = cfg!(debug_assertions);
@@ -49,6 +51,7 @@ fn derive_passkey_kek(prf: &[u8], context: &[u8]) -> AppResult<secrecy::SecretBo
 #[tauri::command]
 pub async fn auth_status(state: State<'_, AppState>) -> AppResult<AuthStatus> {
     let unlocked = state.db.lock().await.is_some();
+    let native = crate::crypto::native_vault::status();
     let path = state.keystore_path();
     if !path.exists() {
         return Ok(AuthStatus {
@@ -63,6 +66,8 @@ pub async fn auth_status(state: State<'_, AppState>) -> AppResult<AuthStatus> {
             is_dev: IS_DEV,
             os_vault_configured: false,
             os_vault_auto_unlock: false,
+            os_vault_supported: native.supported,
+            os_vault_platform: native.platform.to_string(),
         });
     }
     let ks = Keystore::load(&path)?;
@@ -80,6 +85,8 @@ pub async fn auth_status(state: State<'_, AppState>) -> AppResult<AuthStatus> {
         os_vault_configured: ks.os_vault_enabled
             && crate::crypto::native_vault::status().credential_present,
         os_vault_auto_unlock: ks.os_vault_auto_unlock,
+        os_vault_supported: native.supported,
+        os_vault_platform: native.platform.to_string(),
     })
 }
 
@@ -133,6 +140,57 @@ pub async fn auth_setup_password(state: State<'_, AppState>, password: String) -
     ks.save(&ks_path)?;
 
     activate_dmk(&state, dmk).await?;
+    let native = crate::crypto::native_vault::status();
+    if native.supported
+        && crate::crypto::native_vault::set_dmk(
+            state
+                .dmk
+                .lock()
+                .await
+                .as_ref()
+                .ok_or(AppError::Locked)?
+                .expose_secret(),
+        )
+        .is_ok()
+    {
+        let mut ks = Keystore::load(&ks_path)?;
+        ks.os_vault_enabled = true;
+        ks.os_vault_auto_unlock = true;
+        ks.save(&ks_path)?;
+    }
+    Ok(())
+}
+
+/// Initialize a vault with a native OS-vault wrapper and no password wrapper.
+/// The OS account credential is the recovery boundary; users can add one or
+/// more passkeys from Security after the vault is open.
+#[tauri::command]
+pub async fn auth_setup_os_vault(state: State<'_, AppState>) -> AppResult<()> {
+    let ks_path = state.keystore_path();
+    if ks_path.exists() {
+        return Err(AppError::AlreadyInitialized);
+    }
+    let native = crate::crypto::native_vault::status();
+    if !native.supported {
+        return Err(AppError::BadRequest(
+            "this operating system does not provide a supported native vault".into(),
+        ));
+    }
+
+    let dmk = generate_dmk();
+    crate::crypto::native_vault::set_dmk(dmk.expose_secret())?;
+    let mut ks = Keystore::empty();
+    ks.os_vault_enabled = true;
+    ks.os_vault_auto_unlock = true;
+    if let Err(error) = ks.save(&ks_path) {
+        let _ = crate::crypto::native_vault::delete();
+        return Err(error);
+    }
+    if let Err(error) = activate_dmk(&state, dmk).await {
+        let _ = crate::crypto::native_vault::delete();
+        let _ = std::fs::remove_file(&ks_path);
+        return Err(error);
+    }
     Ok(())
 }
 
@@ -290,7 +348,7 @@ pub struct RegisterPasskeyArgs {
     pub credential_id_b64: String,
     pub prf_salt_b64: String,
     pub prf_output_b64: String,
-    pub current_password: String,
+    pub current_password: Option<String>,
 }
 
 #[tauri::command]
@@ -301,31 +359,41 @@ pub async fn auth_register_passkey(
     let ks_path = state.keystore_path();
     let mut ks = Keystore::load(&ks_path)?;
 
-    let pw = ks
-        .wrappers
-        .iter()
-        .find_map(|w| match w {
-            Wrapper::Password {
-                salt_b64,
-                nonce_b64,
-                ciphertext_b64,
-                ..
-            } => Some((salt_b64.clone(), nonce_b64.clone(), ciphertext_b64.clone())),
-            _ => None,
-        })
-        .ok_or_else(|| AppError::BadRequest("password required to register passkey".into()))?;
-
-    let salt = B64
-        .decode(pw.0)
-        .map_err(|e| AppError::Base64(e.to_string()))?;
-    let nonce = B64
-        .decode(pw.1)
-        .map_err(|e| AppError::Base64(e.to_string()))?;
-    let ct = B64
-        .decode(pw.2)
-        .map_err(|e| AppError::Base64(e.to_string()))?;
-    let kek = kdf::derive_kek_from_password(&args.current_password, &salt)?;
-    let dmk = wrap::unwrap_dmk(&kek, &nonce, &ct)?;
+    let dmk = if args
+        .current_password
+        .as_deref()
+        .is_some_and(|password| !password.is_empty())
+    {
+        let password = args.current_password.as_deref().unwrap_or_default();
+        let pw = ks
+            .wrappers
+            .iter()
+            .find_map(|w| match w {
+                Wrapper::Password {
+                    salt_b64,
+                    nonce_b64,
+                    ciphertext_b64,
+                    ..
+                } => Some((salt_b64.clone(), nonce_b64.clone(), ciphertext_b64.clone())),
+                _ => None,
+            })
+            .ok_or_else(|| AppError::BadRequest("no password wrapper".into()))?;
+        let salt = B64
+            .decode(pw.0)
+            .map_err(|e| AppError::Base64(e.to_string()))?;
+        let nonce = B64
+            .decode(pw.1)
+            .map_err(|e| AppError::Base64(e.to_string()))?;
+        let ct = B64
+            .decode(pw.2)
+            .map_err(|e| AppError::Base64(e.to_string()))?;
+        let kek = kdf::derive_kek_from_password(password, &salt)?;
+        wrap::unwrap_dmk(&kek, &nonce, &ct)?
+    } else {
+        let guard = state.dmk.lock().await;
+        let dmk = guard.as_ref().ok_or(AppError::Locked)?;
+        secrecy::SecretBox::new(Box::new(*dmk.expose_secret()))
+    };
 
     let prf = B64
         .decode(&args.prf_output_b64)
@@ -341,6 +409,231 @@ pub async fn auth_register_passkey(
         ciphertext_b64: B64.encode(&pk_ct),
     })?;
     ks.save(&ks_path)?;
+    Ok(())
+}
+
+#[derive(Deserialize)]
+pub struct RemovePasskeyArgs {
+    pub credential_id_b64: String,
+}
+
+#[tauri::command]
+pub async fn auth_remove_passkey(
+    state: State<'_, AppState>,
+    args: RemovePasskeyArgs,
+) -> AppResult<()> {
+    if state.dmk.lock().await.is_none() {
+        return Err(AppError::Locked);
+    }
+    let path = state.keystore_path();
+    let mut ks = Keystore::load(&path)?;
+    let before = ks.passkeys().len();
+    if before == 0 {
+        return Err(AppError::NotFound("passkey not registered".into()));
+    }
+    if !ks.has_password()
+        && before == 1
+        && !(ks.os_vault_enabled && crate::crypto::native_vault::status().credential_present)
+    {
+        return Err(AppError::BadRequest(
+            "keep a password or native OS-vault recovery method before removing the last passkey"
+                .into(),
+        ));
+    }
+    ks.wrappers.retain(|wrapper| {
+        !matches!(
+            wrapper,
+            Wrapper::Passkey {
+                credential_id_b64,
+                ..
+            } if credential_id_b64 == &args.credential_id_b64
+        )
+    });
+    if ks.passkeys().len() == before {
+        return Err(AppError::NotFound("passkey not registered".into()));
+    }
+    ks.save(&path)
+}
+
+#[derive(Deserialize)]
+pub struct PasskeyRewrap {
+    pub credential_id_b64: String,
+    pub prf_output_b64: String,
+}
+
+#[derive(Deserialize)]
+pub struct RotateMasterKeyArgs {
+    pub current_password: Option<String>,
+    #[serde(default)]
+    pub passkeys: Vec<PasskeyRewrap>,
+}
+
+/// Replace the data master key while preserving every configured unlock
+/// method. Passkey PRF assertions are supplied by the WebAuthn frontend so
+/// their wrappers can be re-encrypted without exposing the PRF to disk.
+#[tauri::command]
+pub async fn auth_rotate_master_key(
+    state: State<'_, AppState>,
+    args: RotateMasterKeyArgs,
+) -> AppResult<()> {
+    let old_dmk = {
+        let guard = state.dmk.lock().await;
+        let dmk = guard.as_ref().ok_or(AppError::Locked)?;
+        secrecy::SecretBox::new(Box::new(*dmk.expose_secret()))
+    };
+    let path = state.keystore_path();
+    let ks = Keystore::load(&path)?;
+    let password = args
+        .current_password
+        .as_deref()
+        .filter(|value| !value.is_empty());
+    let new_dmk = generate_dmk();
+    let mut wrappers = Vec::with_capacity(ks.wrappers.len());
+
+    for wrapper in &ks.wrappers {
+        match wrapper {
+            Wrapper::Password { .. } => {
+                let password = password.ok_or_else(|| {
+                    AppError::BadRequest(
+                        "enter the current password to rotate a password-protected master key"
+                            .into(),
+                    )
+                })?;
+                let current = ks
+                    .wrappers
+                    .iter()
+                    .find_map(|candidate| match candidate {
+                        Wrapper::Password {
+                            salt_b64,
+                            nonce_b64,
+                            ciphertext_b64,
+                            ..
+                        } => Some((salt_b64, nonce_b64, ciphertext_b64)),
+                        _ => None,
+                    })
+                    .ok_or_else(|| AppError::BadRequest("no password wrapper".into()))?;
+                let salt = B64
+                    .decode(current.0)
+                    .map_err(|error| AppError::Base64(error.to_string()))?;
+                let nonce = B64
+                    .decode(current.1)
+                    .map_err(|error| AppError::Base64(error.to_string()))?;
+                let ciphertext = B64
+                    .decode(current.2)
+                    .map_err(|error| AppError::Base64(error.to_string()))?;
+                let kek = kdf::derive_kek_from_password(password, &salt)?;
+                let verified = wrap::unwrap_dmk(&kek, &nonce, &ciphertext)?;
+                if verified.expose_secret() != old_dmk.expose_secret() {
+                    return Err(AppError::Crypto("current password is incorrect".into()));
+                }
+                let new_salt = generate_salt(16);
+                let new_kek = kdf::derive_kek_from_password(password, &new_salt)?;
+                let (new_nonce, new_ciphertext) =
+                    wrap::wrap_dmk(&new_kek, new_dmk.expose_secret())?;
+                wrappers.push(Wrapper::Password {
+                    kdf: "argon2id".into(),
+                    m: kdf::ARGON2_M_KIB,
+                    t: kdf::ARGON2_T,
+                    p: kdf::ARGON2_P,
+                    salt_b64: B64.encode(new_salt),
+                    nonce_b64: B64.encode(new_nonce),
+                    ciphertext_b64: B64.encode(new_ciphertext),
+                });
+            }
+            Wrapper::Passkey {
+                label,
+                credential_id_b64,
+                prf_salt_b64,
+                nonce_b64,
+                ciphertext_b64,
+            } => {
+                let rewrap = args
+                    .passkeys
+                    .iter()
+                    .find(|candidate| candidate.credential_id_b64 == *credential_id_b64)
+                    .ok_or_else(|| {
+                        AppError::BadRequest(format!(
+                            "authenticate passkey '{}' before rotating the master key",
+                            label
+                        ))
+                    })?;
+                let prf = B64
+                    .decode(&rewrap.prf_output_b64)
+                    .map_err(|error| AppError::Base64(error.to_string()))?;
+                let nonce = B64
+                    .decode(nonce_b64)
+                    .map_err(|error| AppError::Base64(error.to_string()))?;
+                let ciphertext = B64
+                    .decode(ciphertext_b64)
+                    .map_err(|error| AppError::Base64(error.to_string()))?;
+                let old_passkey_dmk = [PASSKEY_WRAP_CONTEXT, LEGACY_PASSKEY_WRAP_CONTEXT]
+                    .into_iter()
+                    .find_map(|context| {
+                        let kek = derive_passkey_kek(&prf, context).ok()?;
+                        wrap::unwrap_dmk(&kek, &nonce, &ciphertext).ok()
+                    })
+                    .ok_or_else(|| {
+                        AppError::Crypto(format!("passkey '{label}' assertion failed"))
+                    })?;
+                if old_passkey_dmk.expose_secret() != old_dmk.expose_secret() {
+                    return Err(AppError::Crypto(format!(
+                        "passkey '{label}' assertion failed"
+                    )));
+                }
+                let pk_kek = derive_passkey_kek(&prf, PASSKEY_WRAP_CONTEXT)?;
+                let (new_nonce, new_ciphertext) = wrap::wrap_dmk(&pk_kek, new_dmk.expose_secret())?;
+                wrappers.push(Wrapper::Passkey {
+                    label: label.clone(),
+                    credential_id_b64: credential_id_b64.clone(),
+                    prf_salt_b64: prf_salt_b64.clone(),
+                    nonce_b64: B64.encode(new_nonce),
+                    ciphertext_b64: B64.encode(new_ciphertext),
+                });
+            }
+        }
+    }
+
+    let old_pdf_key = kdf::derive_pdf_cache_key(&old_dmk)?;
+    let new_pdf_key = kdf::derive_pdf_cache_key(&new_dmk)?;
+    crate::crypto::file::reencrypt_cache(&state.pdf_dir(), &old_pdf_key, &new_pdf_key)?;
+
+    if ks.os_vault_enabled {
+        if let Err(error) = crate::crypto::native_vault::set_dmk(new_dmk.expose_secret()) {
+            let _ =
+                crate::crypto::file::reencrypt_cache(&state.pdf_dir(), &new_pdf_key, &old_pdf_key);
+            return Err(error);
+        }
+    }
+
+    let rekey_result = {
+        let guard = state.db.lock().await;
+        let db = guard.as_ref().ok_or(AppError::Locked)?;
+        db.rekey(&new_dmk)
+    };
+    if let Err(error) = rekey_result {
+        let _ = crate::crypto::file::reencrypt_cache(&state.pdf_dir(), &new_pdf_key, &old_pdf_key);
+        if ks.os_vault_enabled {
+            let _ = crate::crypto::native_vault::set_dmk(old_dmk.expose_secret());
+        }
+        return Err(error);
+    }
+
+    let mut new_ks = ks;
+    new_ks.wrappers = wrappers;
+    if let Err(error) = new_ks.save(&path) {
+        let rollback_db = state.db.lock().await;
+        if let Some(db) = rollback_db.as_ref() {
+            let _ = db.rekey(&old_dmk);
+        }
+        let _ = crate::crypto::file::reencrypt_cache(&state.pdf_dir(), &new_pdf_key, &old_pdf_key);
+        if new_ks.os_vault_enabled {
+            let _ = crate::crypto::native_vault::set_dmk(old_dmk.expose_secret());
+        }
+        return Err(error);
+    }
+
+    *state.dmk.lock().await = Some(new_dmk);
+    *state.pdf_key.lock().await = Some(new_pdf_key);
     Ok(())
 }
 

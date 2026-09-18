@@ -8,9 +8,21 @@ Choose a password you can retain safely. There is no server-side password reset 
 
 If the password cannot be recovered, the welcome screen provides **Reset this instance**. This permanently removes the encrypted database, password, passkeys, imported reports, PDFs, and local model files from the device. It is protected by an explicit confirmation and cannot be undone, so use a vault export or backup first whenever possible.
 
+## Password-free OS-vault setup
+
+On supported platforms, the welcome screen can create a vault without a
+password. The generated master key is protected by the operating system's
+credential store and automatic OS-vault unlock is enabled. Add a passkey from
+Settings as an additional recovery method; on a shared device, prefer a strong
+vault password or passkey instead of relying only on the OS account.
+
 ## Optional passkey unlock
 
-After the password is set, you can register a passkey when the platform WebView and authenticator support the required PRF operation. On Windows this commonly means Windows Hello or another compatible authenticator. Passkey registration is an additional unlock route; it does not remove the vault password.
+After setup, you can register a passkey from Settings → Security when the
+platform WebView and authenticator support the required PRF operation. On
+Windows this commonly means Windows Hello or another compatible authenticator.
+Passkey registration is an additional unlock route and can also protect a
+password-free OS-vault setup.
 
 If the platform cannot provide the required capability, the password flow remains available and the app reports why passkey setup was skipped.
 

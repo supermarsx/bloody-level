@@ -84,6 +84,17 @@
     finally { busy = false; }
   }
 
+  async function setupOsVault() {
+    if (busy) return;
+    err = null;
+    busy = true;
+    try {
+      await auth.setupOsVault();
+      await refresh();
+    } catch (e) { err = AppError.fromUnknown(e); }
+    finally { busy = false; }
+  }
+
   async function unlockPassword() {
     err = null;
     busy = true;
@@ -281,6 +292,18 @@
           disabled={busy || password.length < 10 || !passwordsMatch || confirmPassword.length === 0}
           onclick={setupPassword}
         >{busy ? 'Encrypting…' : 'Create vault'}</button>
+
+        {#if status?.os_vault_supported}
+          <div class="gate__divider"><span>or</span></div>
+          <button class="btn w-full flex items-center justify-center gap-2" disabled={busy} onclick={setupOsVault}>
+            <Icon name="shield" size={15} /> {busy ? 'Preparing native vault…' : 'Use OS vault without a password'}
+          </button>
+          <p class="text-[11px] text-fg3">
+            The encrypted master key will be protected by {status.os_vault_platform}. Add a passkey
+            from Settings for another recovery method; anyone who can unlock this OS account may
+            access the vault.
+          </p>
+        {/if}
 
         {#if status?.is_dev}
           <details class="text-xs text-fg3">

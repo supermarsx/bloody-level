@@ -1,6 +1,7 @@
 import { invoke } from "./index";
 
 export interface SecurityStatus {
+  master_key_enabled: boolean;
   os_vault_supported: boolean;
   os_vault_platform: string;
   os_vault_enabled: boolean;

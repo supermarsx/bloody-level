@@ -46,6 +46,12 @@ export async function cancelDownload(): Promise<void> {
   return invoke("tier_cancel_download");
 }
 
+export async function deleteModel(
+  tier: "llm" | "olmocr" | "tesseract",
+): Promise<void> {
+  return invoke("tier_delete_model", { tier });
+}
+
 export async function tesseract(): Promise<TierStatus> {
   return invoke("tier_status_tesseract");
 }

@@ -304,6 +304,79 @@ async fn set_model_path(state: &AppState, key: &str, path: &std::path::Path) -> 
     Ok(())
 }
 
+async fn clear_model_path_if_matches(
+    state: &AppState,
+    key: &str,
+    managed_path: &std::path::Path,
+) -> AppResult<()> {
+    let guard = state.db.lock().await;
+    let db = guard.as_ref().ok_or(AppError::Locked)?;
+    let current: serde_json::Value = db
+        .conn
+        .query_row(
+            "SELECT value_json FROM settings WHERE key = ?1",
+            [key],
+            |row| row.get::<_, String>(0),
+        )
+        .ok()
+        .and_then(|raw| serde_json::from_str(&raw).ok())
+        .unwrap_or_else(|| serde_json::json!({}));
+    let managed = managed_path.to_string_lossy();
+    if current.get("model_path").and_then(|value| value.as_str()) != Some(managed.as_ref()) {
+        return Ok(());
+    }
+    let mut object = current.as_object().cloned().unwrap_or_default();
+    object.insert(
+        "model_path".into(),
+        serde_json::Value::String(String::new()),
+    );
+    let value = serde_json::Value::Object(object).to_string();
+    db.conn.execute(
+        "INSERT INTO settings(key, value_json) VALUES(?1, ?2)
+         ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json",
+        [key, &value],
+    )?;
+    Ok(())
+}
+
+fn remove_managed_path(path: &std::path::Path) -> AppResult<()> {
+    if path.is_dir() {
+        std::fs::remove_dir_all(path)?;
+    } else if path.is_file() {
+        std::fs::remove_file(path)?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn tier_delete_model(state: State<'_, AppState>, tier: String) -> AppResult<()> {
+    let tier = tier.trim().to_ascii_lowercase();
+    let (key, path, loaded) = match tier.as_str() {
+        "llm" => (
+            "llm",
+            state.models_dir().join("phi-4-mini-reasoning-Q4_K_M.gguf"),
+            crate::llm::is_loaded(),
+        ),
+        "olmocr" => (
+            "olmocr",
+            state.models_dir().join("olmOCR-2-7B-1025"),
+            crate::ocr_vision::is_loaded(),
+        ),
+        "tesseract" => ("tesseract", state.models_dir().join("tesseract"), false),
+        _ => return Err(AppError::BadRequest("unknown managed model tier".into())),
+    };
+    if loaded {
+        return Err(AppError::BadRequest(
+            "unload this model before deleting its managed files".into(),
+        ));
+    }
+    remove_managed_path(&path)?;
+    if key != "tesseract" {
+        clear_model_path_if_matches(&state, key, &path).await?;
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn tier_download_llm(
     app: AppHandle,

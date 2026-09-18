@@ -5,9 +5,10 @@ protection layers for an instance.
 
 ## Native OS vault
 
-When the vault is unlocked, choose **Enable native OS vault** to store a
-device-unlock copy of the data master key in the operating system's credential
-store:
+New vaults enable the native OS vault by default where the platform supports a
+credential store. Existing unlocked vaults can choose **Enable native OS vault**
+to store a device-unlock copy of the data master key in the operating system's
+credential store:
 
 | Platform | Native store                                                                             |
 | -------- | ---------------------------------------------------------------------------------------- |
@@ -17,15 +18,16 @@ store:
 
 The database and managed PDF cache remain encrypted independently. The OS
 vault is an additional local wrapper that makes unlocking convenient; it does
-not remove the password or passkey recovery methods. **Disable OS vault**
+not remove password or passkey recovery methods. A supported platform can use
+the OS-vault-only first-run option, so a password is not mandatory. **Disable OS vault**
 removes that credential and leaves the encrypted vault intact.
 
 ## Automatic unlock
 
-Automatic unlock is off by default. Enable it only on a device and operating
-system account you control. On the next launch, bloody-level asks the native
-credential store for the device-unlock copy; if that is unavailable, the
-normal password and passkey controls remain available.
+Automatic unlock is enabled for new OS-vault-only vaults. Enable it only on a
+device and operating system account you control. On the next launch,
+bloody-level asks the native credential store for the device-unlock copy; if
+that is unavailable, the normal password and passkey controls remain available.
 
 Keep automatic unlock off on shared, borrowed, or unattended machines. Anyone
 who can unlock the same operating-system account may be able to use the app's
@@ -46,3 +48,14 @@ The OS vault cannot protect data from malware, a hostile administrator, or an
 already-unlocked operating-system session. For the storage boundary and
 recovery steps, see [Privacy and encryption](privacy.md) and [Backup and
 restore](backup-restore.md).
+
+## Passkeys and master-key rotation
+
+Settings → Security can register, list, and remove WebAuthn passkeys with PRF
+support. Removing the last passkey is blocked when it would leave the vault
+without a password or OS-vault recovery route.
+
+Rotate master key creates a fresh data master key and re-keys the encrypted
+database, managed PDFs, OS-vault credential, password wrapper, and passkey
+wrappers. The app asks for the current password and fresh assertions from every
+registered passkey. Keep a current backup before rotating.

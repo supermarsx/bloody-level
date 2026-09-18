@@ -7,6 +7,9 @@ This page describes the capability boundary users and contributors should rely o
 - Local Tauri desktop shell with Svelte UI and Rust commands.
 - Password-protected encrypted vault with lock/unlock and persisted unlock backoff.
 - Optional passkey PRF registration and unlock where the platform supports it.
+- New supported-platform vaults can use an OS-vault-only first-run path, with
+  passkey management and authenticated master-key rotation available in
+  Settings → Security.
 - Settings → Security controls for optional Windows Credential Manager, macOS
   Keychain, or Linux Secret Service vault wrapping, with explicit automatic
   unlock control.

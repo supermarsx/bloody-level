@@ -83,6 +83,7 @@
   let olm    = $state<tiers.ModelTierStatus | null>(null);
   let pdfium = $state<tiers.PdfiumStatus | null>(null);
   let securityStatus = $state<security.SecurityStatus | null>(null);
+  let authStatus = $state<auth.AuthStatus | null>(null);
   let info   = $state<appInfo.AppInfo | null>(null);
   let raw    = $state<Record<string, unknown>>({});
   let err    = $state<string | null>(null);
@@ -97,6 +98,7 @@
         tiers.tesseract(), tiers.llm(), tiers.olmocr(), tiers.pdfium(),
         appInfo.get(), settings.getAll(), security.status()
       ]);
+      authStatus = await auth.status();
     } catch (e) {
       err = String(e);
       toasts.error(e);
@@ -135,6 +137,7 @@
   type ModelTierKey = 'llm' | 'olmocr';
   let tierAction = $state<ModelTierKey | null>(null);
   let tierDownload = $state<'tesseract' | ModelTierKey | null>(null);
+  let tierDelete = $state<'tesseract' | ModelTierKey | null>(null);
 
   onMount(() => {
     let active = true;
@@ -179,6 +182,36 @@
 
   function isCancelled(error: unknown): boolean {
     return AppError.fromUnknown(error).kind === 'cancelled';
+  }
+
+  function managedModelConfigured(key: ModelTierKey, status: tiers.ModelTierStatus): boolean {
+    const configured = configuredModelPath(key, status);
+    const root = info?.models_dir;
+    if (!configured || !root) return false;
+    const normalizedPath = configured.replaceAll('\\', '/').toLowerCase();
+    const normalizedRoot = root.replaceAll('\\', '/').toLowerCase().replace(/\/$/, '');
+    return normalizedPath === `${normalizedRoot}/phi-4-mini-reasoning-q4_k_m.gguf`
+      || normalizedPath === `${normalizedRoot}/olmocr-2-7b-1025`;
+  }
+
+  async function deleteManagedModel(key: 'tesseract' | ModelTierKey) {
+    if (tierDelete || tierDownload || tierAction) return;
+    const label = key === 'llm' ? 'Phi-4' : key === 'olmocr' ? 'olmOCR-2' : 'Tesseract language data';
+    const details = key === 'tesseract'
+      ? 'Delete downloaded Tesseract language data from the app data folder? Native binaries are not affected.'
+      : `Delete the managed ${label} model files from the app data folder? This cannot be undone.`;
+    if (!await ask(details, { title: `Delete ${label}`, kind: 'warning' })) return;
+    tierDelete = key;
+    try {
+      await tiers.deleteModel(key);
+      toasts.success(`${label} deleted`, 'The managed files were removed. You can download them again from this page.');
+      await refresh();
+    } catch (e) {
+      toasts.error(e);
+      await refresh();
+    } finally {
+      tierDelete = null;
+    }
   }
 
   function configuredModelPath(key: ModelTierKey, status?: tiers.TierStatus | null): string {
@@ -288,6 +321,79 @@
   async function toggleAutoUnlock(enabled: boolean) {
     try { securityStatus = await security.setAutoUnlock(enabled); }
     catch (e) { toasts.error(e); }
+  }
+
+  let passkeyLabel = $state('');
+  let passkeyBusy = $state(false);
+  let rotationPassword = $state('');
+  let rotationBusy = $state(false);
+
+  async function registerPasskey() {
+    if (passkeyBusy) return;
+    if (!auth.isWebAuthnAvailable()) {
+      toasts.error(new Error('WebAuthn is not available in this WebView.'));
+      return;
+    }
+    passkeyBusy = true;
+    try {
+      const label = passkeyLabel.trim() || `Passkey ${new Date().toLocaleDateString()}`;
+      const registration = await auth.webauthnRegister(label);
+      if (!registration.prfOutput) {
+        throw new Error('This authenticator did not provide the required PRF capability.');
+      }
+      await auth.registerPasskey({
+        label,
+        credential_id_b64: auth.b64.encode(registration.credentialId),
+        prf_salt_b64: auth.b64.encode(registration.prfSalt),
+        prf_output_b64: auth.b64.encode(registration.prfOutput),
+      });
+      passkeyLabel = '';
+      toasts.success('Passkey added', `${label} can now unlock this vault.`);
+      authStatus = await auth.status();
+    } catch (e) { toasts.error(e); }
+    finally { passkeyBusy = false; }
+  }
+
+  async function removePasskey(passkey: auth.PasskeySummary) {
+    const label = passkey.label || 'this passkey';
+    if (!await ask(`Remove ${label} from this vault? You will not be able to use it to unlock again.`, { title: 'Remove passkey', kind: 'warning' })) return;
+    try {
+      await auth.removePasskey(passkey.credential_id_b64);
+      toasts.success('Passkey removed', `${label} is no longer registered.`);
+      authStatus = await auth.status();
+    } catch (e) { toasts.error(e); }
+  }
+
+  async function rotateMasterKey() {
+    if (rotationBusy) return;
+    if (!await ask(
+      'Rotate the data master key now? The encrypted database and managed PDFs will be re-keyed, and every passkey will need a fresh authenticator assertion. Keep a current backup before continuing.',
+      { title: 'Rotate master key', kind: 'warning' }
+    )) return;
+    const passkeys = authStatus?.passkeys ?? [];
+    if (authStatus?.has_password && !rotationPassword) {
+      toasts.error(new Error('Enter the current vault password to rotate a password-protected master key.'));
+      return;
+    }
+    rotationBusy = true;
+    try {
+      const rewraps: Array<{ credential_id_b64: string; prf_output_b64: string }> = [];
+      for (const passkey of passkeys) {
+        const assertion = await auth.webauthnAssert(passkey.credential_id_b64, passkey.prf_salt_b64);
+        rewraps.push({
+          credential_id_b64: auth.b64.encode(assertion.credentialId),
+          prf_output_b64: auth.b64.encode(assertion.prfOutput),
+        });
+      }
+      await auth.rotateMasterKey({
+        current_password: rotationPassword || undefined,
+        passkeys: rewraps,
+      });
+      rotationPassword = '';
+      toasts.success('Master key rotated', 'The encrypted database, managed PDFs, OS vault, password wrapper, and passkey wrappers were re-keyed.');
+      await refresh();
+    } catch (e) { toasts.error(e); }
+    finally { rotationBusy = false; }
   }
 
   // ── Storage tab — export / import vault ───────────────────────────────
@@ -1770,6 +1876,13 @@
           {#if securityStatus}
             <div class="security-status-grid">
               <div class="security-status-card">
+                <span class="text-[11px] text-fg3">Data master key</span>
+                <strong class={securityStatus.master_key_enabled ? 'text-ok' : 'text-warn'}>
+                  {securityStatus.master_key_enabled ? 'Enabled' : 'Not initialized'}
+                </strong>
+                <span class="text-[11px] text-fg3">Database and PDF cache encryption key</span>
+              </div>
+              <div class="security-status-card">
                 <span class="text-[11px] text-fg3">Native OS vault</span>
                 <strong class={securityStatus.os_vault_enabled && securityStatus.os_vault_credential_present ? 'text-ok' : 'text-fg2'}>
                   {securityStatus.os_vault_enabled && securityStatus.os_vault_credential_present ? 'Enabled' : 'Not enabled'}
@@ -1803,6 +1916,47 @@
                 <span class="text-[11px] text-fg3">Enable this while unlocked to place a device-bound DMK copy in {securityStatus.os_vault_platform}.</span>
               {/if}
             </div>
+
+            <section class="security-subsection">
+              <div>
+                <h3 class="text-xs font-semibold">Passkeys</h3>
+                <p class="text-[11px] text-fg3">Register WebAuthn authenticators such as Windows Hello, Touch ID, or a hardware key. They unlock locally through the authenticator PRF and never replace the encrypted vault.</p>
+              </div>
+              {#if authStatus?.passkeys?.length}
+                <div class="passkey-list">
+                  {#each authStatus.passkeys as passkey}
+                    <div class="passkey-row">
+                      <span><Icon name="key" size={14} /> {passkey.label || 'Passkey'}</span>
+                      <button class="mini-btn" type="button" onclick={() => removePasskey(passkey)}>Remove</button>
+                    </div>
+                  {/each}
+                </div>
+              {:else}
+                <p class="text-[11px] text-fg3">No passkeys are configured.</p>
+              {/if}
+              <div class="security-inline-form">
+                <input class="security-input" bind:value={passkeyLabel} placeholder="Passkey label (optional)" maxlength="80" />
+                <button class="btn" type="button" disabled={passkeyBusy || !auth.isWebAuthnAvailable()} onclick={registerPasskey}>
+                  <Icon name="plus" size={14} /> {passkeyBusy ? 'Registering…' : 'Add passkey'}
+                </button>
+              </div>
+              {#if !auth.isWebAuthnAvailable()}<p class="text-[11px] text-fg3">WebAuthn is unavailable in this WebView.</p>{/if}
+            </section>
+
+            <section class="security-subsection">
+              <div>
+                <h3 class="text-xs font-semibold">Rotate data master key</h3>
+                <p class="text-[11px] text-fg3">Re-key the encrypted database, managed PDFs, native OS-vault copy, password wrapper, and registered passkey wrappers. Each configured passkey will ask for a fresh authenticator assertion.</p>
+              </div>
+              {#if authStatus?.has_password}
+                <input class="security-input" type="password" bind:value={rotationPassword} placeholder="Current vault password" autocomplete="current-password" />
+              {:else}
+                <p class="text-[11px] text-fg3">This vault has no password wrapper; your unlocked OS-vault session authenticates rotation.</p>
+              {/if}
+              <button class="btn-accent" type="button" disabled={rotationBusy || !securityStatus.master_key_enabled} onclick={rotateMasterKey}>
+                <Icon name="refresh" size={14} /> {rotationBusy ? 'Rotating…' : 'Rotate master key'}
+              </button>
+            </section>
           {:else}
             <p class="text-xs text-fg3">Loading security status…</p>
           {/if}
@@ -1939,6 +2093,9 @@
                   <button class="mini-btn" disabled={tierDownload !== null} onclick={() => downloadTesseractLanguage('por')}>
                     {tierDownload === 'tesseract' ? 'Downloading…' : 'Download por data'}
                   </button>
+                  <button class="mini-btn" disabled={!tess.model_present || tierDownload !== null || tierDelete !== null} onclick={() => deleteManagedModel('tesseract')}>
+                    {tierDelete === 'tesseract' ? 'Deleting…' : 'Delete managed data'}
+                  </button>
                   <button class="mini-btn" onclick={() => visit('https://github.com/tesseract-ocr/tessdoc/blob/main/Downloads.md')}>Native binary guide</button>
                 </div>
               </div>
@@ -1971,6 +2128,11 @@
                   disabled={!llm.compiled || tierDownload !== null}
                   onclick={() => downloadModel('llm')}>
                   {tierDownload === 'llm' ? 'Downloading…' : 'Download'}
+                </button>
+                <button class="mini-btn"
+                  disabled={!managedModelConfigured('llm', llm) || tierDownload !== null || tierDelete !== null}
+                  onclick={() => deleteManagedModel('llm')}>
+                  {tierDelete === 'llm' ? 'Deleting…' : 'Delete'}
                 </button>
                 <button class="mini-btn"
                   disabled={tierAction !== null}
@@ -2013,6 +2175,11 @@
                   disabled={!olm.compiled || tierDownload !== null}
                   onclick={() => downloadModel('olmocr')}>
                   {tierDownload === 'olmocr' ? 'Downloading…' : 'Download'}
+                </button>
+                <button class="mini-btn"
+                  disabled={!managedModelConfigured('olmocr', olm) || tierDownload !== null || tierDelete !== null}
+                  onclick={() => deleteManagedModel('olmocr')}>
+                  {tierDelete === 'olmocr' ? 'Deleting…' : 'Delete'}
                 </button>
                 <button class="mini-btn"
                   disabled={tierAction !== null}
@@ -2485,6 +2652,42 @@
     line-height: 1.45;
   }
   .security-notes strong { color: rgb(var(--fg-2)); }
+  .security-subsection {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgb(var(--line));
+  }
+  .security-inline-form {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+  .security-input {
+    min-width: 14rem;
+    flex: 1 1 14rem;
+    padding: 0.42rem 0.55rem;
+    border: 1px solid rgb(var(--line));
+    border-radius: 0.4rem;
+    background: rgb(var(--bg-1));
+    color: rgb(var(--fg-1));
+    font-size: 0.75rem;
+  }
+  .security-input:focus { outline: none; border-color: rgb(var(--accent)); box-shadow: 0 0 0 3px rgb(var(--accent) / 0.18); }
+  .passkey-list { display: flex; flex-direction: column; gap: 0.35rem; }
+  .passkey-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.7rem;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid rgb(var(--line));
+    border-radius: 0.4rem;
+    background: rgb(var(--bg-1));
+  }
+  .passkey-row > span { display: inline-flex; align-items: center; gap: 0.4rem; min-width: 0; font-size: 0.72rem; }
   @media (max-width: 520px) {
     .security-status-grid { grid-template-columns: 1fr; }
   }

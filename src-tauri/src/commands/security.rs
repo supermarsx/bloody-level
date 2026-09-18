@@ -9,6 +9,7 @@ use crate::state::AppState;
 
 #[derive(Debug, Serialize)]
 pub struct SecurityStatus {
+    pub master_key_enabled: bool,
     pub os_vault_supported: bool,
     pub os_vault_platform: String,
     pub os_vault_enabled: bool,
@@ -18,19 +19,20 @@ pub struct SecurityStatus {
     pub last_error: Option<String>,
 }
 
-fn keystore_status(state: &AppState) -> AppResult<(bool, bool)> {
+fn keystore_status(state: &AppState) -> AppResult<(bool, bool, bool)> {
     if !state.keystore_path().exists() {
-        return Ok((false, false));
+        return Ok((false, false, false));
     }
     let ks = Keystore::load(&state.keystore_path())?;
-    Ok((ks.os_vault_enabled, ks.os_vault_auto_unlock))
+    Ok((true, ks.os_vault_enabled, ks.os_vault_auto_unlock))
 }
 
 #[tauri::command]
 pub async fn security_status(state: State<'_, AppState>) -> AppResult<SecurityStatus> {
-    let (enabled, auto_unlock) = keystore_status(&state)?;
+    let (master_key_enabled, enabled, auto_unlock) = keystore_status(&state)?;
     let native = native_vault::status();
     Ok(SecurityStatus {
+        master_key_enabled,
         os_vault_supported: native.supported,
         os_vault_platform: native.platform.to_string(),
         os_vault_enabled: enabled,
@@ -100,7 +102,7 @@ pub async fn security_set_auto_unlock(
 /// passkey unlock remain available as fallbacks and are never removed.
 #[tauri::command]
 pub async fn security_unlock_os_vault(state: State<'_, AppState>) -> AppResult<SecurityStatus> {
-    let (enabled, _) = keystore_status(&state)?;
+    let (_, enabled, _) = keystore_status(&state)?;
     if !enabled {
         return Err(AppError::BadRequest(
             "OS vault unlock is not enabled for this instance".into(),
