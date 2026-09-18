@@ -1,4 +1,6 @@
 use serde::Serialize;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -34,6 +36,10 @@ const OLMOCR_FILES: &[&str] = &[
     "vocab.json",
 ];
 const EVT_DOWNLOAD_PROGRESS: &str = "tier:download-progress";
+const PDFIUM_ESTIMATED_SIZE_BYTES: u64 = 8_000_000;
+const TESSERACT_ESTIMATED_SIZE_BYTES: u64 = 80_000_000;
+const PHI_ESTIMATED_SIZE_BYTES: u64 = 2_500_000_000;
+const OLMOCR_ESTIMATED_SIZE_BYTES: u64 = 16_000_000_000;
 
 #[derive(Serialize)]
 pub struct ModelLoadStatus {
@@ -49,6 +55,8 @@ pub struct TierStatus {
     pub compiled: bool,
     pub enabled_in_settings: bool,
     pub model_present: bool,
+    pub estimated_size_bytes: u64,
+    pub disk_size_bytes: Option<u64>,
     pub loading: bool,
     pub loaded: bool,
     pub loaded_model_path: Option<String>,
@@ -86,6 +94,17 @@ pub async fn tier_status_tesseract(state: State<'_, AppState>) -> AppResult<Tier
         compiled: runtime.compiled,
         enabled_in_settings: config.enabled,
         model_present: runtime.model_present,
+        estimated_size_bytes: TESSERACT_ESTIMATED_SIZE_BYTES,
+        disk_size_bytes: combined_size(
+            [
+                Some(state.models_dir().join("tesseract")),
+                config.datapath.as_deref().map(PathBuf::from),
+                tesseract_resource_path(&state),
+                tesseract_executable_path(&config),
+            ]
+            .into_iter()
+            .flatten(),
+        ),
         loading: false,
         loaded: runtime.loaded,
         loaded_model_path: config.datapath,
@@ -93,7 +112,11 @@ pub async fn tier_status_tesseract(state: State<'_, AppState>) -> AppResult<Tier
     })
 }
 
-fn llm_tier_status(runtime: crate::llm::ModelStatus, enabled_in_settings: bool) -> ModelLoadStatus {
+fn llm_tier_status(
+    runtime: crate::llm::ModelStatus,
+    enabled_in_settings: bool,
+    disk_size_bytes: Option<u64>,
+) -> ModelLoadStatus {
     ModelLoadStatus {
         configured_model_path: runtime.configured_model_path,
         configured_model_present: runtime.configured_model_present,
@@ -102,6 +125,8 @@ fn llm_tier_status(runtime: crate::llm::ModelStatus, enabled_in_settings: bool) 
             compiled: runtime.compiled,
             enabled_in_settings,
             model_present: runtime.configured_model_present,
+            estimated_size_bytes: PHI_ESTIMATED_SIZE_BYTES,
+            disk_size_bytes,
             loading: runtime.loading,
             loaded: runtime.loaded,
             loaded_model_path: runtime.loaded_model_path,
@@ -113,6 +138,7 @@ fn llm_tier_status(runtime: crate::llm::ModelStatus, enabled_in_settings: bool) 
 fn olmocr_tier_status(
     runtime: crate::ocr_vision::ModelStatus,
     enabled_in_settings: bool,
+    disk_size_bytes: Option<u64>,
 ) -> ModelLoadStatus {
     ModelLoadStatus {
         configured_model_path: runtime.configured_model_path,
@@ -122,6 +148,8 @@ fn olmocr_tier_status(
             compiled: runtime.compiled,
             enabled_in_settings,
             model_present: runtime.configured_model_present,
+            estimated_size_bytes: OLMOCR_ESTIMATED_SIZE_BYTES,
+            disk_size_bytes,
             loading: runtime.loading,
             loaded: runtime.loaded,
             loaded_model_path: runtime.loaded_model_path,
@@ -138,6 +166,7 @@ pub async fn tier_status_llm(state: State<'_, AppState>) -> AppResult<ModelLoadS
     Ok(llm_tier_status(
         runtime,
         s.get("enabled").and_then(|v| v.as_bool()).unwrap_or(false),
+        managed_model_size(&state, "llm", Some(model_path)),
     ))
 }
 
@@ -151,6 +180,7 @@ pub async fn tier_load_llm(
     Ok(llm_tier_status(
         runtime,
         s.get("enabled").and_then(|v| v.as_bool()).unwrap_or(false),
+        managed_model_size(&state, "llm", s.get("model_path").and_then(|v| v.as_str())),
     ))
 }
 
@@ -163,19 +193,25 @@ pub async fn tier_unload_llm(state: State<'_, AppState>) -> AppResult<ModelLoadS
 #[derive(Serialize)]
 pub struct PdfiumStatus {
     pub available: bool,
+    pub estimated_size_bytes: u64,
+    pub disk_size_bytes: Option<u64>,
     pub error: Option<String>,
 }
 
 #[tauri::command]
-pub async fn tier_status_pdfium() -> AppResult<PdfiumStatus> {
+pub async fn tier_status_pdfium(state: State<'_, AppState>) -> AppResult<PdfiumStatus> {
     // Cheap: just attempts to bind the library; doesn't open any document.
     match crate::pdf::pdfium_available() {
         Ok(()) => Ok(PdfiumStatus {
             available: true,
+            estimated_size_bytes: PDFIUM_ESTIMATED_SIZE_BYTES,
+            disk_size_bytes: pdfium_disk_size(&state),
             error: None,
         }),
         Err(e) => Ok(PdfiumStatus {
             available: false,
+            estimated_size_bytes: PDFIUM_ESTIMATED_SIZE_BYTES,
+            disk_size_bytes: pdfium_disk_size(&state),
             error: Some(e),
         }),
     }
@@ -189,6 +225,7 @@ pub async fn tier_status_olmocr(state: State<'_, AppState>) -> AppResult<ModelLo
     Ok(olmocr_tier_status(
         runtime,
         s.get("enabled").and_then(|v| v.as_bool()).unwrap_or(false),
+        managed_model_size(&state, "olmocr", Some(model_path)),
     ))
 }
 
@@ -202,6 +239,11 @@ pub async fn tier_load_olmocr(
     Ok(olmocr_tier_status(
         runtime,
         s.get("enabled").and_then(|v| v.as_bool()).unwrap_or(false),
+        managed_model_size(
+            &state,
+            "olmocr",
+            s.get("model_path").and_then(|v| v.as_str()),
+        ),
     ))
 }
 
@@ -209,6 +251,103 @@ pub async fn tier_load_olmocr(
 pub async fn tier_unload_olmocr(state: State<'_, AppState>) -> AppResult<ModelLoadStatus> {
     crate::ocr_vision::unload_model();
     tier_status_olmocr(state).await
+}
+
+fn path_size(path: &Path) -> Option<u64> {
+    let metadata = std::fs::metadata(path).ok()?;
+    if metadata.is_file() {
+        return Some(metadata.len());
+    }
+    if !metadata.is_dir() {
+        return None;
+    }
+
+    let mut total = 0u64;
+    if let Ok(entries) = std::fs::read_dir(path) {
+        for entry in entries.flatten() {
+            if let Some(size) = path_size(&entry.path()) {
+                total = total.saturating_add(size);
+            }
+        }
+    }
+    Some(total)
+}
+
+fn combined_size(paths: impl IntoIterator<Item = PathBuf>) -> Option<u64> {
+    let mut seen = HashSet::new();
+    let existing: Vec<PathBuf> = paths
+        .into_iter()
+        .filter(|path| seen.insert(path.clone()) && path_size(path).is_some())
+        .collect();
+    if existing.is_empty() {
+        return None;
+    }
+
+    let total = existing
+        .iter()
+        .filter(|path| {
+            !existing
+                .iter()
+                .any(|parent| parent != *path && path.starts_with(parent))
+        })
+        .filter_map(|path| path_size(path))
+        .fold(0u64, u64::saturating_add);
+    Some(total)
+}
+
+fn managed_model_size(state: &AppState, tier: &str, configured_path: Option<&str>) -> Option<u64> {
+    let managed = match tier {
+        "llm" => state.models_dir().join("phi-4-mini-reasoning-Q4_K_M.gguf"),
+        "olmocr" => state.models_dir().join("olmOCR-2-7B-1025"),
+        _ => return None,
+    };
+    combined_size(
+        [
+            Some(managed),
+            configured_path
+                .map(str::trim)
+                .filter(|path| !path.is_empty())
+                .map(PathBuf::from),
+        ]
+        .into_iter()
+        .flatten(),
+    )
+}
+
+fn tesseract_resource_path(state: &AppState) -> Option<PathBuf> {
+    state
+        .resource_dir
+        .as_ref()
+        .map(|root| root.join("binaries").join("tesseract"))
+}
+
+fn tesseract_executable_path(config: &crate::ocr::OcrConfig) -> Option<PathBuf> {
+    let path = Path::new(&config.executable);
+    (path.is_absolute() || path.components().count() > 1).then(|| path.to_path_buf())
+}
+
+fn pdfium_candidates(state: &AppState) -> Vec<PathBuf> {
+    let names = ["pdfium.dll", "libpdfium.so", "libpdfium.dylib", "pdfium.so"];
+    let mut paths = Vec::new();
+    if let Ok(path) = std::env::var("PDFIUM_LIB_PATH") {
+        paths.push(PathBuf::from(path));
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            paths.extend(names.iter().map(|name| parent.join(name)));
+        }
+    }
+    if let Some(resource_dir) = &state.resource_dir {
+        let binaries = resource_dir.join("binaries");
+        paths.extend(names.iter().map(|name| binaries.join(name)));
+    }
+    let dev_binaries = Path::new(env!("CARGO_MANIFEST_DIR")).join("binaries");
+    paths.extend(names.iter().map(|name| dev_binaries.join(name)));
+    paths
+}
+
+fn pdfium_disk_size(state: &AppState) -> Option<u64> {
+    combined_size(pdfium_candidates(state))
 }
 
 fn download_context(

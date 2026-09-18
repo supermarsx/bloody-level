@@ -159,7 +159,7 @@
     stopDownloadProgress = null;
   });
 
-  function formatDownloadBytes(value: number): string {
+  function formatDownloadBytes(value: number | null | undefined): string {
     return appInfo.formatBytes(value);
   }
 
@@ -1949,7 +1949,7 @@
                 <p class="text-[11px] text-fg3">Re-key the encrypted database, managed PDFs, native OS-vault copy, password wrapper, and registered passkey wrappers. Each configured passkey will ask for a fresh authenticator assertion.</p>
               </div>
               {#if authStatus?.has_password}
-                <input class="security-input" type="password" bind:value={rotationPassword} placeholder="Current vault password" autocomplete="current-password" />
+                <input class="security-input security-input--password" type="password" bind:value={rotationPassword} placeholder="Current vault password" autocomplete="current-password" />
               {:else}
                 <p class="text-[11px] text-fg3">This vault has no password wrapper; your unlocked OS-vault session authenticates rotation.</p>
               {/if}
@@ -2033,6 +2033,7 @@
                 <div class="row__hint">
                   {pdfium.available ? 'Library bound. Ingestion ready.' : 'Library missing — ingestion will fail.'}
                 </div>
+                <div class="tier-size">Estimated {formatDownloadBytes(pdfium.estimated_size_bytes)} · on disk {formatDownloadBytes(pdfium.disk_size_bytes)}</div>
                 {#if pdfium.error}<div class="text-[11px] text-warn break-words mt-1">{pdfium.error}</div>{/if}
               </div>
               <span class={pdfium.available ? 'pill-ok' : 'pill-crit'}>{pdfium.available ? 'OK' : 'Missing'}</span>
@@ -2083,6 +2084,7 @@
                   languages: {tess.model_present ? 'present' : 'missing'} ·
                   runtime: {tess.loaded ? 'ready' : 'unavailable'}
                 </div>
+                <div class="tier-size">Estimated {formatDownloadBytes(tess.estimated_size_bytes)} · on disk {formatDownloadBytes(tess.disk_size_bytes)}</div>
                 {#if tess.last_error}
                   <div class="row__hint row__hint--error">{tess.last_error}</div>
                 {/if}
@@ -2115,6 +2117,7 @@
                   model: {llm.model_present ? 'present' : 'missing'} ·
                   loaded: {llm.loaded ? 'yes' : llm.loading ? 'loading' : 'no'}
                 </div>
+                <div class="tier-size">Estimated {formatDownloadBytes(llm.estimated_size_bytes)} · on disk {formatDownloadBytes(llm.disk_size_bytes)}</div>
                 <div class="model-path" title={modelPathHint('llm', llm)}>
                   model_path: {modelPathHint('llm', llm)}
                 </div>
@@ -2162,6 +2165,7 @@
                   model: {olm.model_present ? 'present' : 'missing'} ·
                   loaded: {olm.loaded ? 'yes' : olm.loading ? 'loading' : 'no'}
                 </div>
+                <div class="tier-size">Estimated {formatDownloadBytes(olm.estimated_size_bytes)} · on disk {formatDownloadBytes(olm.disk_size_bytes)}</div>
                 <div class="model-path" title={modelPathHint('olmocr', olm)}>
                   model_path: {modelPathHint('olmocr', olm)}
                 </div>
@@ -2615,7 +2619,7 @@
   }
   .security-status-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.65rem;
   }
   .security-status-card {
@@ -2675,6 +2679,11 @@
     color: rgb(var(--fg-1));
     font-size: 0.75rem;
   }
+  .security-input--password {
+    width: min(100%, 22rem);
+    max-width: 22rem;
+    flex: 0 1 22rem;
+  }
   .security-input:focus { outline: none; border-color: rgb(var(--accent)); box-shadow: 0 0 0 3px rgb(var(--accent) / 0.18); }
   .passkey-list { display: flex; flex-direction: column; gap: 0.35rem; }
   .passkey-row {
@@ -2688,6 +2697,7 @@
     background: rgb(var(--bg-1));
   }
   .passkey-row > span { display: inline-flex; align-items: center; gap: 0.4rem; min-width: 0; font-size: 0.72rem; }
+  .tier-size { color: rgb(var(--fg-3)); font-size: 0.66rem; line-height: 1.35; }
   @media (max-width: 520px) {
     .security-status-grid { grid-template-columns: 1fr; }
   }

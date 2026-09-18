@@ -6,6 +6,8 @@ export interface TierStatus {
   compiled: boolean;
   enabled_in_settings: boolean;
   model_present: boolean;
+  estimated_size_bytes: number;
+  disk_size_bytes: number | null;
   loading: boolean;
   loaded: boolean;
   loaded_model_path: string | null;
@@ -19,6 +21,8 @@ export interface ModelTierStatus extends TierStatus {
 
 export interface PdfiumStatus {
   available: boolean;
+  estimated_size_bytes: number;
+  disk_size_bytes: number | null;
   error: string | null;
 }
 
