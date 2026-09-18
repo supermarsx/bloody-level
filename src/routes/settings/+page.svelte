@@ -2022,9 +2022,12 @@
         </section>
 
         <section class="card p-5 space-y-4">
-          <div>
-            <h2 class="text-sm font-semibold">PDF extraction (tier 1)</h2>
-            <p class="text-xs text-fg2">Always-on baseline. Other tiers below are opt-in.</p>
+          <div class="ingestion-tier-heading">
+            <span class="ingestion-tier-badge">Tier 1</span>
+            <div>
+              <h2 class="text-sm font-semibold">PDF extraction</h2>
+              <p class="text-xs text-fg2">Always-on baseline. Other tiers below are opt-in.</p>
+            </div>
           </div>
           {#if pdfium}
             <div class="row">
@@ -2884,6 +2887,7 @@
     padding-top: 0.35rem;
   }
   .ingestion-tier-heading > div { min-width: 0; }
+  .ingestion-tier-heading h2 { margin: 0; }
   .ingestion-tier-heading h3 { margin: 0; font-size: 0.75rem; font-weight: 650; color: rgb(var(--fg-1)); }
   .ingestion-tier-heading p { margin: 0.12rem 0 0; font-size: 0.68rem; line-height: 1.35; color: rgb(var(--fg-3)); }
   .ingestion-tier-warning {
