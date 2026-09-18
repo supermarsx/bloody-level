@@ -172,6 +172,8 @@ fn path_to_string(path: &Path) -> String {
 mod tests {
     use super::*;
 
+    static TEST_STATE_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+
     fn temp_model_file(name: &str) -> PathBuf {
         let mut path = std::env::temp_dir();
         let unique = format!(
@@ -198,6 +200,7 @@ mod tests {
 
     #[test]
     fn status_reflects_configured_path_presence() {
+        let _guard = TEST_STATE_LOCK.lock().unwrap();
         unload_model();
         let path = temp_model_file("llm-status");
         let status = status_for_config(Some(path.to_str().unwrap()));
@@ -221,6 +224,7 @@ mod tests {
     #[test]
     #[cfg(feature = "embedded-llm")]
     fn load_model_records_validated_path_when_feature_enabled() {
+        let _guard = TEST_STATE_LOCK.lock().unwrap();
         unload_model();
         let path = temp_model_file("llm-load");
         let status = load_model(&path).unwrap();
