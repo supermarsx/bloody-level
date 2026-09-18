@@ -32,6 +32,8 @@ pub struct AuthStatus {
     /// True only in debug builds. Frontend uses this to surface a dev "Skip"
     /// button that uses a known dev password — never compiled into release.
     pub is_dev: bool,
+    pub os_vault_configured: bool,
+    pub os_vault_auto_unlock: bool,
 }
 
 const IS_DEV: bool = cfg!(debug_assertions);
@@ -59,6 +61,8 @@ pub async fn auth_status(state: State<'_, AppState>) -> AppResult<AuthStatus> {
             failed_unlocks: 0,
             unlock_backoff_remaining_secs: 0,
             is_dev: IS_DEV,
+            os_vault_configured: false,
+            os_vault_auto_unlock: false,
         });
     }
     let ks = Keystore::load(&path)?;
@@ -73,7 +77,36 @@ pub async fn auth_status(state: State<'_, AppState>) -> AppResult<AuthStatus> {
         failed_unlocks: ks.failed_unlocks,
         unlock_backoff_remaining_secs: ks.unlock_backoff_remaining_secs(),
         is_dev: IS_DEV,
+        os_vault_configured: ks.os_vault_enabled
+            && crate::crypto::native_vault::status().credential_present,
+        os_vault_auto_unlock: ks.os_vault_auto_unlock,
     })
+}
+
+#[tauri::command]
+pub async fn auth_unlock_os_vault(state: State<'_, AppState>) -> AppResult<()> {
+    crate::commands::security::security_unlock_os_vault(state)
+        .await
+        .map(|_| ())
+}
+
+/// Open the encrypted vault and retain the DMK only in the native process.
+/// Keeping this in one path makes password, passkey, and OS-vault unlocks
+/// apply the same PDF-cache migration and key lifetime rules.
+pub(crate) async fn activate_dmk(
+    state: &AppState,
+    dmk: secrecy::SecretBox<[u8; 32]>,
+) -> AppResult<()> {
+    let mut db = Database::open_encrypted(&state.db_path(), &dmk)?;
+    db.migrate()?;
+    let _ = db.ensure_ontology(state.ontology_seed_path().as_deref());
+    let pdf_key = kdf::derive_pdf_cache_key(&dmk)?;
+    crate::crypto::file::migrate_plaintext_pdf_cache(&state.pdf_dir(), &pdf_key)?;
+    let dmk_copy = secrecy::SecretBox::new(Box::new(*dmk.expose_secret()));
+    *state.db.lock().await = Some(db);
+    *state.dmk.lock().await = Some(dmk_copy);
+    *state.pdf_key.lock().await = Some(pdf_key);
+    Ok(())
 }
 
 #[tauri::command]
@@ -99,13 +132,7 @@ pub async fn auth_setup_password(state: State<'_, AppState>, password: String) -
     })?;
     ks.save(&ks_path)?;
 
-    let mut db = Database::open_encrypted(&state.db_path(), &dmk)?;
-    db.migrate()?;
-    let _ = db.ensure_ontology(state.ontology_seed_path().as_deref());
-    let pdf_key = kdf::derive_pdf_cache_key(&dmk)?;
-    crate::crypto::file::migrate_plaintext_pdf_cache(&state.pdf_dir(), &pdf_key)?;
-    *state.db.lock().await = Some(db);
-    *state.pdf_key.lock().await = Some(pdf_key);
+    activate_dmk(&state, dmk).await?;
     Ok(())
 }
 
@@ -148,13 +175,7 @@ pub async fn auth_unlock_password(state: State<'_, AppState>, password: String) 
         }
     };
 
-    let mut db = Database::open_encrypted(&state.db_path(), &dmk)?;
-    db.migrate()?;
-    let _ = db.ensure_ontology(state.ontology_seed_path().as_deref());
-    let pdf_key = kdf::derive_pdf_cache_key(&dmk)?;
-    crate::crypto::file::migrate_plaintext_pdf_cache(&state.pdf_dir(), &pdf_key)?;
-    *state.db.lock().await = Some(db);
-    *state.pdf_key.lock().await = Some(pdf_key);
+    activate_dmk(&state, dmk).await?;
 
     ks.record_success();
     ks.save(&ks_path)?;
@@ -221,6 +242,7 @@ pub async fn auth_change_password(
 #[tauri::command]
 pub async fn auth_lock(state: State<'_, AppState>) -> AppResult<()> {
     *state.db.lock().await = None;
+    *state.dmk.lock().await = None;
     *state.pdf_key.lock().await = None;
     Ok(())
 }
@@ -245,6 +267,8 @@ pub async fn auth_reset_instance(state: State<'_, AppState>, confirm: bool) -> A
         }
     }
     *state.pdf_key.lock().await = None;
+    *state.dmk.lock().await = None;
+    let _ = crate::crypto::native_vault::delete();
 
     if state.data_dir.exists() {
         std::fs::remove_dir_all(&state.data_dir)
@@ -376,13 +400,7 @@ pub async fn auth_unlock_passkey(
             AppError::Crypto("unwrap failed (wrong passkey)".into())
         })?;
 
-    let mut db = Database::open_encrypted(&state.db_path(), &dmk)?;
-    db.migrate()?;
-    let _ = db.ensure_ontology(state.ontology_seed_path().as_deref());
-    let pdf_key = kdf::derive_pdf_cache_key(&dmk)?;
-    crate::crypto::file::migrate_plaintext_pdf_cache(&state.pdf_dir(), &pdf_key)?;
-    *state.db.lock().await = Some(db);
-    *state.pdf_key.lock().await = Some(pdf_key);
+    activate_dmk(&state, dmk).await?;
 
     ks.record_success();
     ks.save(&ks_path)?;

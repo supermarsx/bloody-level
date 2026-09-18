@@ -30,6 +30,15 @@ not moved or encrypted by the app; protect that file separately.
 
 On supported platforms, a passkey can unlock a password-wrapped vault key using the authenticator PRF capability. Passkeys are an additional local unlock mechanism, not a cloud account or a replacement for a backup password.
 
+## Native OS vault
+
+Settings → Security can place a device-unlock copy of the data master key in
+Windows Credential Manager, macOS Keychain, or Linux Secret Service. This is a
+native OS-vault wrapper around the already encrypted vault, not a replacement
+for database encryption. It can be disabled without deleting any reports or
+PDFs. Automatic unlock is opt-in and should remain off on shared devices. See
+[Security controls](security.md) for the setup and warning details.
+
 ## Practical limits
 
 Encryption protects stored data at rest, but it cannot protect an unlocked device from malware, a hostile administrator, or someone who can read exported files. CSV exports, copied PDFs, screenshots, and backups need their own protection. Lock the app when it is unattended and keep backups in a protected location.

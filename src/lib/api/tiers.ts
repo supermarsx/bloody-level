@@ -42,10 +42,24 @@ export async function unloadLlm(): Promise<ModelTierStatus> {
   return invoke("tier_unload_llm");
 }
 
+export async function downloadLlm(): Promise<ModelTierStatus> {
+  return invoke("tier_download_llm");
+}
+
 export async function loadOlmocr(modelPath: string): Promise<ModelTierStatus> {
   return invoke("tier_load_olmocr", { modelPath });
 }
 
 export async function unloadOlmocr(): Promise<ModelTierStatus> {
   return invoke("tier_unload_olmocr");
+}
+
+export async function downloadOlmocr(): Promise<ModelTierStatus> {
+  return invoke("tier_download_olmocr");
+}
+
+export async function downloadTesseractLanguage(
+  language: string,
+): Promise<TierStatus> {
+  return invoke("tier_download_tesseract_language", { language });
 }

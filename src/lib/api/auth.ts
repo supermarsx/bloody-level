@@ -10,6 +10,8 @@ export interface AuthStatus {
   failed_unlocks: number;
   unlock_backoff_remaining_secs: number;
   is_dev: boolean;
+  os_vault_configured: boolean;
+  os_vault_auto_unlock: boolean;
 }
 
 export interface PasskeySummary {
@@ -29,6 +31,10 @@ export async function setupPassword(password: string): Promise<void> {
 
 export async function unlockPassword(password: string): Promise<void> {
   await invoke("auth_unlock_password", { password }, { silentAuth: true });
+}
+
+export async function unlockOsVault(): Promise<void> {
+  await invoke("auth_unlock_os_vault", undefined, { silentAuth: true });
 }
 
 export async function changePassword(

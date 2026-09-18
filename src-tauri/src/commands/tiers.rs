@@ -4,6 +4,32 @@ use tauri::State;
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
 
+// The TensorBlock model card still lists this quantization, but its resolve
+// endpoint currently returns 404 for direct downloads. The maintained
+// lmstudio-community mirror exposes the same Phi-4-mini-reasoning filename
+// and is the working direct-download source.
+const PHI4_URL: &str = "https://huggingface.co/lmstudio-community/Phi-4-mini-reasoning-GGUF/resolve/main/Phi-4-mini-reasoning-Q4_K_M.gguf?download=true";
+const OLMOCR_REPO: &str = "allenai/olmOCR-2-7B-1025";
+const OLMOCR_FILES: &[&str] = &[
+    "added_tokens.json",
+    "chat_template.jinja",
+    "chat_template.json",
+    "config.json",
+    "generation_config.json",
+    "merges.txt",
+    "model-00001-of-00004.safetensors",
+    "model-00002-of-00004.safetensors",
+    "model-00003-of-00004.safetensors",
+    "model-00004-of-00004.safetensors",
+    "model.safetensors.index.json",
+    "preprocessor_config.json",
+    "special_tokens_map.json",
+    "tokenizer.json",
+    "tokenizer_config.json",
+    "video_preprocessor_config.json",
+    "vocab.json",
+];
+
 #[derive(Serialize)]
 pub struct ModelLoadStatus {
     pub configured_model_path: Option<String>,
@@ -44,7 +70,11 @@ async fn read_setting(state: &AppState, key: &str) -> AppResult<serde_json::Valu
 #[tauri::command]
 pub async fn tier_status_tesseract(state: State<'_, AppState>) -> AppResult<TierStatus> {
     let s = read_setting(&state, "tesseract").await?;
-    let config = crate::ocr::config_from_settings(&s);
+    let config = crate::ocr::config_from_settings_with_paths(
+        &s,
+        Some(&state.data_dir),
+        state.resource_dir.as_deref(),
+    );
     let runtime = crate::ocr::runtime_status(&config);
     Ok(TierStatus {
         feature: "tesseract-ocr",
@@ -174,4 +204,108 @@ pub async fn tier_load_olmocr(
 pub async fn tier_unload_olmocr(state: State<'_, AppState>) -> AppResult<ModelLoadStatus> {
     crate::ocr_vision::unload_model();
     tier_status_olmocr(state).await
+}
+
+async fn download_one(
+    url: String,
+    destination: std::path::PathBuf,
+) -> AppResult<crate::resources::DownloadResult> {
+    tokio::task::spawn_blocking(move || crate::resources::download_file(&url, &destination))
+        .await
+        .map_err(|error| AppError::Internal(format!("resource download task failed: {error}")))?
+}
+
+async fn set_model_path(state: &AppState, key: &str, path: &std::path::Path) -> AppResult<()> {
+    let guard = state.db.lock().await;
+    let db = guard.as_ref().ok_or(AppError::Locked)?;
+    let current: serde_json::Value = db
+        .conn
+        .query_row(
+            "SELECT value_json FROM settings WHERE key = ?1",
+            [key],
+            |row| row.get::<_, String>(0),
+        )
+        .ok()
+        .and_then(|raw| serde_json::from_str(&raw).ok())
+        .unwrap_or_else(|| serde_json::json!({}));
+    let mut object = current.as_object().cloned().unwrap_or_default();
+    object.insert(
+        "model_path".into(),
+        serde_json::Value::String(path.to_string_lossy().into_owned()),
+    );
+    let value = serde_json::Value::Object(object).to_string();
+    db.conn.execute(
+        "INSERT INTO settings(key, value_json) VALUES(?1, ?2)
+         ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json",
+        [key, &value],
+    )?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn tier_download_llm(state: State<'_, AppState>) -> AppResult<ModelLoadStatus> {
+    let destination = state.models_dir().join("phi-4-mini-reasoning-Q4_K_M.gguf");
+    download_one(PHI4_URL.to_string(), destination.clone()).await?;
+    set_model_path(&state, "llm", &destination).await?;
+    tier_status_llm(state).await
+}
+
+#[tauri::command]
+pub async fn tier_download_olmocr(state: State<'_, AppState>) -> AppResult<ModelLoadStatus> {
+    let root = state.models_dir().join("olmOCR-2-7B-1025");
+    let root_for_download = root.clone();
+    tokio::task::spawn_blocking(move || -> AppResult<()> {
+        for file in OLMOCR_FILES {
+            let url =
+                format!("https://huggingface.co/{OLMOCR_REPO}/resolve/main/{file}?download=true");
+            let destination = crate::resources::safe_child(&root_for_download, file)?;
+            crate::resources::download_file(&url, &destination)?;
+        }
+        Ok(())
+    })
+    .await
+    .map_err(|error| AppError::Internal(format!("olmOCR download task failed: {error}")))??;
+    set_model_path(&state, "olmocr", &root).await?;
+    tier_status_olmocr(state).await
+}
+
+#[tauri::command]
+pub async fn tier_download_tesseract_language(
+    state: State<'_, AppState>,
+    language: String,
+) -> AppResult<TierStatus> {
+    let language = language.trim().to_ascii_lowercase();
+    if language.is_empty()
+        || language.len() > 12
+        || !language
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || character == '_')
+    {
+        return Err(AppError::BadRequest(
+            "invalid Tesseract language code".into(),
+        ));
+    }
+    let url = format!(
+        "https://raw.githubusercontent.com/tesseract-ocr/tessdata/main/{language}.traineddata"
+    );
+    let destination = state
+        .models_dir()
+        .join("tesseract")
+        .join("tessdata")
+        .join(format!("{language}.traineddata"));
+    download_one(url, destination).await?;
+    tier_status_tesseract(state).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PHI4_URL;
+
+    #[test]
+    fn phi_model_download_url_uses_the_live_mirror() {
+        assert!(PHI4_URL.starts_with(
+            "https://huggingface.co/lmstudio-community/Phi-4-mini-reasoning-GGUF/resolve/main/"
+        ));
+        assert!(PHI4_URL.ends_with("Phi-4-mini-reasoning-Q4_K_M.gguf?download=true"));
+    }
 }

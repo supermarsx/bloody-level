@@ -88,6 +88,7 @@ nav:
   - Data and security:
       - How data moves: data-and-security/data-flow.md
       - Privacy and encryption: data-and-security/privacy.md
+      - Security controls: data-and-security/security.md
       - Backup and restore: data-and-security/backup-restore.md
   - Developer guide:
       - Architecture: developer/architecture.md

@@ -17,7 +17,55 @@ fn main() {
         );
     }
 
+    if let Err(e) = bundle_tesseract() {
+        println!("cargo:warning=tesseract bundle skipped: {e}");
+    }
+
     tauri_build::build();
+}
+
+/// Copy a prepared native Tesseract distribution into the application
+/// resources when the release environment provides `TESSERACT_BUNDLE_DIR`.
+/// We do not silently fetch executable code from an unpinned third-party
+/// installer during builds; platform packaging can provide a reviewed,
+/// licensed directory and the runtime resolves it automatically.
+fn bundle_tesseract() -> Result<(), String> {
+    let source = match env::var("TESSERACT_BUNDLE_DIR") {
+        Ok(value) if !value.trim().is_empty() => PathBuf::from(value),
+        _ => return Ok(()),
+    };
+    if !source.is_dir() {
+        return Err(format!(
+            "TESSERACT_BUNDLE_DIR is not a directory: {source:?}"
+        ));
+    }
+    let manifest_dir = PathBuf::from(
+        env::var("CARGO_MANIFEST_DIR").map_err(|e| format!("CARGO_MANIFEST_DIR: {e}"))?,
+    );
+    let destination = manifest_dir.join("binaries").join("tesseract");
+    copy_dir_recursive(&source, &destination)?;
+    println!("cargo:rerun-if-env-changed=TESSERACT_BUNDLE_DIR");
+    println!("cargo:rerun-if-changed={}", source.display());
+    Ok(())
+}
+
+fn copy_dir_recursive(
+    source: &std::path::Path,
+    destination: &std::path::Path,
+) -> Result<(), String> {
+    fs::create_dir_all(destination).map_err(|e| format!("mkdir {destination:?}: {e}"))?;
+    for entry in fs::read_dir(source).map_err(|e| format!("read {source:?}: {e}"))? {
+        let entry = entry.map_err(|e| format!("read bundle entry: {e}"))?;
+        let source_path = entry.path();
+        let destination_path = destination.join(entry.file_name());
+        if source_path.is_dir() {
+            copy_dir_recursive(&source_path, &destination_path)?;
+        } else if source_path.is_file() {
+            fs::copy(&source_path, &destination_path)
+                .map_err(|e| format!("copy {source_path:?}: {e}"))?;
+        }
+    }
+    Ok(())
 }
 
 fn ensure_pdfium() -> Result<(), String> {

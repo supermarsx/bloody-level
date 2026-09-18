@@ -90,13 +90,16 @@ is independent and is not affiliated with either provider.
 - Encrypted local SQLite vault for reports, patients, settings, and audit data.
 - Password unlock with persisted retry backoff after failed attempts.
 - Optional passkey unlock where the platform supports the required capability.
+- Optional native OS-vault unlock through Windows Credential Manager, macOS
+  Keychain, or Linux Secret Service, with automatic unlock off by default.
 - Encrypted backup and restore with the copied source PDFs preserved.
 - Local model paths and ingestion status shown explicitly; missing capabilities
   are not silently presented as successful processing.
 
-The distributed build compiles Tesseract, olmOCR-2, and Phi-4 integrations;
-Tesseract still needs its local runtime and language data, while the embedded
-tiers need their model files. See the [implementation status](docs/reference/status.md).
+The distributed build compiles Tesseract, olmOCR-2, and Phi-4 integrations.
+Settings provides explicit controls to download Tesseract `eng`/`por` data and
+the optional model assets; a native Tesseract executable can be bundled at
+build time or installed separately. See the [implementation status](docs/reference/status.md).
 
 ## Quick start
 

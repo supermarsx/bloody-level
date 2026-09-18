@@ -22,7 +22,23 @@ Treat it as unverified. Check the original report, unit, reference range, and pa
 
 ## OCR or a model is unavailable
 
-Go to Settings → Ingestion and check the selected tier, configured path, and load status. A configured path must point to a compatible local installation. The app does not silently download missing model files.
+Go to Settings → Ingestion and check the selected tier, configured path, and
+load status. Use **Download eng data** or **Download por data** for Tesseract
+language files, or the model's explicit **Download** button. A configured path
+must point to a compatible local installation. Downloads are user-initiated;
+the app never fetches large OCR/model assets during startup or ingestion.
+
+If the native Tesseract executable is missing, set `TESSERACT_BUNDLE_DIR` for
+a source build or install a platform package using the [Tesseract download
+guidance](https://github.com/tesseract-ocr/tessdoc/blob/main/Downloads.md),
+then restart the app and check the tier again.
+
+## OS vault unlock is unavailable
+
+Open Settings → Security. The status card identifies the native store and any
+access error. On Linux, ensure a Secret Service provider such as GNOME Keyring
+or KWallet is running. You can always disable the native path and use the
+vault password or a registered passkey instead.
 
 ## Unlock is temporarily delayed
 

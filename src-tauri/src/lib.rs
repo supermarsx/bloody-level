@@ -8,6 +8,7 @@ mod ocr_vision;
 mod ontology;
 mod parse;
 mod pdf;
+mod resources;
 mod state;
 
 use tauri::Manager;
@@ -73,11 +74,17 @@ pub fn run() {
             commands::auth::auth_status,
             commands::auth::auth_setup_password,
             commands::auth::auth_unlock_password,
+            commands::auth::auth_unlock_os_vault,
             commands::auth::auth_change_password,
             commands::auth::auth_lock,
             commands::auth::auth_reset_instance,
             commands::auth::auth_register_passkey,
             commands::auth::auth_unlock_passkey,
+            commands::security::security_status,
+            commands::security::security_enable_os_vault,
+            commands::security::security_disable_os_vault,
+            commands::security::security_set_auto_unlock,
+            commands::security::security_unlock_os_vault,
             restart_app,
             commands::settings::settings_get,
             commands::settings::settings_set,
@@ -94,9 +101,12 @@ pub fn run() {
             commands::tiers::tier_status_llm,
             commands::tiers::tier_load_llm,
             commands::tiers::tier_unload_llm,
+            commands::tiers::tier_download_llm,
             commands::tiers::tier_status_olmocr,
             commands::tiers::tier_load_olmocr,
             commands::tiers::tier_unload_olmocr,
+            commands::tiers::tier_download_olmocr,
+            commands::tiers::tier_download_tesseract_language,
             commands::tiers::tier_status_pdfium,
             commands::app_info::app_info,
             commands::app_info::export_vault,

@@ -13,6 +13,7 @@
   let confirmPassword = $state('');
   let showPw = $state(false);
   let busy = $state(false);
+  let nativeUnlockAttempted = $state(false);
   let resetting = $state(false);
   let err = $state<AppError | null>(null);
 
@@ -21,6 +22,17 @@
       status = await auth.status();
       mode = status.initialized ? 'unlock' : 'setup';
       if (status.unlocked) onUnlocked();
+      else if (status.os_vault_configured && status.os_vault_auto_unlock && !nativeUnlockAttempted) {
+        nativeUnlockAttempted = true;
+        try {
+          await auth.unlockOsVault();
+          onUnlocked();
+          return;
+        } catch {
+          // Fall back to the explicit unlock controls when the OS store is
+          // unavailable, locked, or the credential was revoked.
+        }
+      }
     } catch (e) {
       err = AppError.fromUnknown(e);
     }
@@ -84,6 +96,21 @@
       await refresh();
     }
     finally { busy = false; }
+  }
+
+  async function unlockOsVault() {
+    if (busy) return;
+    busy = true;
+    err = null;
+    try {
+      await auth.unlockOsVault();
+      onUnlocked();
+    } catch (e) {
+      err = AppError.fromUnknown(e);
+      await refresh();
+    } finally {
+      busy = false;
+    }
   }
 
   async function unlockPasskey(passkey: auth.PasskeySummary | undefined = status?.passkeys?.[0]) {
@@ -273,6 +300,13 @@
           <h2 class="text-base font-semibold">Welcome back</h2>
           <p class="text-xs text-fg2">Enter your password to unlock.</p>
         </div>
+
+        {#if status?.os_vault_configured}
+          <button class="btn w-full" disabled={busy} onclick={unlockOsVault}>
+            <Icon name="shield" size={15} /> Unlock with OS vault
+          </button>
+          <p class="text-[11px] text-fg3">Uses your configured native credential store; your password remains available as a fallback.</p>
+        {/if}
 
         <label class="block">
           <span class="text-xs text-fg2">Password</span>

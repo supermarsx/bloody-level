@@ -36,9 +36,18 @@ When a build reports that PDFium is missing, see [troubleshooting](../reference/
 
 The distributed build compiles the complete extraction feature set: PDFium,
 Tesseract OCR, olmOCR-2 vision OCR, and Phi-4 repair support. Tesseract still
-needs a local executable and language data, while the embedded tiers need a
-compatible local model file. The application does not silently download OCR or
-language-model assets at runtime.
+needs a native executable and language data. Settings → Ingestion can download
+the official `eng` and `por` tessdata files into the app's managed models
+folder; a reviewed native executable can be bundled at build time with
+`TESSERACT_BUNDLE_DIR`, or installed using the linked platform guidance.
+The embedded tiers provide explicit download buttons for their local model
+assets and never download them during startup or ingestion.
+
+Phi-4's recommended Q4_K_M file is about 2.5 GB. The complete olmOCR-2 7B
+snapshot is about 16 GB. Confirm that you have enough disk space before
+starting either download. These optional models are stored locally and remain
+under the app's model directory; they are not encrypted as part of the vault
+database, so protect the device and backups accordingly.
 
 When building from source, the embedded tiers also require a native C++ toolchain,
 CMake, and LLVM/libclang for bindgen. The CI workflow installs these prerequisites

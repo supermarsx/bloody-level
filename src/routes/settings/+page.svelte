@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import * as settings from '$api/settings';
   import * as tiers from '$api/tiers';
+  import * as security from '$api/security';
   import * as appInfo from '$api/app-info';
   import * as admin from '$api/records-admin';
   import { theme } from '$theme/store.svelte';
@@ -80,6 +81,7 @@
   let llm    = $state<tiers.ModelTierStatus | null>(null);
   let olm    = $state<tiers.ModelTierStatus | null>(null);
   let pdfium = $state<tiers.PdfiumStatus | null>(null);
+  let securityStatus = $state<security.SecurityStatus | null>(null);
   let info   = $state<appInfo.AppInfo | null>(null);
   let raw    = $state<Record<string, unknown>>({});
   let err    = $state<string | null>(null);
@@ -87,9 +89,9 @@
   async function refresh() {
     err = null;
     try {
-      [tess, llm, olm, pdfium, info, raw] = await Promise.all([
+      [tess, llm, olm, pdfium, info, raw, securityStatus] = await Promise.all([
         tiers.tesseract(), tiers.llm(), tiers.olmocr(), tiers.pdfium(),
-        appInfo.get(), settings.getAll()
+        appInfo.get(), settings.getAll(), security.status()
       ]);
     } catch (e) {
       err = String(e);
@@ -105,6 +107,7 @@
 
   type ModelTierKey = 'llm' | 'olmocr';
   let tierAction = $state<ModelTierKey | null>(null);
+  let tierDownload = $state<'tesseract' | ModelTierKey | null>(null);
 
   function configuredModelPath(key: ModelTierKey, status?: tiers.TierStatus | null): string {
     const value = (raw[key] as Record<string, unknown> | undefined)?.model_path;
@@ -142,6 +145,33 @@
     }
   }
 
+  async function downloadModel(key: ModelTierKey) {
+    if (tierDownload) return;
+    const details = key === 'llm'
+      ? 'Download the recommended Phi-4 Q4_K_M model (about 2.5 GB) into the encrypted app data folder?'
+      : 'Download the complete olmOCR-2 7B model snapshot (about 16 GB) into the app data folder?';
+    if (!await ask(details, { title: `Download ${key === 'llm' ? 'Phi-4' : 'olmOCR-2'} model`, kind: 'warning' })) return;
+    tierDownload = key;
+    try {
+      if (key === 'llm') await tiers.downloadLlm();
+      else await tiers.downloadOlmocr();
+      toasts.success('Model download complete', `${key === 'llm' ? 'Phi-4' : 'olmOCR-2'} is configured for this instance.`);
+      await refresh();
+    } catch (e) { toasts.error(e); await refresh(); }
+    finally { tierDownload = null; }
+  }
+
+  async function downloadTesseractLanguage(language: string) {
+    if (tierDownload) return;
+    tierDownload = 'tesseract';
+    try {
+      await tiers.downloadTesseractLanguage(language);
+      toasts.success('Language data downloaded', `Tesseract ${language} data is ready in the managed models folder.`);
+      await refresh();
+    } catch (e) { toasts.error(e); await refresh(); }
+    finally { tierDownload = null; }
+  }
+
   async function chooseModelPath(key: ModelTierKey) {
     const selected = await openDialog({
       directory: false,
@@ -152,6 +182,30 @@
     const current = (raw[key] as Record<string, unknown> | undefined) ?? {};
     await settings.set(key, { ...current, model_path: selected });
     await refresh();
+  }
+
+  async function enableOsVault() {
+    try {
+      securityStatus = await security.enableOsVault();
+      toasts.success('OS vault enabled', `The vault DMK is now protected by ${securityStatus.os_vault_platform}.`);
+    } catch (e) { toasts.error(e); }
+  }
+
+  async function disableOsVault() {
+    const confirmed = await ask(
+      'Disable native OS vault unlock? The encrypted database and PDF cache will remain protected, but this device will no longer offer OS-vault unlock.',
+      { title: 'Disable OS vault', kind: 'warning' }
+    );
+    if (!confirmed) return;
+    try {
+      securityStatus = await security.disableOsVault();
+      toasts.success('OS vault disabled', 'Password and passkey unlock remain available.');
+    } catch (e) { toasts.error(e); }
+  }
+
+  async function toggleAutoUnlock(enabled: boolean) {
+    try { securityStatus = await security.setAutoUnlock(enabled); }
+    catch (e) { toasts.error(e); }
   }
 
   // ── Storage tab — export / import vault ───────────────────────────────
@@ -495,12 +549,13 @@
   // Tab id is reflected in the URL hash so deep-linking works (e.g.
   // `/settings#charts` opens directly to the chart pane). Falls back to
   // the first tab when the hash is unknown / missing.
-  type TabId = 'appearance' | 'dashboard' | 'charts' | 'comparison' | 'ingestion' | 'ontology' | 'storage' | 'about' | 'advanced';
+  type TabId = 'appearance' | 'dashboard' | 'charts' | 'comparison' | 'security' | 'ingestion' | 'ontology' | 'storage' | 'about' | 'advanced';
   const tabs: { id: TabId; label: string; hint: string; icon: IconName }[] = [
     { id: 'appearance', label: 'Appearance', hint: 'Theme & visual',          icon: 'palette' },
     { id: 'dashboard',  label: 'Dashboard',  hint: 'Home layout',              icon: 'dashboard' },
     { id: 'charts',     label: 'Charts',     hint: 'Zoom, sliders, labels',   icon: 'chart' },
     { id: 'comparison', label: 'Comparison', hint: 'Presets & filter sets',   icon: 'flask' },
+    { id: 'security',   label: 'Security',   hint: 'OS vault & unlock',        icon: 'shield' },
     { id: 'ingestion',  label: 'Ingestion',  hint: 'PDF / OCR / LLM tiers',   icon: 'download' },
     { id: 'ontology',   label: 'Ontology',   hint: 'Analyte registry',        icon: 'book' },
     { id: 'storage',    label: 'Storage',    hint: 'Paths & sizes',           icon: 'database' },
@@ -931,7 +986,7 @@
               <div class="row__title">Date format</div>
               <div class="row__hint">How dates appear on the X-axis when nicknames aren't being used.</div>
             </div>
-            <div class="seg seg--wrap">
+            <div class="seg seg--nowrap">
               {#each [
                 { id: 'iso',       label: '2024-09-07' },
                 { id: 'short',     label: 'Sep 07'     },
@@ -1033,7 +1088,7 @@
                 represent values that hold steady between samples.
               </div>
             </div>
-            <div class="seg seg--wrap">
+            <div class="seg seg--nowrap">
               {#each [
                 { id: 'none',   label: 'None'   },
                 { id: 'start',  label: 'Start'  },
@@ -1169,7 +1224,7 @@
                 <strong>Hide</strong> never draws axis labels — cleanest visual; rely on hover for the exact date.
               </div>
             </div>
-            <div class="seg">
+            <div class="seg seg--nowrap">
               {#each [
                 { id: 'auto',   label: 'Auto'   },
                 { id: 'rotate', label: 'Rotate' },
@@ -1620,6 +1675,72 @@
         </section>
       {/if}
 
+      {#if activeTab === 'security'}
+        <section class="card p-5 space-y-4">
+          <div class="flex items-start gap-3">
+            <span class="section-icon"><Icon name="shield" size={18} /></span>
+            <div>
+              <h2 class="text-sm font-semibold">Device security</h2>
+              <p class="text-xs text-fg2 mt-1">Manage the protection layers used by this local instance. The encrypted SQLCipher database and managed PDF cache remain protected whether or not OS-vault unlock is enabled.</p>
+            </div>
+          </div>
+
+          {#if securityStatus}
+            <div class="security-status-grid">
+              <div class="security-status-card">
+                <span class="text-[11px] text-fg3">Native OS vault</span>
+                <strong class={securityStatus.os_vault_enabled && securityStatus.os_vault_credential_present ? 'text-ok' : 'text-fg2'}>
+                  {securityStatus.os_vault_enabled && securityStatus.os_vault_credential_present ? 'Enabled' : 'Not enabled'}
+                </strong>
+                <span class="text-[11px] text-fg3">{securityStatus.os_vault_platform}</span>
+              </div>
+              <div class="security-status-card">
+                <span class="text-[11px] text-fg3">Session</span>
+                <strong class={securityStatus.session_unlocked ? 'text-ok' : 'text-warn'}>{securityStatus.session_unlocked ? 'Unlocked' : 'Locked'}</strong>
+                <span class="text-[11px] text-fg3">DMK held only in native memory</span>
+              </div>
+            </div>
+
+            {#if securityStatus.last_error}
+              <p class="row__hint row__hint--error">{securityStatus.last_error}</p>
+            {/if}
+
+            <div class="security-actions">
+              {#if securityStatus.os_vault_enabled && securityStatus.os_vault_credential_present}
+                <button class="btn" type="button" onclick={disableOsVault}>
+                  <Icon name="lock" size={14} /> Disable OS vault
+                </button>
+                <label class="security-toggle">
+                  <input type="checkbox" checked={securityStatus.os_vault_auto_unlock} onchange={(event) => toggleAutoUnlock((event.currentTarget as HTMLInputElement).checked)} />
+                  <span><strong>Automatic unlock</strong><small>Unlock at launch when the OS credential store permits it.</small></span>
+                </label>
+              {:else}
+                <button class="btn-accent" type="button" disabled={!securityStatus.os_vault_supported} onclick={enableOsVault}>
+                  <Icon name="shield" size={14} /> Enable native OS vault
+                </button>
+                <span class="text-[11px] text-fg3">Enable this while unlocked to place a device-bound DMK copy in {securityStatus.os_vault_platform}.</span>
+              {/if}
+            </div>
+          {:else}
+            <p class="text-xs text-fg3">Loading security status…</p>
+          {/if}
+
+          <div class="security-notes">
+            <p><strong>Protection model.</strong> Passwords and passkeys continue to work as recovery methods. The OS vault is an additional device-local wrapper, not a replacement for the encrypted database.</p>
+            <p><strong>Shared-device warning.</strong> Anyone who can unlock this operating-system account may be able to use the optional automatic unlock setting. Keep it off on shared or unattended machines.</p>
+          </div>
+        </section>
+
+        <section class="card p-5 space-y-2">
+          <h2 class="text-sm font-semibold">Security checklist</h2>
+          <ul class="text-xs text-fg2 space-y-1 list-disc pl-4">
+            <li>Use a strong vault password and keep at least one recovery method available.</li>
+            <li>Lock the app when stepping away from an unlocked session.</li>
+            <li>Export backups to a separately protected location; exported PDFs and the database remain encrypted.</li>
+          </ul>
+        </section>
+      {/if}
+
       {#if activeTab === 'ingestion'}
         <section class="card p-5 space-y-4">
           <div>
@@ -1661,6 +1782,15 @@
                 {#if tess.last_error}
                   <div class="row__hint row__hint--error">{tess.last_error}</div>
                 {/if}
+                <div class="tier-resource-help">
+                  <button class="mini-btn" disabled={tierDownload !== null} onclick={() => downloadTesseractLanguage('eng')}>
+                    {tierDownload === 'tesseract' ? 'Downloading…' : 'Download eng data'}
+                  </button>
+                  <button class="mini-btn" disabled={tierDownload !== null} onclick={() => downloadTesseractLanguage('por')}>
+                    {tierDownload === 'tesseract' ? 'Downloading…' : 'Download por data'}
+                  </button>
+                  <button class="mini-btn" onclick={() => visit('https://github.com/tesseract-ocr/tessdoc/blob/main/Downloads.md')}>Native binary guide</button>
+                </div>
               </div>
               <input type="checkbox"
                 bind:checked={tess.enabled_in_settings}
@@ -1687,6 +1817,11 @@
                 {#if llm.last_error}<div class="text-[11px] text-warn break-words mt-1">{llm.last_error}</div>{/if}
               </div>
               <div class="tier-actions">
+                <button class="mini-btn"
+                  disabled={!llm.compiled || tierDownload !== null}
+                  onclick={() => downloadModel('llm')}>
+                  {tierDownload === 'llm' ? 'Downloading…' : 'Download'}
+                </button>
                 <button class="mini-btn"
                   disabled={tierAction !== null}
                   onclick={() => chooseModelPath('llm')}>Browse</button>
@@ -1724,6 +1859,11 @@
                 {#if olm.last_error}<div class="text-[11px] text-warn break-words mt-1">{olm.last_error}</div>{/if}
               </div>
               <div class="tier-actions">
+                <button class="mini-btn"
+                  disabled={!olm.compiled || tierDownload !== null}
+                  onclick={() => downloadModel('olmocr')}>
+                  {tierDownload === 'olmocr' ? 'Downloading…' : 'Download'}
+                </button>
                 <button class="mini-btn"
                   disabled={tierAction !== null}
                   onclick={() => chooseModelPath('olmocr')}>Browse</button>
@@ -2144,6 +2284,60 @@
 <style>
   .settings { display: flex; flex-direction: column; gap: 1rem; }
   .settings__head { display: flex; flex-direction: column; gap: 0.15rem; }
+  .section-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid rgb(var(--accent) / 0.35);
+    border-radius: 0.55rem;
+    color: rgb(var(--accent));
+    background: rgb(var(--accent) / 0.1);
+  }
+  .security-status-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+  .security-status-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+    padding: 0.7rem;
+    border: 1px solid rgb(var(--line));
+    border-radius: 0.5rem;
+    background: rgb(var(--bg-1));
+  }
+  .security-status-card strong { font-size: 0.82rem; }
+  .security-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+  }
+  .security-toggle {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    cursor: pointer;
+  }
+  .security-toggle span { display: flex; flex-direction: column; gap: 0.1rem; font-size: 0.75rem; }
+  .security-toggle small { color: rgb(var(--fg-3)); font-size: 0.68rem; }
+  .security-notes {
+    display: grid;
+    gap: 0.45rem;
+    padding-top: 0.25rem;
+    color: rgb(var(--fg-3));
+    font-size: 0.7rem;
+    line-height: 1.45;
+  }
+  .security-notes strong { color: rgb(var(--fg-2)); }
+  @media (max-width: 520px) {
+    .security-status-grid { grid-template-columns: 1fr; }
+  }
 
   .settings__shell {
     display: grid;
@@ -2280,6 +2474,13 @@
     gap: 0.4rem;
     flex: 0 0 auto;
   }
+  .tier-resource-help {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.45rem;
+  }
   .mini-btn {
     border: 1px solid rgb(var(--line));
     background: rgb(var(--bg-1));
@@ -2320,6 +2521,10 @@
     width: max-content;
   }
   .seg__opt {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
     padding: 0.4rem 0.85rem;
     font-size: 0.8rem;
     color: rgb(var(--fg-2));
@@ -2327,6 +2532,7 @@
     border: 0;
     border-right: 1px solid rgb(var(--line));
     cursor: pointer;
+    white-space: nowrap;
     transition: background 120ms ease, color 120ms ease;
   }
   .seg__opt:last-child { border-right: 0; }
@@ -2346,18 +2552,28 @@
   }
   .seg--wrap .seg__opt { border-right: 1px solid rgb(var(--line)); }
   .seg--wrap .seg__opt:last-child { border-right: 0; }
+  .seg--nowrap {
+    flex-wrap: nowrap;
+    width: max-content;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .seg--nowrap .seg__opt { flex: 0 0 auto; }
 
   /* ── Accent swatches ── */
   .swatches {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: flex-start;
     gap: 0.4rem;
   }
-  @media (min-width: 480px) { .swatches { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-  @media (min-width: 720px) { .swatches { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
   .swatch {
     display: inline-flex;
     align-items: center;
+    flex: 0 0 auto;
+    width: max-content;
+    max-width: 100%;
     gap: 0.45rem;
     padding: 0.45rem 0.65rem;
     background: rgb(var(--bg-1));

@@ -21,6 +21,10 @@ pub struct Keystore {
     pub updated_at: i64,
     pub failed_unlocks: u32,
     pub last_failed_unlock_at: Option<i64>,
+    #[serde(default)]
+    pub os_vault_enabled: bool,
+    #[serde(default)]
+    pub os_vault_auto_unlock: bool,
     pub wrappers: Vec<Wrapper>,
 }
 
@@ -54,6 +58,8 @@ impl Keystore {
             updated_at: now,
             failed_unlocks: 0,
             last_failed_unlock_at: None,
+            os_vault_enabled: false,
+            os_vault_auto_unlock: false,
             wrappers: vec![],
         }
     }
@@ -190,6 +196,8 @@ mod tests {
             updated_at: 0,
             failed_unlocks,
             last_failed_unlock_at,
+            os_vault_enabled: false,
+            os_vault_auto_unlock: false,
             wrappers: vec![],
         }
     }

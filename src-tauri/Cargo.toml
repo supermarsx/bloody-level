@@ -67,6 +67,14 @@ ahash = "0.8"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
 
+# --- Native OS credential vault -------------------------------------------
+# Uses Windows Credential Manager, macOS Keychain, or Linux Secret Service.
+keyring = { version = "4.2", default-features = true }
+
+# --- Explicit user-initiated resource downloads ---------------------------
+# Rustls keeps runtime downloads free of OpenSSL/native-tls requirements.
+ureq = { version = "3.4", default-features = false, features = ["rustls", "gzip"] }
+
 # --- Extraction tiers ------------------------------------------------------
 llama-cpp-2 = { version = "0.1.156", optional = true }
 

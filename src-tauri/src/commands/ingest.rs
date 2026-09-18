@@ -285,7 +285,11 @@ async fn ingest_one(
         .await
         .stage("loading_tesseract_settings")
         .path(path_str)?;
-    let tesseract_config = crate::ocr::config_from_settings(&tesseract_setting);
+    let tesseract_config = crate::ocr::config_from_settings_with_paths(
+        &tesseract_setting,
+        Some(&state.data_dir),
+        state.resource_dir.as_deref(),
+    );
 
     if crate::ocr::should_fallback_to_ocr(&extracted.combined_text, extracted.page_count) {
         if tesseract_config.enabled && crate::ocr::is_available() {

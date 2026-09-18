@@ -72,6 +72,50 @@ pub fn config_from_settings(settings: &Value) -> OcrConfig {
     }
 }
 
+/// Resolve managed Tesseract resources only when the user has not supplied a
+/// path. A build can bundle a native executable under `binaries/tesseract`
+/// and the settings UI can download official tessdata language files into the
+/// per-instance models folder.
+pub fn config_from_settings_with_paths(
+    settings: &Value,
+    data_dir: Option<&std::path::Path>,
+    resource_dir: Option<&std::path::Path>,
+) -> OcrConfig {
+    let mut config = config_from_settings(settings);
+    if config.executable == "tesseract" {
+        if let Some(path) = bundled_executable(data_dir, resource_dir) {
+            config.executable = path.to_string_lossy().into_owned();
+        }
+    }
+    if config.datapath.is_none() {
+        if let Some(path) = data_dir
+            .map(|root| root.join("models").join("tesseract").join("tessdata"))
+            .filter(|path| path.is_dir())
+        {
+            config.datapath = Some(path.to_string_lossy().into_owned());
+        }
+    }
+    config
+}
+
+fn bundled_executable(
+    data_dir: Option<&std::path::Path>,
+    resource_dir: Option<&std::path::Path>,
+) -> Option<std::path::PathBuf> {
+    let name = if cfg!(target_os = "windows") {
+        "tesseract.exe"
+    } else {
+        "tesseract"
+    };
+    [
+        data_dir.map(|root| root.join("models").join("tesseract").join(name)),
+        resource_dir.map(|root| root.join("binaries").join("tesseract").join(name)),
+    ]
+    .into_iter()
+    .flatten()
+    .find(|path| path.is_file())
+}
+
 pub fn languages_from_settings(settings: &Value) -> Vec<String> {
     let languages: Vec<String> = settings
         .get("languages")

@@ -11,6 +11,7 @@ pub mod report_detail;
 pub mod reports;
 pub mod samples;
 pub mod search;
+pub mod security;
 pub mod settings;
 pub mod shell;
 pub mod tiers;
