@@ -77,7 +77,10 @@ ureq = { version = "3.4", default-features = false, features = ["rustls", "gzip"
 zip = { version = "6.0", default-features = false, features = ["deflate"] }
 
 # --- Extraction tiers ------------------------------------------------------
-llama-cpp-2 = { version = "0.1.156", optional = true }
+# The upstream default enables OpenMP. It has no portable ARM64 MSVC runtime
+# on the hosted Windows ARM64 toolchain, so use llama.cpp's native thread pool
+# instead; the embedded LLM and vision features remain compiled by default.
+llama-cpp-2 = { version = "0.1.156", default-features = false, optional = true }
 
 [features]
 # The distributed build includes every extraction tier. Tesseract still needs
