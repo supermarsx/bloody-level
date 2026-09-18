@@ -35,7 +35,11 @@ architecture label. The publish job verifies the exact 20-file matrix before
 creating the GitHub Release, so a missing or duplicate package blocks
 publication.
 
-Portable archives and installer/update targets are not interchangeable. Confirm which artifacts are intended for installation, portable use, or update distribution.
+Portable archives and installer/update targets are not interchangeable. Windows
+ZIPs contain the standalone `bloody-level.exe` plus its bundled `resources`
+directory (including PDFium and ontology assets), so they are portable
+applications rather than archives containing the NSIS/MSI installers. Linux
+ZIPs contain the AppImage, and macOS ZIPs contain the `.app` bundle.
 
 ## Signing
 

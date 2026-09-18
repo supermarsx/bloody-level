@@ -90,8 +90,9 @@ is independent and is not affiliated with either provider.
 - Encrypted local SQLite vault for reports, patients, settings, and audit data.
 - Password unlock with persisted retry backoff after failed attempts.
 - Optional passkey unlock where the platform supports the required capability.
-- Optional native OS-vault unlock through Windows Credential Manager, macOS
-  Keychain, or Linux Secret Service, with automatic unlock off by default.
+- Native OS-vault unlock through Windows Credential Manager, macOS Keychain, or
+  Linux Secret Service, enabled by default on supported platforms for new vaults
+  and available as a password-free first-run option.
 - Encrypted backup and restore with the copied source PDFs preserved.
 - Local model paths and ingestion status shown explicitly; missing capabilities
   are not silently presented as successful processing.
