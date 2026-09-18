@@ -2682,7 +2682,9 @@
   .security-input--password {
     width: min(100%, 22rem);
     max-width: 22rem;
-    flex: 0 1 22rem;
+    height: auto;
+    flex: 0 1 auto;
+    align-self: flex-start;
   }
   .security-input:focus { outline: none; border-color: rgb(var(--accent)); box-shadow: 0 0 0 3px rgb(var(--accent) / 0.18); }
   .passkey-list { display: flex; flex-direction: column; gap: 0.35rem; }
