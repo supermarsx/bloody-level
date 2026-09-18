@@ -481,7 +481,11 @@
         left: 56,
         right: prefs.showYSlider ? 28 : 12,
         top: 44,
-        bottom: prefs.showXSlider ? 44 : 16
+        bottom: prefs.showXSlider ? 44 : 16,
+        // Keep the axis labels inside the chart's measured bounds. This is
+        // especially important for the first/last time tick and for rotated
+        // labels, which otherwise can paint into the surrounding page.
+        containLabel: true
       },
       xAxis: {
         type: 'time',
@@ -494,6 +498,8 @@
           show: xLabelMode !== 'hide',
           rotate: xLabelMode === 'rotate' ? 35 : 0,
           hideOverlap: xLabelMode !== 'hide',
+          overflow: 'truncate',
+          ellipsis: '…',
           formatter: useNicknames
             ? formatNicknameAxisLabel
             : (value: number) => formatAxisDate(value, dateFormat)

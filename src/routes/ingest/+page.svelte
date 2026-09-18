@@ -11,7 +11,7 @@
     type IngestStage
   } from '$api/ingest';
   import * as samples from '$api/samples';
-  import { type AppErrorPayload, ERROR_TITLES } from '$api/errors';
+  import { AppError, type AppErrorPayload, ERROR_TITLES } from '$api/errors';
   import { toasts } from '../../lib/toasts/store.svelte';
   import { windowTitle } from '$lib/title.svelte';
 
@@ -76,6 +76,19 @@
     return f;
   }
 
+  function toErrorPayload(error: unknown): AppErrorPayload {
+    const normalized = AppError.fromUnknown(error, 'ingest_pdfs');
+    return {
+      kind: normalized.kind,
+      code: normalized.code,
+      message: normalized.message,
+      detail: normalized.detail,
+      retryable: normalized.retryable,
+      timestamp: normalized.timestamp,
+      context: normalized.context
+    };
+  }
+
   function applyProgress(p: IngestProgress) {
     const f = ensureFile(p.path);
     f.stage = p.stage;
@@ -97,8 +110,7 @@
    * final IPC response as the source of truth as well, so a dropped final
    * event can never leave a completed item displaying "Queued" forever.
    */
-  function applyOutcome(outcome: import('$api/ingest').IngestOutcome) {
-    const f = ensureFile(outcome.path);
+  function applyOutcomeToFile(f: FileState, outcome: import('$api/ingest').IngestOutcome) {
     const result = outcome.result;
     f.stage = outcome.ok
       ? result?.already_ingested ? 'duplicate' : 'completed'
@@ -115,26 +127,86 @@
         ? `already ingested as ${result.report_id}`
         : `ingested as ${result.report_id}`;
     }
-    files = new Map(files);
+  }
+
+  function applyOutcomes(paths: string[], outcomes: import('$api/ingest').IngestOutcome[]) {
+    const next = new Map(files);
+    const seen = new Set<string>();
+    for (const outcome of outcomes) {
+      const f = next.get(outcome.path);
+      if (f) {
+        seen.add(outcome.path);
+        applyOutcomeToFile(f, outcome);
+      }
+    }
+    for (const path of paths) {
+      if (seen.has(path)) continue;
+      const f = next.get(path);
+      if (!f) continue;
+      f.stage = 'error';
+      f.progress = 1;
+      f.error = toErrorPayload(new Error('Ingestion returned no final result for this file'));
+      f.message = 'No final result returned by the ingestion service';
+    }
+    files = next;
+  }
+
+  function markBatchError(paths: string[], error: unknown) {
+    const payload = toErrorPayload(error);
+    const next = new Map(files);
+    let completed = 0;
+    for (const path of paths) {
+      const f = next.get(path);
+      if (!f) continue;
+      if (f.stage === 'completed' || f.stage === 'duplicate') {
+        completed += 1;
+        continue;
+      }
+      f.stage = 'error';
+      f.progress = 1;
+      f.error = payload;
+      f.message = payload.message;
+    }
+    files = next;
+    batch = {
+      total: paths.length,
+      completed,
+      failed: paths.length - completed,
+      current_path: null,
+      elapsed_ms: batch?.elapsed_ms ?? 0
+    };
   }
 
   async function runIngest(paths: string[]) {
     if (busy || paths.length === 0) return;
     busy = true;
-    for (const p of paths) ensureFile(p);
+    for (const p of paths) {
+      const f = ensureFile(p);
+      if (f.stage === 'started') {
+        f.stage = 'hashing';
+        f.message = 'Preparing PDF…';
+      }
+    }
     files = new Map(files);
     try {
       const outcomes = await ingestPdfs(paths);
-      for (const outcome of outcomes) applyOutcome(outcome);
-      const completed = outcomes.filter((outcome) => outcome.ok).length;
+      if (!Array.isArray(outcomes)) {
+        throw new Error('Ingestion returned an invalid result');
+      }
+      applyOutcomes(paths, outcomes);
+      const completed = paths.filter((path) => {
+        const stage = files.get(path)?.stage;
+        return stage === 'completed' || stage === 'duplicate';
+      }).length;
       batch = {
-        total: outcomes.length,
+        total: paths.length,
         completed,
-        failed: outcomes.length - completed,
+        failed: paths.length - completed,
         current_path: null,
         elapsed_ms: batch?.elapsed_ms ?? 0
       };
     } catch (e) {
+      markBatchError(paths, e);
       toasts.error(e);
     } finally {
       busy = false;
