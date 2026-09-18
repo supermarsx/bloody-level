@@ -256,10 +256,11 @@ body {
    shared icon component rigid, and make any link that owns an SVG a single
    aligned inline control. */
 .app-icon {
-  display: block;
+  display: inline-block;
   flex: 0 0 auto;
   max-width: none;
   vertical-align: middle;
+  line-height: 1;
   transform: none;
 }
 a:has(> svg),
@@ -271,14 +272,14 @@ a:has(> .app-icon) {
 }
 a:has(> svg) > svg,
 a:has(> .app-icon) > .app-icon {
-  display: block;
+  display: inline-block;
   flex: 0 0 auto;
   vertical-align: middle;
 }
 table button > svg,
 table a > svg,
 table .app-icon {
-  display: block;
+  display: inline-block;
   flex: 0 0 auto;
   vertical-align: middle;
   transform: none;

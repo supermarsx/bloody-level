@@ -2752,8 +2752,6 @@
     border-radius: 0.6rem;
     padding: 0.4rem;
     align-self: start;
-    position: sticky;
-    top: 1rem;
   }
   .settings__tab {
     display: flex;
@@ -2778,6 +2776,16 @@
   .settings__tab-label { font-size: 0.85rem; font-weight: 600; }
   .settings__tab-hint  { font-size: 0.65rem; color: rgb(var(--fg-3)); }
   .settings__tab--active .settings__tab-hint { color: rgb(var(--accent) / 0.8); }
+
+  @media (min-width: 800px) {
+    .settings__nav {
+      position: sticky;
+      top: 4.25rem;
+      max-height: calc(100vh - 5.25rem);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+  }
 
   .settings__pane {
     display: flex;
