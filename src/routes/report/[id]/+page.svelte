@@ -25,6 +25,7 @@
   import { hrtMilestoneFor } from '$format/hrt-milestone';
   import { formatRelativeSpan } from '$format/dates';
   import Icon from '$components/icon.svelte';
+  import { patientAnalyteSummaries, type AnalyteReading, type PatientAnalyteSummary } from '$api/reports';
 
   // Time gap to the previous (older) report for this patient — surfaces in
   // the page header so users immediately see the cadence between draws.
@@ -46,6 +47,7 @@
 
   let reportId = $derived($page.params.id ?? '');
   let detail = $state<reportApi.ReportDetail | null>(null);
+  let analyteSeries = $state<PatientAnalyteSummary[]>([]);
   let err = $state<AppError | null>(null);
   let loading = $state(true);
   let filter = $state<'all' | 'matched' | 'unmatched' | 'abnormal' | 'inline_prior'>('all');
@@ -58,8 +60,16 @@
     loading = true;
     err = null;
     try {
-      detail = await reportApi.get(reportId);
+      const nextDetail = await reportApi.get(reportId);
+      detail = nextDetail;
+      try {
+        analyteSeries = await patientAnalyteSummaries(nextDetail.report.patient_id);
+      } catch {
+        // The report remains usable if longitudinal trend data is unavailable.
+        analyteSeries = [];
+      }
     } catch (e) {
+      analyteSeries = [];
       err = AppError.fromUnknown(e);
       toasts.error(err);
     } finally {
@@ -254,6 +264,25 @@
       }
     });
   });
+
+  function trendReadings(row: reportApi.ReportRow): AnalyteReading[] {
+    if (!row.analyte_id) return [];
+    return analyteSeries.find((summary) => summary.analyte_id === row.analyte_id)?.readings
+      .filter((reading) => reading.value != null && !reading.inline_prior) ?? [];
+  }
+
+  function sparklinePoints(readings: AnalyteReading[]): string {
+    if (readings.length < 2) return '';
+    const values = readings.map((reading) => reading.value as number);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = max - min || 1;
+    return values.map((value, index) => {
+      const x = (index / (values.length - 1)) * 100;
+      const y = 24 - ((value - min) / span) * 18;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+  }
 </script>
 
 <svelte:window onkeydown={onKeydown} />
@@ -552,6 +581,7 @@
           <thead class="text-fg2 text-xs uppercase tracking-wide">
             <tr class="border-b border-line">
               <th class="text-left px-3 py-2">Analyte</th>
+              <th class="text-left px-3 py-2 w-32">Trend</th>
               <th class="text-right px-3 py-2">Value</th>
               <th class="text-left px-3 py-2">Unit</th>
               <th class="text-left px-3 py-2">Ref</th>
@@ -601,6 +631,7 @@
                   : chartPrefs.referenceSource === 'library'
                     ? derivedFlag
                     : (derivedFlag ?? r.flag)}
+              {@const series = trendReadings(r)}
               <tr class="border-b border-line/50 hover:bg-bg3/50 {r.inline_prior_pdf ? 'opacity-70' : ''}">
                 <td class="px-3 py-2">
                   {#if r.analyte_id}
@@ -621,6 +652,22 @@
                     {#if methodInBrackets}
                       <div class="text-[10px] text-fg3 font-mono">{methodInBrackets}</div>
                     {/if}
+                  {/if}
+                </td>
+                <td class="px-3 py-2 align-middle">
+                  {#if r.analyte_id && series.length > 0}
+                    <a class="report-trend" href={`/analyte/${r.analyte_id}?patient=${detail.report.patient_id}`} title="Open the full longitudinal analyte history">
+                      <svg class="report-trend__spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-label={`${r.analyte_pt_name ?? cleanRaw} longitudinal trend`} role="img">
+                        {#if series.length >= 2}
+                          <polyline points={sparklinePoints(series)} fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" />
+                        {:else}
+                          <circle cx="50" cy="14" r="3" fill="currentColor" stroke="none" />
+                        {/if}
+                      </svg>
+                      <span class="report-trend__count">{series.length} reading{series.length === 1 ? '' : 's'}</span>
+                    </a>
+                  {:else}
+                    <span class="text-[11px] text-fg3">—</span>
                   {/if}
                 </td>
                 <td class="px-3 py-2 text-right tabular-nums">
@@ -689,6 +736,27 @@
 />
 
 <style>
+  .report-trend {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 7rem;
+    color: rgb(var(--accent));
+    vertical-align: middle;
+  }
+  .report-trend:hover { color: rgb(var(--fg-1)); }
+  .report-trend__spark {
+    display: block;
+    width: 7rem;
+    height: 1.75rem;
+  }
+  .report-trend__count {
+    color: rgb(var(--fg-3));
+    font-size: 0.625rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
   /* Mirror of the patient page's HRT tag — same look, included here so the
      header chip renders without depending on the patient page's CSS being
      loaded (each page is its own SvelteKit chunk). */
