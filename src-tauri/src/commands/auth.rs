@@ -43,9 +43,44 @@ const PASSKEY_WRAP_CONTEXT: &[u8] = b"bloody-level DMK wrap v1";
 // Passkeys created by pre-rename builds use this context. Keep it as a
 // compatibility fallback so a product rename cannot strand an existing vault.
 const LEGACY_PASSKEY_WRAP_CONTEXT: &[u8] = b"blevel-tracker DMK wrap v1";
+const DMK_TRANSITION_CONTEXT: &[u8] = b"bloody-level DMK transition v1";
 
 fn derive_passkey_kek(prf: &[u8], context: &[u8]) -> AppResult<secrecy::SecretBox<[u8; 32]>> {
     kdf::derive_kek_from_prf(prf, context)
+}
+
+fn derive_dmk_transition_kek(
+    dmk: &secrecy::SecretBox<[u8; 32]>,
+) -> AppResult<secrecy::SecretBox<[u8; 32]>> {
+    kdf::derive_kek_from_prf(dmk.expose_secret(), DMK_TRANSITION_CONTEXT)
+}
+
+/// Resolve password-authenticated DMK rotations that happened while the
+/// session was already unlocked. The password wrapper intentionally remains
+/// unchanged in that case, and these encrypted links bring it forward to the
+/// current DMK without requiring the password to be retained in memory.
+fn resolve_dmk_transitions(
+    ks: &Keystore,
+    mut dmk: secrecy::SecretBox<[u8; 32]>,
+) -> AppResult<secrecy::SecretBox<[u8; 32]>> {
+    for wrapper in &ks.wrappers {
+        let Wrapper::DmkTransition {
+            nonce_b64,
+            ciphertext_b64,
+        } = wrapper
+        else {
+            continue;
+        };
+        let nonce = B64
+            .decode(nonce_b64)
+            .map_err(|error| AppError::Base64(error.to_string()))?;
+        let ciphertext = B64
+            .decode(ciphertext_b64)
+            .map_err(|error| AppError::Base64(error.to_string()))?;
+        let kek = derive_dmk_transition_kek(&dmk)?;
+        dmk = wrap::unwrap_dmk(&kek, &nonce, &ciphertext)?;
+    }
+    Ok(dmk)
 }
 
 #[tauri::command]
@@ -232,6 +267,7 @@ pub async fn auth_unlock_password(state: State<'_, AppState>, password: String) 
             return Err(e);
         }
     };
+    let dmk = resolve_dmk_transitions(&ks, dmk)?;
 
     activate_dmk(&state, dmk).await?;
 
@@ -280,10 +316,13 @@ pub async fn auth_change_password(
         .map_err(|e| AppError::Base64(e.to_string()))?;
     let cur_kek = kdf::derive_kek_from_password(&args.current_password, &salt)?;
     let dmk = wrap::unwrap_dmk(&cur_kek, &nonce, &ct)?;
+    let dmk = resolve_dmk_transitions(&ks, dmk)?;
 
     let new_salt = generate_salt(16);
     let new_kek = kdf::derive_kek_from_password(&args.new_password, &new_salt)?;
     let (new_nonce, new_ct) = wrap::wrap_dmk(&new_kek, dmk.expose_secret())?;
+    ks.wrappers
+        .retain(|wrapper| !matches!(wrapper, Wrapper::DmkTransition { .. }));
     ks.replace_password(Wrapper::Password {
         kdf: "argon2id".into(),
         m: kdf::ARGON2_M_KIB,
@@ -489,56 +528,59 @@ pub async fn auth_rotate_master_key(
         .filter(|value| !value.is_empty());
     let new_dmk = generate_dmk();
     let mut wrappers = Vec::with_capacity(ks.wrappers.len());
+    let mut retained_password_wrapper = false;
+    let mut rekeyed_password_wrapper = false;
 
     for wrapper in &ks.wrappers {
         match wrapper {
             Wrapper::Password { .. } => {
-                let password = password.ok_or_else(|| {
-                    AppError::BadRequest(
-                        "enter the current password to rotate a password-protected master key"
-                            .into(),
-                    )
-                })?;
-                let current = ks
-                    .wrappers
-                    .iter()
-                    .find_map(|candidate| match candidate {
-                        Wrapper::Password {
-                            salt_b64,
-                            nonce_b64,
-                            ciphertext_b64,
-                            ..
-                        } => Some((salt_b64, nonce_b64, ciphertext_b64)),
-                        _ => None,
-                    })
-                    .ok_or_else(|| AppError::BadRequest("no password wrapper".into()))?;
-                let salt = B64
-                    .decode(current.0)
-                    .map_err(|error| AppError::Base64(error.to_string()))?;
-                let nonce = B64
-                    .decode(current.1)
-                    .map_err(|error| AppError::Base64(error.to_string()))?;
-                let ciphertext = B64
-                    .decode(current.2)
-                    .map_err(|error| AppError::Base64(error.to_string()))?;
-                let kek = kdf::derive_kek_from_password(password, &salt)?;
-                let verified = wrap::unwrap_dmk(&kek, &nonce, &ciphertext)?;
-                if verified.expose_secret() != old_dmk.expose_secret() {
-                    return Err(AppError::Crypto("current password is incorrect".into()));
+                if let Some(password) = password {
+                    let current = ks
+                        .wrappers
+                        .iter()
+                        .find_map(|candidate| match candidate {
+                            Wrapper::Password {
+                                salt_b64,
+                                nonce_b64,
+                                ciphertext_b64,
+                                ..
+                            } => Some((salt_b64, nonce_b64, ciphertext_b64)),
+                            _ => None,
+                        })
+                        .ok_or_else(|| AppError::BadRequest("no password wrapper".into()))?;
+                    let salt = B64
+                        .decode(current.0)
+                        .map_err(|error| AppError::Base64(error.to_string()))?;
+                    let nonce = B64
+                        .decode(current.1)
+                        .map_err(|error| AppError::Base64(error.to_string()))?;
+                    let ciphertext = B64
+                        .decode(current.2)
+                        .map_err(|error| AppError::Base64(error.to_string()))?;
+                    let kek = kdf::derive_kek_from_password(password, &salt)?;
+                    let verified =
+                        resolve_dmk_transitions(&ks, wrap::unwrap_dmk(&kek, &nonce, &ciphertext)?)?;
+                    if verified.expose_secret() != old_dmk.expose_secret() {
+                        return Err(AppError::Crypto("current password is incorrect".into()));
+                    }
+                    let new_salt = generate_salt(16);
+                    let new_kek = kdf::derive_kek_from_password(password, &new_salt)?;
+                    let (new_nonce, new_ciphertext) =
+                        wrap::wrap_dmk(&new_kek, new_dmk.expose_secret())?;
+                    wrappers.push(Wrapper::Password {
+                        kdf: "argon2id".into(),
+                        m: kdf::ARGON2_M_KIB,
+                        t: kdf::ARGON2_T,
+                        p: kdf::ARGON2_P,
+                        salt_b64: B64.encode(new_salt),
+                        nonce_b64: B64.encode(new_nonce),
+                        ciphertext_b64: B64.encode(new_ciphertext),
+                    });
+                    rekeyed_password_wrapper = true;
+                } else {
+                    wrappers.push(wrapper.clone());
+                    retained_password_wrapper = true;
                 }
-                let new_salt = generate_salt(16);
-                let new_kek = kdf::derive_kek_from_password(password, &new_salt)?;
-                let (new_nonce, new_ciphertext) =
-                    wrap::wrap_dmk(&new_kek, new_dmk.expose_secret())?;
-                wrappers.push(Wrapper::Password {
-                    kdf: "argon2id".into(),
-                    m: kdf::ARGON2_M_KIB,
-                    t: kdf::ARGON2_T,
-                    p: kdf::ARGON2_P,
-                    salt_b64: B64.encode(new_salt),
-                    nonce_b64: B64.encode(new_nonce),
-                    ciphertext_b64: B64.encode(new_ciphertext),
-                });
             }
             Wrapper::Passkey {
                 label,
@@ -590,7 +632,17 @@ pub async fn auth_rotate_master_key(
                     ciphertext_b64: B64.encode(new_ciphertext),
                 });
             }
+            Wrapper::DmkTransition { .. } => {}
         }
+    }
+
+    if retained_password_wrapper && !rekeyed_password_wrapper {
+        let transition_kek = derive_dmk_transition_kek(&old_dmk)?;
+        let (nonce, ciphertext) = wrap::wrap_dmk(&transition_kek, new_dmk.expose_secret())?;
+        wrappers.push(Wrapper::DmkTransition {
+            nonce_b64: B64.encode(nonce),
+            ciphertext_b64: B64.encode(ciphertext),
+        });
     }
 
     let old_pdf_key = kdf::derive_pdf_cache_key(&old_dmk)?;
@@ -717,4 +769,34 @@ fn passkey_statuses(ks: &Keystore) -> Vec<PasskeyStatus> {
             _ => None,
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolves_chained_dmk_transitions() {
+        let first = generate_dmk();
+        let second = generate_dmk();
+        let third = generate_dmk();
+        let first_kek = derive_dmk_transition_kek(&first).expect("first transition key");
+        let (first_nonce, first_ciphertext) =
+            wrap::wrap_dmk(&first_kek, second.expose_secret()).expect("first transition");
+        let second_kek = derive_dmk_transition_kek(&second).expect("second transition key");
+        let (second_nonce, second_ciphertext) =
+            wrap::wrap_dmk(&second_kek, third.expose_secret()).expect("second transition");
+        let mut ks = Keystore::empty();
+        ks.wrappers.push(Wrapper::DmkTransition {
+            nonce_b64: B64.encode(first_nonce),
+            ciphertext_b64: B64.encode(first_ciphertext),
+        });
+        ks.wrappers.push(Wrapper::DmkTransition {
+            nonce_b64: B64.encode(second_nonce),
+            ciphertext_b64: B64.encode(second_ciphertext),
+        });
+
+        let resolved = resolve_dmk_transitions(&ks, first).expect("resolve transitions");
+        assert_eq!(resolved.expose_secret(), third.expose_secret());
+    }
 }

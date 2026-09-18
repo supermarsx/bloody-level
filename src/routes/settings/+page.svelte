@@ -302,6 +302,7 @@
   async function enableOsVault() {
     try {
       securityStatus = await security.enableOsVault();
+      broadcastSecurityStatus();
       toasts.success('OS vault enabled', `The vault DMK is now protected by ${securityStatus.os_vault_platform}.`);
     } catch (e) { toasts.error(e); }
   }
@@ -314,18 +315,25 @@
     if (!confirmed) return;
     try {
       securityStatus = await security.disableOsVault();
+      broadcastSecurityStatus();
       toasts.success('OS vault disabled', 'Password and passkey unlock remain available.');
     } catch (e) { toasts.error(e); }
   }
 
   async function toggleAutoUnlock(enabled: boolean) {
-    try { securityStatus = await security.setAutoUnlock(enabled); }
+    try {
+      securityStatus = await security.setAutoUnlock(enabled);
+      broadcastSecurityStatus();
+    }
     catch (e) { toasts.error(e); }
+  }
+
+  function broadcastSecurityStatus() {
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('bloody-level:security-status'));
   }
 
   let passkeyLabel = $state('');
   let passkeyBusy = $state(false);
-  let rotationPassword = $state('');
   let rotationBusy = $state(false);
 
   async function registerPasskey() {
@@ -371,10 +379,6 @@
       { title: 'Rotate master key', kind: 'warning' }
     )) return;
     const passkeys = authStatus?.passkeys ?? [];
-    if (authStatus?.has_password && !rotationPassword) {
-      toasts.error(new Error('Enter the current vault password to rotate a password-protected master key.'));
-      return;
-    }
     rotationBusy = true;
     try {
       const rewraps: Array<{ credential_id_b64: string; prf_output_b64: string }> = [];
@@ -386,11 +390,9 @@
         });
       }
       await auth.rotateMasterKey({
-        current_password: rotationPassword || undefined,
         passkeys: rewraps,
       });
-      rotationPassword = '';
-      toasts.success('Master key rotated', 'The encrypted database, managed PDFs, OS vault, password wrapper, and passkey wrappers were re-keyed.');
+      toasts.success('Master key rotated', 'The encrypted database, managed PDFs, and configured unlock methods remain synchronized.');
       await refresh();
     } catch (e) { toasts.error(e); }
     finally { rotationBusy = false; }
@@ -1935,7 +1937,7 @@
                 <p class="text-[11px] text-fg3">No passkeys are configured.</p>
               {/if}
               <div class="security-inline-form">
-                <input class="security-input" bind:value={passkeyLabel} placeholder="Passkey label (optional)" maxlength="80" />
+                <input class="security-input security-input--passkey" bind:value={passkeyLabel} placeholder="Passkey label (optional)" maxlength="80" />
                 <button class="btn" type="button" disabled={passkeyBusy || !auth.isWebAuthnAvailable()} onclick={registerPasskey}>
                   <Icon name="plus" size={14} /> {passkeyBusy ? 'Registering…' : 'Add passkey'}
                 </button>
@@ -1948,14 +1950,12 @@
                 <h3 class="text-xs font-semibold">Rotate data master key</h3>
                 <p class="text-[11px] text-fg3">Re-key the encrypted database, managed PDFs, native OS-vault copy, password wrapper, and registered passkey wrappers. Each configured passkey will ask for a fresh authenticator assertion.</p>
               </div>
-              {#if authStatus?.has_password}
-                <input class="security-input security-input--password" type="password" bind:value={rotationPassword} placeholder="Current vault password" autocomplete="current-password" />
-              {:else}
-                <p class="text-[11px] text-fg3">This vault has no password wrapper; your unlocked OS-vault session authenticates rotation.</p>
-              {/if}
-              <button class="btn-accent" type="button" disabled={rotationBusy || !securityStatus.master_key_enabled} onclick={rotateMasterKey}>
-                <Icon name="refresh" size={14} /> {rotationBusy ? 'Rotating…' : 'Rotate master key'}
-              </button>
+              <div class="security-rotate-form">
+                <p class="text-[11px] text-fg3">Your unlocked session authorizes this rotation; no password entry is required.</p>
+                <button class="btn-accent security-rotate-button" type="button" disabled={rotationBusy || !securityStatus.master_key_enabled} onclick={rotateMasterKey}>
+                  <Icon name="refresh" size={14} /> {rotationBusy ? 'Rotating…' : 'Rotate master key'}
+                </button>
+              </div>
             </section>
           {:else}
             <p class="text-xs text-fg3">Loading security status…</p>
@@ -1992,7 +1992,7 @@
                 checked={ingestionTierEnabled('pdf_extraction')}
                 onchange={(e) => toggleIngestionTier('pdf_extraction', e.currentTarget.checked)} />
               <span>
-                <strong>Tier 1 · PDF extraction</strong>
+                <strong><span class="ingestion-tier-badge">Tier 1</span> PDF extraction</strong>
                 <small>Required foundation for every import.</small>
               </span>
             </label>
@@ -2002,7 +2002,7 @@
                 disabled={!tess?.compiled}
                 onchange={(e) => toggleIngestionTier('ocr', e.currentTarget.checked)} />
               <span>
-                <strong>Tier 2 · OCR</strong>
+                <strong><span class="ingestion-tier-badge">Tier 2</span> OCR</strong>
                 <small>Run Tesseract when embedded PDF text is sparse.</small>
               </span>
             </label>
@@ -2011,7 +2011,7 @@
                 checked={ingestionTierEnabled('hybrid_ocr_llm')}
                 onchange={(e) => toggleIngestionTier('hybrid_ocr_llm', e.currentTarget.checked)} />
               <span>
-                <strong>Tier 3 · Hybrid OCR + LLM</strong>
+                <strong><span class="ingestion-tier-badge">Tier 3</span> Hybrid OCR + LLM</strong>
                 <small>Record low-confidence escalation candidates when model tiers are enabled.</small>
               </span>
             </label>
@@ -2068,13 +2068,20 @@
 
         <section class="card p-5 space-y-3">
           <div>
-            <h2 class="text-sm font-semibold">OCR / LLM tiers</h2>
+            <h2 class="text-sm font-semibold">Higher-tier extraction resources</h2>
             <p class="text-xs text-fg3">
-              Each tier loads only when used. Toggle off to disable entirely. Compile with the
-              relevant cargo feature to make a tier available.
+              These resources support Tier 2 and Tier 3 only. Each loads only when used; compile
+              with the relevant cargo feature to make a resource available.
             </p>
           </div>
 
+          <div class="ingestion-tier-heading">
+            <span class="ingestion-tier-badge">Tier 2</span>
+            <div>
+              <h3>OCR</h3>
+              <p>Use Tesseract when a PDF has sparse or unusable embedded text.</p>
+            </div>
+          </div>
           {#if tess}
             <label class="row">
               <div class="row__body">
@@ -2108,6 +2115,13 @@
             </label>
           {/if}
 
+          <div class="ingestion-tier-heading">
+            <span class="ingestion-tier-badge">Tier 3</span>
+            <div>
+              <h3>Hybrid OCR + LLM</h3>
+              <p>Use optional repair and vision models for difficult or low-confidence results.</p>
+            </div>
+          </div>
           {#if llm}
             <div class="row">
               <div class="row__body">
@@ -2679,12 +2693,22 @@
     color: rgb(var(--fg-1));
     font-size: 0.75rem;
   }
-  .security-input--password {
-    width: min(100%, 22rem);
-    max-width: 22rem;
-    height: auto;
-    flex: 0 1 auto;
+  .security-input--passkey {
+    min-width: 0;
+    width: min(100%, 16rem);
+    max-width: 16rem;
+    flex: 0 1 16rem;
+  }
+  .security-rotate-form {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+  }
+  .security-rotate-form > p { margin: 0; }
+  .security-rotate-button {
     align-self: flex-start;
+    width: fit-content;
   }
   .security-input:focus { outline: none; border-color: rgb(var(--accent)); box-shadow: 0 0 0 3px rgb(var(--accent) / 0.18); }
   .passkey-list { display: flex; flex-direction: column; gap: 0.35rem; }
@@ -2838,6 +2862,30 @@
   }
   .ingestion-tier-toggle strong { font-size: 0.72rem; color: rgb(var(--fg-1)); }
   .ingestion-tier-toggle small { font-size: 0.67rem; line-height: 1.35; color: rgb(var(--fg-3)); }
+  .ingestion-tier-badge {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    padding: 0.12rem 0.35rem;
+    border: 1px solid rgb(var(--accent) / 0.45);
+    border-radius: 999px;
+    color: rgb(var(--accent));
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .ingestion-tier-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding-top: 0.35rem;
+  }
+  .ingestion-tier-heading > div { min-width: 0; }
+  .ingestion-tier-heading h3 { margin: 0; font-size: 0.75rem; font-weight: 650; color: rgb(var(--fg-1)); }
+  .ingestion-tier-heading p { margin: 0.12rem 0 0; font-size: 0.68rem; line-height: 1.35; color: rgb(var(--fg-3)); }
   .ingestion-tier-warning {
     display: inline-flex;
     align-items: center;

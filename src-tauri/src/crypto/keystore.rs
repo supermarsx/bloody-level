@@ -47,6 +47,14 @@ pub enum Wrapper {
         nonce_b64: String,
         ciphertext_b64: String,
     },
+    /// Bridges a password wrapper that still protects the previous DMK to
+    /// the current DMK after an in-session rotation. The transition is
+    /// encrypted with the previous DMK, so no password plaintext is needed
+    /// while the vault is already unlocked.
+    DmkTransition {
+        nonce_b64: String,
+        ciphertext_b64: String,
+    },
 }
 
 impl Keystore {

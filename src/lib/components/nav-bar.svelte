@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { theme } from '$theme/store.svelte';
   import * as auth from '$api/auth';
+  import * as security from '$api/security';
   import GlobalSearch from './global-search.svelte';
 
   // Inline SVG paths so the navbar has no asset dependencies. Each icon is
@@ -17,7 +19,24 @@
     { href: '/settings', label: 'Settings',  icon: 'settings' }
   ] as const;
 
+  let securityStatus = $state<security.SecurityStatus | null>(null);
+
+  async function refreshSecurityStatus() {
+    try { securityStatus = await security.status(); }
+    catch { /* The navbar remains usable if the status probe is unavailable. */ }
+  }
+
+  onMount(() => {
+    void refreshSecurityStatus();
+    const onSecurityStatusChanged = () => { void refreshSecurityStatus(); };
+    window.addEventListener('bloody-level:security-status', onSecurityStatusChanged);
+    return () => window.removeEventListener('bloody-level:security-status', onSecurityStatusChanged);
+  });
+
   async function lock() {
+    const current = await security.status();
+    securityStatus = current;
+    if (current.os_vault_auto_unlock) return;
     await auth.lock();
     location.href = '/';
   }
@@ -140,7 +159,13 @@
       </button>
       <!-- Icon-only lock (closed padlock). Click re-locks the DB and the
            layout's auth gate kicks the user back to the unlock screen. -->
-      <button class="icon-btn" onclick={lock} title="Lock the database" aria-label="Lock">
+      <button
+        class="icon-btn"
+        disabled={securityStatus?.os_vault_auto_unlock === true}
+        onclick={lock}
+        title={securityStatus?.os_vault_auto_unlock ? 'Disable automatic unlock before locking' : 'Lock the database'}
+        aria-label="Lock"
+      >
         <svg viewBox="0 0 20 20" width="16" height="16" fill="none"
              stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <rect x="4" y="9" width="12" height="8" rx="1.5"/>
