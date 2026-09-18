@@ -2,6 +2,9 @@
 
 Local-first blood-test tracking for enthusiasts and professionals who need a clear longitudinal view of blood-work records.
 
+[Download bloody-level](https://github.com/supermarsx/bloody-level/releases/latest){ .md-button .md-button--primary }
+[View the source on GitHub](https://github.com/supermarsx/bloody-level){ .md-button }
+
 Import a PDF, review the extracted values, compare trends over time, and keep the original report beside the structured record. The application is designed for private review and organization; it is not a diagnostic service.
 
 ![bloody-level analyte detail view with a synthetic demo patient and quarterly one-year history](assets/demo-analyte.png)
