@@ -74,6 +74,7 @@ keyring = { version = "4.2", default-features = true }
 # --- Explicit user-initiated resource downloads ---------------------------
 # Rustls keeps runtime downloads free of OpenSSL/native-tls requirements.
 ureq = { version = "3.4", default-features = false, features = ["rustls", "gzip"] }
+zip = { version = "6.0", default-features = false, features = ["deflate"] }
 
 # --- Extraction tiers ------------------------------------------------------
 llama-cpp-2 = { version = "0.1.156", optional = true }

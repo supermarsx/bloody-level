@@ -51,6 +51,7 @@
     | 'trash'
     | 'trend-up'
     | 'unlock'
+    | 'upload'
     | 'warning'
     | 'x';
 
@@ -121,6 +122,8 @@
     <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
   {:else if name === 'download'}
     <path d="M12 4v11m-4-4 4 4 4-4M5 20h14" />
+  {:else if name === 'upload'}
+    <path d="M12 20V9m-4 4 4-4 4 4M5 4h14" />
   {:else if name === 'edit'}
     <path d="m4 16-.8 4.8L8 20l10.8-10.8a2.8 2.8 0 0 0-4-4L4 16Z" />
     <path d="m13.5 6.5 4 4" />

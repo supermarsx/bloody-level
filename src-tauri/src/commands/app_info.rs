@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::Write;
 use std::path::Path;
 use std::time::SystemTime;
 
@@ -7,6 +9,8 @@ use tauri::State;
 
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
+use zip::write::FileOptions;
+use zip::{CompressionMethod, ZipArchive, ZipWriter};
 
 #[derive(Serialize)]
 pub struct AppInfo {
@@ -233,12 +237,9 @@ pub struct ExportResult {
     pub manifest_path: String,
 }
 
-/// Copy every file under the vault data dir to a user-chosen destination
-/// directory, alongside a small JSON manifest for verification on import.
-/// The DB itself is encrypted at rest — copying the file out preserves
-/// that encryption — so this is safe to keep on a USB stick or sync into
-/// an external backup tool. The keystore travels with the DB so the
-/// receiving device can unlock it with the original password.
+/// Package every file under the vault data dir into a ZIP archive in the
+/// user-chosen destination directory. The files remain encrypted at rest and
+/// the archive also carries a small manifest for verification on import.
 #[tauri::command]
 pub async fn export_vault(
     state: State<'_, AppState>,
@@ -255,35 +256,54 @@ pub async fn export_vault(
             dest.display()
         )));
     }
-    // Refuse to write into the vault itself — would silently shred the
-    // db when the recursive copy hits its own destination.
-    if dest.canonicalize().ok() == state.data_dir.canonicalize().ok() {
+    // Refuse to write inside the vault itself — the archive would otherwise
+    // be included while it is still being written.
+    let vault_root = state.data_dir.canonicalize().ok();
+    let destination_root = dest.canonicalize().ok();
+    if destination_root
+        .as_ref()
+        .zip(vault_root.as_ref())
+        .is_some_and(|(destination, vault)| destination.starts_with(vault))
+    {
         return Err(AppError::BadRequest(
-            "destination cannot be the vault itself".into(),
+            "destination cannot be inside the vault".into(),
         ));
     }
 
+    let archive_path = dest.join(format!("bloody-level-vault-{}.zip", unix_timestamp()));
+    let archive_file = File::create(&archive_path)
+        .map_err(|e| AppError::Internal(format!("create ZIP archive: {e}")))?;
+    let mut archive = ZipWriter::new(archive_file);
     let mut bytes_copied = 0u64;
     let mut files_copied = 0u64;
-    copy_dir_recursive(&state.data_dir, dest, &mut bytes_copied, &mut files_copied)
-        .map_err(|e| AppError::Internal(format!("copy: {e}")))?;
+    add_dir_to_zip(
+        &state.data_dir,
+        &state.data_dir,
+        &mut archive,
+        &mut bytes_copied,
+        &mut files_copied,
+    )?;
 
     // Write a small manifest so a human can confirm the contents at a
     // glance and a future "import" check can validate compatibility.
-    let manifest_path = dest.join("vault-manifest.json");
     let manifest = serde_json::json!({
         "app":             env!("CARGO_PKG_NAME"),
         "version":         env!("CARGO_PKG_VERSION"),
         "exported_at":     unix_timestamp(),
         "files_copied":    files_copied,
         "bytes_copied":    bytes_copied,
-        "source_data_dir": state.data_dir.to_string_lossy(),
+        "format":          "bloody-level-vault-zip-v1",
     });
-    std::fs::write(
-        &manifest_path,
-        serde_json::to_vec_pretty(&manifest).unwrap_or_default(),
-    )
-    .map_err(|e| AppError::Internal(format!("write manifest: {e}")))?;
+    archive
+        .start_file("vault-manifest.json", zip_options())
+        .map_err(|e| AppError::Internal(format!("write ZIP manifest: {e}")))?;
+    archive
+        .write_all(&serde_json::to_vec_pretty(&manifest).unwrap_or_default())
+        .map_err(|e| AppError::Internal(format!("write ZIP manifest: {e}")))?;
+    archive
+        .finish()
+        .map_err(|e| AppError::Internal(format!("finish ZIP archive: {e}")))?;
+    let manifest_path = format!("{}::vault-manifest.json", archive_path.display());
 
     // Audit-trail the export. Best-effort — does not abort if the audit
     // table can't be written (e.g. just-locked vault).
@@ -297,10 +317,10 @@ pub async fn export_vault(
                 None,
                 &format!(
                     "Exported vault to {} ({files_copied} files, {bytes_copied} bytes)",
-                    dest.display()
+                    archive_path.display()
                 ),
                 Some(&serde_json::json!({
-                    "destination": dest.to_string_lossy(),
+                    "destination": archive_path.to_string_lossy(),
                     "bytes":       bytes_copied,
                     "files":       files_copied,
                 })),
@@ -309,10 +329,10 @@ pub async fn export_vault(
     }
 
     Ok(ExportResult {
-        destination: dest.to_string_lossy().into(),
+        destination: archive_path.to_string_lossy().into(),
         bytes_copied,
         files_copied,
-        manifest_path: manifest_path.to_string_lossy().into(),
+        manifest_path,
     })
 }
 
@@ -324,7 +344,7 @@ pub struct ImportResult {
     pub backup_dir: String,
 }
 
-/// Replace the current vault contents with the exported snapshot at
+/// Replace the current vault contents with the exported ZIP snapshot at
 /// `source`. The current vault is renamed alongside as
 /// `data_dir.backup-<timestamp>` rather than deleted, so the user can
 /// roll back manually. Refuses to run while the DB connection is open
@@ -343,18 +363,86 @@ pub async fn import_vault(state: State<'_, AppState>, source: String) -> AppResu
     }
 
     let src = Path::new(&source);
-    if !src.is_dir() {
+    if !src.is_file() {
         return Err(AppError::BadRequest(format!(
-            "source must be a directory: {}",
+            "source must be a ZIP archive: {}",
             src.display()
         )));
     }
-    // Sanity check — at minimum the source must contain a keystore + db.
-    if !src.join("keystore.json").exists() || !src.join("data.db").exists() {
+    if !src
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("zip"))
+    {
         return Err(AppError::BadRequest(
-            "source directory missing keystore.json or data.db — is this a vault export?".into(),
+            "source must have a .zip extension — is this a bloody-level vault export?".into(),
         ));
     }
+
+    let import_dir = state
+        .data_dir
+        .parent()
+        .map(|parent| {
+            parent.join(format!(
+                "{}.import-{}",
+                state
+                    .data_dir
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("data"),
+                unix_timestamp()
+            ))
+        })
+        .ok_or_else(|| AppError::Internal("data_dir has no parent".into()))?;
+    if import_dir.exists() {
+        return Err(AppError::Internal(
+            "temporary import directory already exists".into(),
+        ));
+    }
+    std::fs::create_dir_all(&import_dir)
+        .map_err(|e| AppError::Internal(format!("create import staging directory: {e}")))?;
+
+    let extract_result = (|| -> AppResult<(u64, u64)> {
+        let file =
+            File::open(src).map_err(|e| AppError::Internal(format!("open ZIP archive: {e}")))?;
+        let mut archive = ZipArchive::new(file)
+            .map_err(|e| AppError::BadRequest(format!("invalid vault ZIP archive: {e}")))?;
+        let mut bytes_copied = 0u64;
+        let mut files_copied = 0u64;
+        for index in 0..archive.len() {
+            let mut entry = archive
+                .by_index(index)
+                .map_err(|e| AppError::BadRequest(format!("read vault ZIP entry: {e}")))?;
+            let relative = entry
+                .enclosed_name()
+                .ok_or_else(|| AppError::BadRequest("vault ZIP contains an unsafe path".into()))?
+                .to_path_buf();
+            let destination = import_dir.join(&relative);
+            if entry.is_dir() {
+                std::fs::create_dir_all(&destination)?;
+                continue;
+            }
+            if let Some(parent) = destination.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            let mut output = File::create(&destination)?;
+            bytes_copied += std::io::copy(&mut entry, &mut output)?;
+            files_copied += 1;
+        }
+        if !import_dir.join("keystore.json").is_file() || !import_dir.join("data.db").is_file() {
+            return Err(AppError::BadRequest(
+                "vault ZIP is missing keystore.json or data.db".into(),
+            ));
+        }
+        Ok((bytes_copied, files_copied))
+    })();
+    let (bytes_copied, files_copied) = match extract_result {
+        Ok(counts) => counts,
+        Err(error) => {
+            let _ = std::fs::remove_dir_all(&import_dir);
+            return Err(error);
+        }
+    };
 
     // Move the current data dir aside (atomic rename) before laying the
     // new files down. We DON'T delete it — the user may want to roll back.
@@ -377,13 +465,13 @@ pub async fn import_vault(state: State<'_, AppState>, source: String) -> AppResu
         std::fs::rename(&state.data_dir, &backup_dir)
             .map_err(|e| AppError::Internal(format!("backup current vault: {e}")))?;
     }
-    std::fs::create_dir_all(&state.data_dir)
-        .map_err(|e| AppError::Internal(format!("create new vault dir: {e}")))?;
-
-    let mut bytes_copied = 0u64;
-    let mut files_copied = 0u64;
-    copy_dir_recursive(src, &state.data_dir, &mut bytes_copied, &mut files_copied)
-        .map_err(|e| AppError::Internal(format!("copy: {e}")))?;
+    if let Err(error) = std::fs::rename(&import_dir, &state.data_dir) {
+        let _ = std::fs::rename(&backup_dir, &state.data_dir);
+        let _ = std::fs::remove_dir_all(&import_dir);
+        return Err(AppError::Internal(format!(
+            "activate imported vault: {error}"
+        )));
+    }
 
     Ok(ImportResult {
         source: src.to_string_lossy().into(),
@@ -393,23 +481,33 @@ pub async fn import_vault(state: State<'_, AppState>, source: String) -> AppResu
     })
 }
 
-fn copy_dir_recursive(
-    src: &Path,
-    dst: &Path,
+fn zip_options() -> FileOptions<'static, ()> {
+    FileOptions::default().compression_method(CompressionMethod::Deflated)
+}
+
+fn add_dir_to_zip(
+    root: &Path,
+    current: &Path,
+    archive: &mut ZipWriter<File>,
     bytes: &mut u64,
     files: &mut u64,
-) -> std::io::Result<()> {
-    std::fs::create_dir_all(dst)?;
-    for entry in std::fs::read_dir(src)? {
+) -> AppResult<()> {
+    for entry in std::fs::read_dir(current)? {
         let entry = entry?;
         let entry_src = entry.path();
-        let entry_dst = dst.join(entry.file_name());
         let md = entry.metadata()?;
         if md.is_dir() {
-            copy_dir_recursive(&entry_src, &entry_dst, bytes, files)?;
+            add_dir_to_zip(root, &entry_src, archive, bytes, files)?;
         } else if md.is_file() {
-            std::fs::copy(&entry_src, &entry_dst)?;
-            *bytes += md.len();
+            let relative = entry_src
+                .strip_prefix(root)
+                .map_err(|e| AppError::Internal(format!("ZIP relative path: {e}")))?;
+            let name = relative.to_string_lossy().replace('\\', "/");
+            archive
+                .start_file(name, zip_options())
+                .map_err(|e| AppError::Internal(format!("start ZIP entry: {e}")))?;
+            let mut input = File::open(&entry_src)?;
+            *bytes += std::io::copy(&mut input, archive)?;
             *files += 1;
         }
     }

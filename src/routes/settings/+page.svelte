@@ -474,7 +474,7 @@
       dest = await openDialog({
         directory: true,
         multiple: false,
-        title: 'Choose a destination folder for the vault export'
+        title: 'Choose a destination folder for the vault ZIP export'
       }) as string | null;
     } catch (e) {
       toasts.error(e);
@@ -511,7 +511,7 @@
     // Hard confirm + walk the user through the lock requirement. We do the
     // ask FIRST so we don't lock the vault if they cancel the picker.
     const proceed = await ask(
-      'Replace the current vault with a previous export?\n\n' +
+      'Replace the current vault with a previous ZIP export?\n\n' +
       '• The current vault will be renamed to data.backup-<timestamp> alongside the data dir.\n' +
       '• The vault will be locked first; you will need the password from the source export to unlock it.\n' +
       '• Restart the app after import for the new vault to take effect cleanly.\n\n' +
@@ -522,9 +522,10 @@
     let src: string | null = null;
     try {
       src = await openDialog({
-        directory: true,
+        directory: false,
         multiple: false,
-        title: 'Select the exported vault directory to restore'
+        title: 'Select the exported vault ZIP to restore',
+        filters: [{ name: 'bloody-level vault ZIP', extensions: ['zip'] }]
       }) as string | null;
     } catch (e) {
       toasts.error(e);
@@ -2469,19 +2470,19 @@
             <div>
               <h2 class="text-sm font-semibold">Backup &amp; restore</h2>
               <p class="text-xs text-fg2">
-                Export copies the entire encrypted vault — DB, keystore, PDFs, models — into a folder of
-                your choice. The file remains encrypted, so it's safe to keep on a USB stick or sync to
-                an external backup tool. Import replaces the current vault with a previous export
+                Export packages the entire encrypted vault — DB, keystore, PDFs, models — into a ZIP file
+                in a folder of your choice. The files remain encrypted, so the package is safe to keep on
+                a USB stick or sync to an external backup tool. Import restores from a previous ZIP export
                 (the current vault is renamed aside, not deleted, so you can roll back).
               </p>
             </div>
 
             <div class="flex flex-wrap gap-2">
               <button class="btn-accent" onclick={onExportVault} disabled={exporting}>
-                {exporting ? 'Exporting…' : '⤓ Export vault…'}
+                <Icon name="download" size={14} /> {exporting ? 'Exporting ZIP…' : 'Export vault ZIP…'}
               </button>
               <button class="btn" onclick={onImportVault} disabled={importing}>
-                {importing ? 'Importing…' : '⤒ Import vault…'}
+                <Icon name="upload" size={14} /> {importing ? 'Importing ZIP…' : 'Import vault ZIP…'}
               </button>
             </div>
 
@@ -2506,13 +2507,13 @@
 
             <div class="text-[11px] text-fg3 space-y-1">
               <p>
-                <strong class="text-fg2">Export:</strong> safe at any time. Audit-logged. The destination directory must
-                not be the vault itself; it gets created if missing.
+                <strong class="text-fg2">Export:</strong> safe at any time. Audit-logged. A ZIP package is created
+                in the selected directory; that directory must not be inside the vault.
               </p>
               <p>
-                <strong class="text-fg2">Import:</strong> requires the vault to be locked first (the open SQLite handle
-                would otherwise pin the old DB and corrupt the swap on Windows). The current vault is
-                renamed to <span class="font-mono">data.backup-&lt;timestamp&gt;</span> for one-click rollback.
+                <strong class="text-fg2">Import:</strong> select a bloody-level ZIP and lock the vault first (the
+                open SQLite handle would otherwise pin the old DB and corrupt the swap on Windows). The current
+                vault is renamed to <span class="font-mono">data.backup-&lt;timestamp&gt;</span> for one-click rollback.
               </p>
             </div>
           </section>
