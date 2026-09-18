@@ -11,10 +11,11 @@ If the password cannot be recovered, the welcome screen provides **Reset this in
 ## Password-free OS-vault setup
 
 On supported platforms, the welcome screen can create a vault without a
-password. The generated master key is protected by the operating system's
-credential store and automatic OS-vault unlock is enabled. Add a passkey from
-Settings as an additional recovery method; on a shared device, prefer a strong
-vault password or passkey instead of relying only on the OS account.
+password. The generated data master key is protected by the operating system's
+credential store and automatic OS-vault unlock is enabled; bloody-level never
+stores the vault password there. Add a passkey from Settings as an additional
+recovery method; on a shared device, prefer a strong vault password or passkey
+instead of relying only on the OS account.
 
 ## Optional passkey unlock
 
@@ -28,7 +29,12 @@ If the platform cannot provide the required capability, the password flow remain
 
 ## Unlock and lock
 
-Unlock the app with the password or a registered passkey. Use the lock control in the navigation bar whenever you leave the device. The vault key is kept in the Rust process while unlocked and is cleared when the app locks or closes.
+Unlock the app with the password, the native OS vault, or a registered passkey.
+For a password-free OS-vault vault, leaving the password field empty invokes the
+native key store; an empty string is never accepted as a password for a
+password-protected vault. Use the lock control in the navigation bar whenever
+you leave the device. The vault key is kept in the Rust process while unlocked
+and is cleared when the app locks or closes.
 
 Repeated failed unlocks use persisted backoff. Wait for the displayed retry time rather than repeatedly submitting guesses.
 

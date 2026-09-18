@@ -10,6 +10,12 @@ credential store. Existing unlocked vaults can choose **Enable native OS vault**
 to store a device-unlock copy of the data master key in the operating system's
 credential store:
 
+Only the data master key is placed in the OS vault. The vault password is never
+stored there. A password-free OS-vault vault can be unlocked by leaving the
+password field empty, which retrieves the key from the configured native store;
+an empty string is not treated as a valid password when a password wrapper
+exists.
+
 | Platform | Native store                                                                             |
 | -------- | ---------------------------------------------------------------------------------------- |
 | Windows  | Windows Credential Manager                                                               |
@@ -20,7 +26,9 @@ The database and managed PDF cache remain encrypted independently. The OS
 vault is an additional local wrapper that makes unlocking convenient; it does
 not remove password or passkey recovery methods. A supported platform can use
 the OS-vault-only first-run option, so a password is not mandatory. **Disable OS vault**
-removes that credential and leaves the encrypted vault intact.
+removes that credential and leaves the encrypted vault intact. Keep a strong
+vault password or passkey before doing this; the app warns that the password
+protects access to the data and blocks disabling the last recovery route.
 
 ## Automatic unlock
 

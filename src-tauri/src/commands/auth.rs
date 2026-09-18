@@ -264,6 +264,32 @@ pub async fn auth_unlock_password(state: State<'_, AppState>, password: String) 
     let ks_path = state.keystore_path();
     let mut ks = Keystore::load(&ks_path)?;
     ks.enforce_unlock_backoff()?;
+
+    // A passwordless vault still has an encrypted database: its DMK is held
+    // by the configured native OS vault. Accepting an empty password here
+    // gives the unlock screen a predictable fallback when automatic OS-vault
+    // unlock is disabled or unavailable at launch. Never treat an empty
+    // string as a password for a password-protected vault.
+    if !ks.has_password() {
+        if !password.is_empty() {
+            return Err(AppError::BadRequest(
+                "this vault has no password; leave the password field empty or use a passkey"
+                    .into(),
+            ));
+        }
+        if !(ks.os_vault_enabled && crate::crypto::native_vault::status().credential_present) {
+            return Err(AppError::BadRequest(
+                "no vault password is configured; use the native OS vault or a passkey to unlock"
+                    .into(),
+            ));
+        }
+        let dmk = crate::crypto::native_vault::get_dmk()?;
+        activate_dmk(&state, dmk).await?;
+        ks.record_success();
+        ks.save(&ks_path)?;
+        return Ok(());
+    }
+
     let pw = ks
         .wrappers
         .iter()

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { ask } from '@tauri-apps/plugin-dialog';
-  import { listPatients, listReports, type PatientSummary, type ReportSummary } from '$api/reports';
+  import { listPatients, listReports, patientAnalyteSummaries, type AnalyteReading, type PatientAnalyteSummary, type PatientSummary, type ReportSummary } from '$api/reports';
   import * as admin from '$api/records-admin';
   import * as reparse from '$api/reparse';
   import { AppError } from '$api/errors';
@@ -23,6 +23,8 @@
 
   let patients = $state<PatientSummary[]>([]);
   let reports = $state<ReportSummary[]>([]);
+  let patientAnalytes = $state<Record<string, PatientAnalyteSummary[]>>({});
+  let analytesLoading = $state(false);
   let loading = $state(true);
 
   let editingPatient = $state<string | null>(null);
@@ -66,13 +68,23 @@
   async function refresh() {
     loading = true;
     try {
-      [patients, reports] = await Promise.all([listPatients(), listReports()]);
+      const [nextPatients, nextReports] = await Promise.all([listPatients(), listReports()]);
+      patients = nextPatients;
+      reports = nextReports;
+      analytesLoading = nextReports.length > 0;
+      const patientIds = [...new Set(nextReports.map((report) => report.patient_id))];
+      const snapshots = await Promise.all(patientIds.map(async (patientId) => [
+        patientId,
+        await patientAnalyteSummaries(patientId),
+      ] as const));
+      patientAnalytes = Object.fromEntries(snapshots);
       // Drop selections for reports that no longer exist
-      const valid = new Set(reports.map((r) => r.id));
+      const valid = new Set(nextReports.map((r) => r.id));
       selected = new Set([...selected].filter((id) => valid.has(id)));
     } catch (e) {
       toasts.error(e);
     } finally {
+      analytesLoading = false;
       loading = false;
     }
   }
@@ -158,6 +170,56 @@
     out.sort((a, b) => b.collection_date_iso.localeCompare(a.collection_date_iso));
     return out;
   });
+
+  type ReportAnalyte = {
+    id: string;
+    name: string;
+    reading: AnalyteReading;
+    readings: AnalyteReading[];
+  };
+
+  function reportAnalytes(report: ReportSummary): ReportAnalyte[] {
+    return (patientAnalytes[report.patient_id] ?? [])
+      .map((summary) => {
+        const reading = summary.readings.find((item) => item.source_report_id === report.id && !item.inline_prior);
+        if (!reading) return null;
+        return {
+          id: summary.analyte_id,
+          name: summary.analyte_name,
+          reading,
+          readings: summary.readings.filter((item) => item.value != null && !item.inline_prior),
+        } satisfies ReportAnalyte;
+      })
+      .filter((item): item is ReportAnalyte => item !== null)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  function groupAnalytes(group: ReportGroup): ReportAnalyte[] {
+    const seen = new Set<string>();
+    return group.sources.flatMap((report) => reportAnalytes(report)).filter((analyte) => {
+      if (seen.has(analyte.id)) return false;
+      seen.add(analyte.id);
+      return true;
+    });
+  }
+
+  function sparklinePoints(readings: AnalyteReading[]): string {
+    if (readings.length < 2) return '';
+    const values = readings.map((reading) => reading.value as number);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = max - min || 1;
+    return values.map((value, index) => {
+      const x = (index / (values.length - 1)) * 100;
+      const y = 18 - ((value - min) / span) * 14;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+  }
+
+  function readingLabel(reading: AnalyteReading): string {
+    if (reading.value != null) return reading.value.toLocaleString(undefined, { maximumFractionDigits: 4 });
+    return reading.qualitative ?? '—';
+  }
 
   // ───────── Bulk select / delete ─────────
   function toggleSelect(reportId: string) {
@@ -432,6 +494,7 @@
                 <th class="text-right px-3 py-2">Sources</th>
                 <th class="text-right px-3 py-2">Rows</th>
                 <th class="text-right px-3 py-2">Conf</th>
+                <th class="text-left px-3 py-2">Analytes</th>
                 <th class="text-left px-3 py-2 w-24">Actions</th>
               </tr>
             </thead>
@@ -482,6 +545,28 @@
                       <span class="text-[10px] text-fg3">/ min {(g.min_confidence * 100).toFixed(0)}%</span>
                     {/if}
                   </td>
+                  <td class="px-3 py-2 align-top">
+                    {#if analytesLoading}
+                      <span class="text-[11px] text-fg3">Loading trends…</span>
+                    {:else if groupAnalytes(g).length === 0}
+                      <span class="text-[11px] text-fg3">No linked analytes</span>
+                    {:else}
+                      <div class="report-analytes" aria-label="Analyte trends in this report">
+                        {#each groupAnalytes(g) as analyte (analyte.id)}
+                          <a class="report-analyte" href={`/analyte/${analyte.id}?patient=${g.patient_id}`} title={`${analyte.name}: ${readingLabel(analyte.reading)} ${analyte.reading.unit ?? ''}`}>
+                            <span class="report-analyte__name">{analyte.name}</span>
+                            {#if sparklinePoints(analyte.readings)}
+                              <svg class="report-analyte__spark" viewBox="0 0 100 22" preserveAspectRatio="none" aria-hidden="true">
+                                <polyline points={sparklinePoints(analyte.readings)} fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" />
+                              </svg>
+                            {:else}
+                              <span class="report-analyte__value">{readingLabel(analyte.reading)}</span>
+                            {/if}
+                          </a>
+                        {/each}
+                      </div>
+                    {/if}
+                  </td>
                   <td class="px-3 py-2">
                     {#if g.sources.length === 1}
                       <div class="flex items-center gap-1">
@@ -520,6 +605,22 @@
                       <td class="px-3 py-1.5 text-right tabular-nums text-xs {r.doc_confidence < 0.7 ? 'text-warn' : 'text-fg3'}">
                         {(r.doc_confidence * 100).toFixed(0)}%
                       </td>
+                      <td class="px-3 py-1.5 align-top">
+                        <div class="report-analytes report-analytes--expanded">
+                          {#each reportAnalytes(r) as analyte (analyte.id)}
+                            <a class="report-analyte" href={`/analyte/${analyte.id}?patient=${r.patient_id}`} title={`${analyte.name}: ${readingLabel(analyte.reading)} ${analyte.reading.unit ?? ''}`}>
+                              <span class="report-analyte__name">{analyte.name}</span>
+                              {#if sparklinePoints(analyte.readings)}
+                                <svg class="report-analyte__spark" viewBox="0 0 100 22" preserveAspectRatio="none" aria-hidden="true">
+                                  <polyline points={sparklinePoints(analyte.readings)} fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" />
+                                </svg>
+                              {:else}
+                                <span class="report-analyte__value">{readingLabel(analyte.reading)}</span>
+                              {/if}
+                            </a>
+                          {/each}
+                        </div>
+                      </td>
                       <td class="px-3 py-1.5">
                         <div class="flex items-center gap-1">
                           <a class="btn text-xs" href={`/report/${r.id}`}>Open</a>
@@ -547,3 +648,51 @@
     onPick={onMergeInto}
   />
 </div>
+
+<style>
+  .report-analytes {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 11rem;
+    max-height: 8.5rem;
+    overflow-y: auto;
+    padding-right: 0.2rem;
+  }
+  .report-analytes--expanded { min-width: 10rem; max-height: 7rem; }
+  .report-analyte {
+    display: grid;
+    grid-template-columns: minmax(5rem, 1fr) 4.5rem;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    color: rgb(var(--fg-2));
+    font-size: 0.65rem;
+    line-height: 1.1;
+  }
+  .report-analyte:hover { color: rgb(var(--accent)); }
+  .report-analyte__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .report-analyte__spark {
+    display: block;
+    width: 4.5rem;
+    height: 1.1rem;
+    color: rgb(var(--accent));
+  }
+  .report-analyte__value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
+    color: rgb(var(--fg-3));
+    font-variant-numeric: tabular-nums;
+  }
+  @media (max-width: 900px) {
+    .report-analytes { min-width: 8rem; }
+    .report-analyte { grid-template-columns: minmax(4rem, 1fr) 3.5rem; }
+    .report-analyte__spark { width: 3.5rem; }
+  }
+</style>

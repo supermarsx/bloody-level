@@ -308,8 +308,11 @@
   }
 
   async function disableOsVault() {
+    const hasPassword = authStatus?.has_password === true;
     const confirmed = await ask(
-      'Disable native OS vault unlock? The encrypted database and PDF cache will remain protected, but this device will no longer offer OS-vault unlock.',
+      hasPassword
+        ? 'Disable native OS vault unlock? The encrypted database and PDF cache will remain protected, but this device will no longer offer OS-vault unlock. Your vault password is important: keep it strong and recoverable because it protects access to the data on this device.'
+        : 'Disable native OS vault unlock? The encrypted database and PDF cache will remain protected, but this device will no longer offer OS-vault unlock. No vault password is configured, so you will need your registered passkey to unlock. Set a password first if you want password recovery.',
       { title: 'Disable OS vault', kind: 'warning' }
     );
     if (!confirmed) return;

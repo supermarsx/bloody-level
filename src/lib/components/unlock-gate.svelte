@@ -321,7 +321,11 @@
       {:else}
         <div class="space-y-1">
           <h2 class="text-base font-semibold">Welcome back</h2>
-          <p class="text-xs text-fg2">Enter your password to unlock.</p>
+          <p class="text-xs text-fg2">
+            {status?.has_password
+              ? 'Enter your password to unlock.'
+              : 'This vault has no password. Use the native OS vault or a registered passkey to unlock.'}
+          </p>
         </div>
 
         {#if status?.os_vault_configured}
@@ -340,8 +344,8 @@
               bind:value={password}
               autocomplete="current-password"
               oncontextmenu={keepContextMenu}
-              onkeydown={(e) => e.key === 'Enter' && password && !busy && unlockPassword()}
-              placeholder="Your vault password"
+              onkeydown={(e) => e.key === 'Enter' && (!status?.has_password || password) && !busy && unlockPassword()}
+              placeholder={status?.has_password ? 'Your vault password' : 'Leave blank — no password is configured'}
             />
             <button type="button" class="gate__pw-toggle"
               onclick={() => (showPw = !showPw)}
@@ -353,9 +357,12 @@
 
         <button
           class="btn-accent w-full"
-          disabled={busy || !password}
+          disabled={busy || (!!status?.has_password && !password) || (!!status && !status.has_password && !status.os_vault_configured)}
           onclick={unlockPassword}
-        >{busy ? 'Unlocking…' : 'Unlock'}</button>
+        >{busy ? 'Unlocking…' : status?.has_password ? 'Unlock' : 'Unlock without password'}</button>
+        {#if status && !status.has_password && !status.os_vault_configured}
+          <p class="text-[11px] text-fg3">No passwordless OS-vault route is available. Use a registered passkey below.</p>
+        {/if}
 
         <div class="gate__reset-area">
           <button

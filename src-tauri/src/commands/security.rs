@@ -72,8 +72,14 @@ pub async fn security_disable_os_vault(
             "disabling OS vault unlock requires explicit confirmation".into(),
         ));
     }
-    native_vault::delete()?;
     let path = state.keystore_path();
+    let ks = Keystore::load(&path)?;
+    if !ks.has_password() && !ks.has_passkey() {
+        return Err(AppError::BadRequest(
+            "set a vault password or register a passkey before disabling the OS vault; otherwise this vault has no recovery method".into(),
+        ));
+    }
+    native_vault::delete()?;
     let mut ks = Keystore::load(&path)?;
     ks.os_vault_enabled = false;
     ks.os_vault_auto_unlock = false;
