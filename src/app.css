@@ -250,6 +250,40 @@ body {
   flex: 0 0 auto;
 }
 
+/* Tailwind preflight makes SVGs block-level. That is correct for standalone
+   artwork, but it makes a trailing icon in an inline link drop onto a second
+   line and lets compact table controls inherit odd baseline sizing. Keep the
+   shared icon component rigid, and make any link that owns an SVG a single
+   aligned inline control. */
+.app-icon {
+  display: block;
+  flex: 0 0 auto;
+  max-width: none;
+  vertical-align: middle;
+  transform: none;
+}
+a:has(> svg),
+a:has(> .app-icon) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+a:has(> svg) > svg,
+a:has(> .app-icon) > .app-icon {
+  display: block;
+  flex: 0 0 auto;
+  vertical-align: middle;
+}
+table button > svg,
+table a > svg,
+table .app-icon {
+  display: block;
+  flex: 0 0 auto;
+  vertical-align: middle;
+  transform: none;
+}
+
 .btn:disabled,
 .btn-accent:disabled {
   cursor: not-allowed;

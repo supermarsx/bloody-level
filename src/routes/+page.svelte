@@ -171,7 +171,7 @@
         {:else if section === 'patients'}
           <section class="dashboard-section dashboard-section--column">
             <h2 class="text-sm font-semibold mb-2">Patients</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div class="grid grid-cols-1 gap-3">
               {#each patientsByActivity as p}
                 <a class="card p-3 hover:bg-bg3 transition-colors" href={`/patient/${p.id}`}>
                   <div class="flex items-baseline justify-between gap-2"><span class="text-sm font-medium truncate">{p.display_name}{#if p.nickname}<span class="ml-1 text-fg3 font-normal">"{p.nickname}"</span>{/if}</span><span class="text-xs text-fg3 uppercase">{p.sex}</span></div>
@@ -192,7 +192,7 @@
 <style>
   .dashboard-sections {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(18rem, 1fr));
     gap: 1.25rem;
     align-items: stretch;
   }
