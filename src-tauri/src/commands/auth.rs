@@ -1,6 +1,7 @@
 use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
 use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
 use tauri::State;
 
 use crate::crypto::{
@@ -53,6 +54,65 @@ fn derive_dmk_transition_kek(
     dmk: &secrecy::SecretBox<[u8; 32]>,
 ) -> AppResult<secrecy::SecretBox<[u8; 32]>> {
     kdf::derive_kek_from_prf(dmk.expose_secret(), DMK_TRANSITION_CONTEXT)
+}
+
+/// Rename legacy hash-named managed PDFs to opaque, salted names and keep the
+/// encrypted report metadata pointing at the new paths. The source hash stays
+/// in the encrypted database for duplicate detection, never in the filename.
+fn migrate_pdf_cache_filenames(
+    db: &mut Database,
+    dir: &Path,
+    key: &secrecy::SecretBox<[u8; 32]>,
+) -> AppResult<()> {
+    if !dir.exists() {
+        return Ok(());
+    }
+
+    let records: Vec<(String, String, String)> = {
+        let mut statement = db.conn.prepare(
+            "SELECT id, raw_pdf_path, source_sha256
+             FROM reports
+             WHERE raw_pdf_path IS NOT NULL AND raw_pdf_path <> ''",
+        )?;
+        let rows = statement
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
+            .collect::<Result<_, _>>()?;
+        rows
+    };
+
+    let mut moved: Vec<(PathBuf, PathBuf)> = Vec::new();
+    let result = (|| {
+        let tx = db.conn.transaction()?;
+        for (report_id, raw_pdf_path, source_sha256) in records {
+            let old_path = PathBuf::from(raw_pdf_path);
+            if !old_path.is_file()
+                || !old_path.starts_with(dir)
+                || crate::crypto::file::is_salted_cache_path(&old_path)
+            {
+                continue;
+            }
+
+            let new_path = dir.join(crate::crypto::file::salted_cache_filename(
+                &source_sha256,
+                key,
+            ));
+            std::fs::rename(&old_path, &new_path)?;
+            tx.execute(
+                "UPDATE reports SET raw_pdf_path = ?1 WHERE id = ?2",
+                rusqlite::params![new_path.to_string_lossy().to_string(), report_id],
+            )?;
+            moved.push((old_path, new_path));
+        }
+        tx.commit()?;
+        Ok::<(), AppError>(())
+    })();
+
+    if result.is_err() {
+        for (old_path, new_path) in moved.into_iter().rev() {
+            let _ = std::fs::rename(new_path, old_path);
+        }
+    }
+    result
 }
 
 /// Resolve password-authenticated DMK rotations that happened while the
@@ -144,6 +204,7 @@ pub(crate) async fn activate_dmk(
     let _ = db.ensure_ontology(state.ontology_seed_path().as_deref());
     let pdf_key = kdf::derive_pdf_cache_key(&dmk)?;
     crate::crypto::file::migrate_plaintext_pdf_cache(&state.pdf_dir(), &pdf_key)?;
+    migrate_pdf_cache_filenames(&mut db, &state.pdf_dir(), &pdf_key)?;
     let dmk_copy = secrecy::SecretBox::new(Box::new(*dmk.expose_secret()));
     *state.db.lock().await = Some(db);
     *state.dmk.lock().await = Some(dmk_copy);

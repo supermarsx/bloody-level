@@ -46,6 +46,10 @@ native unlock path.
 - The database is SQLCipher-encrypted at rest.
 - Managed PDF copies are encrypted with XChaCha20-Poly1305 and are only
   decrypted into a short-lived temporary hand-off when opened externally.
+- Managed PDF filenames use a fresh per-file salt and an instance-keyed digest;
+  the original source SHA-256 is retained only inside the encrypted database
+  for duplicate detection and is not used as the on-disk filename. Existing
+  hash-named cache files are migrated when the vault is unlocked.
 - Password unlock uses Argon2id and failed attempts use persisted backoff.
 - Passkeys are an additional local unlock method where WebAuthn PRF is
   supported.

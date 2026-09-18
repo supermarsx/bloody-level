@@ -623,14 +623,17 @@ async fn ingest_one(
     let report_id = format!("{}-{}", collection_date_iso, &extracted.sha256_hex[..8]);
     let now = now_secs();
 
-    let pdf_dest_dir = state.pdf_dir();
-    std::fs::create_dir_all(&pdf_dest_dir)?;
-    let pdf_dest = pdf_dest_dir.join(format!("{}.pdf", extracted.sha256_hex));
     let pdf_key = {
         let guard = state.pdf_key.lock().await;
         let key = guard.as_ref().ok_or(AppError::Locked)?;
         SecretBox::new(Box::new(*key.expose_secret()))
     };
+    let pdf_dest_dir = state.pdf_dir();
+    std::fs::create_dir_all(&pdf_dest_dir)?;
+    let pdf_dest = pdf_dest_dir.join(crate::crypto::file::salted_cache_filename(
+        &extracted.sha256_hex,
+        &pdf_key,
+    ));
     crate::crypto::file::encrypt_file(&pdf_path, &pdf_dest, &pdf_key)?;
     let pdf_dest_str = pdf_dest.to_string_lossy().to_string();
 

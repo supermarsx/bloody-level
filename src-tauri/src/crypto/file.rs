@@ -7,6 +7,7 @@ use chacha20poly1305::{
 };
 use rand::RngExt;
 use secrecy::{ExposeSecret, SecretBox};
+use sha2::{Digest, Sha256};
 
 use crate::error::{AppError, AppResult};
 
@@ -14,6 +15,39 @@ use crate::error::{AppError, AppResult};
 /// and authentication tag. The format deliberately does not resemble a PDF.
 pub const MAGIC: &[u8] = b"BLPDFENC\x01";
 const NONCE_LEN: usize = 24;
+const SALTED_FILENAME_PREFIX: &str = "blpdf-v1";
+
+/// Build an opaque managed-PDF filename. The source hash remains useful for
+/// duplicate detection inside the encrypted database, but it must not be
+/// exposed as a directly guessable filename. A per-file random salt plus the
+/// instance PDF-cache key makes the on-disk name unlinkable without the vault.
+pub fn salted_cache_filename(source_sha256: &str, key: &SecretBox<[u8; 32]>) -> String {
+    let mut salt = [0u8; 16];
+    rand::rng().fill(&mut salt);
+
+    let mut digest = Sha256::new();
+    digest.update(b"bloody-level PDF cache filename v1");
+    digest.update(key.expose_secret());
+    digest.update(salt);
+    digest.update(source_sha256.as_bytes());
+    let digest = digest.finalize();
+
+    format!(
+        "{SALTED_FILENAME_PREFIX}-{}-{}.pdf",
+        hex_lower(&salt),
+        hex_lower(&digest[..16])
+    )
+}
+
+pub fn is_salted_cache_path(path: &Path) -> bool {
+    path.file_stem()
+        .and_then(|stem| stem.to_str())
+        .is_some_and(|stem| stem.starts_with(SALTED_FILENAME_PREFIX))
+}
+
+fn hex_lower(bytes: &[u8]) -> String {
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+}
 
 fn cipher(key: &SecretBox<[u8; 32]>) -> AppResult<XChaCha20Poly1305> {
     XChaCha20Poly1305::new_from_slice(key.expose_secret())
@@ -220,5 +254,17 @@ mod tests {
         reencrypt_cache(dir.path(), &key(7), &key(8)).unwrap();
         assert!(decrypt_file(&cached, &key(7)).is_err());
         assert_eq!(decrypt_file(&cached, &key(8)).unwrap(), b"%PDF source");
+    }
+
+    #[test]
+    fn salted_cache_names_do_not_expose_source_hashes() {
+        let source_hash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        let first = salted_cache_filename(source_hash, &key(7));
+        let second = salted_cache_filename(source_hash, &key(7));
+
+        assert_ne!(first, second);
+        assert!(!first.contains(source_hash));
+        assert!(is_salted_cache_path(Path::new(&first)));
+        assert!(!is_salted_cache_path(Path::new("0123456789abcdef.pdf")));
     }
 }
