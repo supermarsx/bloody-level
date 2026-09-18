@@ -335,6 +335,38 @@
   let passkeyLabel = $state('');
   let passkeyBusy = $state(false);
   let rotationBusy = $state(false);
+  let vaultPasswordCurrent = $state('');
+  let vaultPasswordNew = $state('');
+  let vaultPasswordConfirm = $state('');
+  let vaultPasswordBusy = $state(false);
+
+  async function saveVaultPassword() {
+    if (vaultPasswordBusy) return;
+    if (vaultPasswordNew !== vaultPasswordConfirm) {
+      toasts.error(new Error('The new vault passwords do not match.'));
+      return;
+    }
+    vaultPasswordBusy = true;
+    try {
+      if (authStatus?.has_password) {
+        await auth.changePassword(vaultPasswordCurrent, vaultPasswordNew);
+      } else {
+        await auth.setPassword(vaultPasswordNew);
+      }
+      vaultPasswordCurrent = '';
+      vaultPasswordNew = '';
+      vaultPasswordConfirm = '';
+      authStatus = await auth.status();
+      toasts.success(
+        authStatus.has_password ? 'Vault password changed' : 'Vault password added',
+        'Use the new password the next time this vault is locked.'
+      );
+    } catch (e) {
+      toasts.error(e);
+    } finally {
+      vaultPasswordBusy = false;
+    }
+  }
 
   async function registerPasskey() {
     if (passkeyBusy) return;
@@ -1921,6 +1953,27 @@
 
             <section class="security-subsection">
               <div>
+                <h3 class="text-xs font-semibold">Vault password</h3>
+                <p class="text-[11px] text-fg3">
+                  {authStatus?.has_password
+                    ? 'Change the password used to recover this encrypted vault.'
+                    : 'Add a password recovery method to this OS-vault-only instance.'}
+                </p>
+              </div>
+              <div class="security-password-form">
+                {#if authStatus?.has_password}
+                  <input class="security-input" type="password" bind:value={vaultPasswordCurrent} placeholder="Current vault password" autocomplete="current-password" />
+                {/if}
+                <input class="security-input" type="password" bind:value={vaultPasswordNew} placeholder={authStatus?.has_password ? 'New vault password' : 'Vault password'} autocomplete="new-password" />
+                <input class="security-input" type="password" bind:value={vaultPasswordConfirm} placeholder="Confirm new password" autocomplete="new-password" />
+                <button class="btn-accent security-password-button" type="button" disabled={!authStatus || vaultPasswordBusy || !vaultPasswordNew || !vaultPasswordConfirm || (authStatus?.has_password && !vaultPasswordCurrent)} onclick={saveVaultPassword}>
+                  <Icon name="key" size={14} /> {vaultPasswordBusy ? 'Saving…' : authStatus?.has_password ? 'Change password' : 'Add password'}
+                </button>
+              </div>
+            </section>
+
+            <section class="security-subsection">
+              <div>
                 <h3 class="text-xs font-semibold">Passkeys</h3>
                 <p class="text-[11px] text-fg3">Register WebAuthn authenticators such as Windows Hello, Touch ID, or a hardware key. They unlock locally through the authenticator PRF and never replace the encrypted vault.</p>
               </div>
@@ -2012,7 +2065,7 @@
                 onchange={(e) => toggleIngestionTier('hybrid_ocr_llm', e.currentTarget.checked)} />
               <span>
                 <strong><span class="ingestion-tier-badge">Tier 3</span> Hybrid OCR + LLM</strong>
-                <small>Record low-confidence escalation candidates when model tiers are enabled.</small>
+                <small>Repair low-confidence OCR with Phi-4 when the model is enabled and ready.</small>
               </span>
             </label>
           </div>
@@ -2702,6 +2755,18 @@
     max-width: 16rem;
     flex: 0 1 16rem;
   }
+  .security-password-form {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+  .security-password-form .security-input {
+    min-width: 12rem;
+    width: min(100%, 15rem);
+    flex: 0 1 15rem;
+  }
+  .security-password-button { width: fit-content; }
   .security-rotate-form {
     display: flex;
     align-items: center;

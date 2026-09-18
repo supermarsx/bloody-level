@@ -73,6 +73,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::auth::auth_status,
             commands::auth::auth_setup_password,
+            commands::auth::auth_set_password,
             commands::auth::auth_setup_os_vault,
             commands::auth::auth_unlock_password,
             commands::auth::auth_unlock_os_vault,

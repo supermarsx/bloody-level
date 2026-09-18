@@ -41,6 +41,8 @@ native unlock path.
 - Password unlock uses Argon2id and failed attempts use persisted backoff.
 - Passkeys are an additional local unlock method where WebAuthn PRF is
   supported.
+- Change an existing vault password in Settings → Security, or add the first
+  password to an OS-vault-only instance while it is unlocked.
 - Lock the app before leaving the device and protect exports, screenshots,
   original source files, and backups separately.
 
@@ -57,5 +59,6 @@ without a password or OS-vault recovery route.
 
 Rotate master key creates a fresh data master key and re-keys the encrypted
 database, managed PDFs, OS-vault credential, password wrapper, and passkey
-wrappers. The app asks for the current password and fresh assertions from every
-registered passkey. Keep a current backup before rotating.
+wrappers. The already-unlocked session authorizes the rotation; fresh
+assertions are still required from every registered passkey. Keep a current
+backup before rotating.

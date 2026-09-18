@@ -31,6 +31,10 @@ export async function setupPassword(password: string): Promise<void> {
   await invoke("auth_setup_password", { password });
 }
 
+export async function setPassword(password: string): Promise<void> {
+  await invoke("auth_set_password", { password });
+}
+
 export async function setupOsVault(): Promise<void> {
   await invoke("auth_setup_os_vault");
 }
@@ -44,11 +48,14 @@ export async function unlockOsVault(): Promise<void> {
 }
 
 export async function changePassword(
-  currentPassword: string,
+  currentPassword: string | null | undefined,
   newPassword: string,
 ): Promise<void> {
   await invoke("auth_change_password", {
-    args: { current_password: currentPassword, new_password: newPassword },
+    args: {
+      current_password: currentPassword ?? "",
+      new_password: newPassword,
+    },
   });
 }
 

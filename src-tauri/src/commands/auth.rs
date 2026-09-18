@@ -196,6 +196,36 @@ pub async fn auth_setup_password(state: State<'_, AppState>, password: String) -
     Ok(())
 }
 
+/// Add the first password wrapper to an already-unlocked vault that was
+/// initialized with the native OS vault only.
+#[tauri::command]
+pub async fn auth_set_password(state: State<'_, AppState>, password: String) -> AppResult<()> {
+    password_strength::validate_new_password(&password)?;
+    let ks_path = state.keystore_path();
+    let mut ks = Keystore::load(&ks_path)?;
+    if ks.has_password() {
+        return Err(AppError::AlreadyInitialized);
+    }
+    let dmk = {
+        let guard = state.dmk.lock().await;
+        let current = guard.as_ref().ok_or(AppError::Locked)?;
+        *current.expose_secret()
+    };
+    let salt = generate_salt(16);
+    let kek = kdf::derive_kek_from_password(&password, &salt)?;
+    let (nonce, ciphertext) = wrap::wrap_dmk(&kek, &dmk)?;
+    ks.replace_password(Wrapper::Password {
+        kdf: "argon2id".into(),
+        m: kdf::ARGON2_M_KIB,
+        t: kdf::ARGON2_T,
+        p: kdf::ARGON2_P,
+        salt_b64: B64.encode(&salt),
+        nonce_b64: B64.encode(&nonce),
+        ciphertext_b64: B64.encode(&ciphertext),
+    })?;
+    ks.save(&ks_path)
+}
+
 /// Initialize a vault with a native OS-vault wrapper and no password wrapper.
 /// The OS account credential is the recovery boundary; users can add one or
 /// more passkeys from Security after the vault is open.
@@ -278,7 +308,7 @@ pub async fn auth_unlock_password(state: State<'_, AppState>, password: String) 
 
 #[derive(Deserialize)]
 pub struct ChangePasswordArgs {
-    pub current_password: String,
+    pub current_password: Option<String>,
     pub new_password: String,
 }
 
@@ -314,7 +344,8 @@ pub async fn auth_change_password(
     let ct = B64
         .decode(pw.2)
         .map_err(|e| AppError::Base64(e.to_string()))?;
-    let cur_kek = kdf::derive_kek_from_password(&args.current_password, &salt)?;
+    let cur_kek =
+        kdf::derive_kek_from_password(args.current_password.as_deref().unwrap_or_default(), &salt)?;
     let dmk = wrap::unwrap_dmk(&cur_kek, &nonce, &ct)?;
     let dmk = resolve_dmk_transitions(&ks, dmk)?;
 
