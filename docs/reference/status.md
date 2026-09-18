@@ -19,6 +19,10 @@ This page describes the capability boundary users and contributors should rely o
 - Tesseract OCR is compiled into distributed builds. A native executable can be
   bundled with `TESSERACT_BUNDLE_DIR`; Settings can download the `eng`/`por`
   language data, while an installed executable remains a supported fallback.
+- Ingestion stages are independently controlled in Settings: Tier 1 PDFium
+  extraction, Tier 2 Tesseract OCR fallback, and Tier 3 hybrid OCR + LLM
+  escalation auditing. Tier 3 currently records readiness candidates without
+  modifying report output.
 - PDFium may need a target-matched manual library when the build-time download is unavailable.
 - Signing depends on platform credentials and repository secrets; default artifacts can be unsigned.
 

@@ -1,4 +1,5 @@
 import { invoke } from "./index";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 export interface TierStatus {
   feature: string;
@@ -19,6 +20,30 @@ export interface ModelTierStatus extends TierStatus {
 export interface PdfiumStatus {
   available: boolean;
   error: string | null;
+}
+
+export interface DownloadProgress {
+  resource: string;
+  file: string;
+  file_index: number;
+  file_count: number;
+  downloaded_bytes: number;
+  total_bytes: number | null;
+  progress: number | null;
+  done: boolean;
+  cancelled: boolean;
+}
+
+export async function subscribeDownloadProgress(
+  onProgress: (progress: DownloadProgress) => void,
+): Promise<UnlistenFn> {
+  return listen<DownloadProgress>("tier:download-progress", (event) => {
+    onProgress(event.payload);
+  });
+}
+
+export async function cancelDownload(): Promise<void> {
+  return invoke("tier_cancel_download");
 }
 
 export async function tesseract(): Promise<TierStatus> {
@@ -43,7 +68,7 @@ export async function unloadLlm(): Promise<ModelTierStatus> {
 }
 
 export async function downloadLlm(): Promise<ModelTierStatus> {
-  return invoke("tier_download_llm");
+  return invoke("tier_download_llm", undefined, { timeoutMs: 0 });
 }
 
 export async function loadOlmocr(modelPath: string): Promise<ModelTierStatus> {
@@ -55,11 +80,15 @@ export async function unloadOlmocr(): Promise<ModelTierStatus> {
 }
 
 export async function downloadOlmocr(): Promise<ModelTierStatus> {
-  return invoke("tier_download_olmocr");
+  return invoke("tier_download_olmocr", undefined, { timeoutMs: 0 });
 }
 
 export async function downloadTesseractLanguage(
   language: string,
 ): Promise<TierStatus> {
-  return invoke("tier_download_tesseract_language", { language });
+  return invoke(
+    "tier_download_tesseract_language",
+    { language },
+    { timeoutMs: 0 },
+  );
 }

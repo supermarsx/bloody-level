@@ -34,13 +34,24 @@ The source SHA-256 is the identity check for an imported file. Importing the sam
 
 ## Ingestion tiers
 
-Tier 1 uses the local PDFium path and is always available when its matching
-sidecar is present. Distributed builds also compile Tier 2 Tesseract OCR, Tier 3
-olmOCR-2 vision OCR, and Tier 4 Phi-4 repair. OCR/model execution remains
-opt-in and requires the matching local runtime assets; a compiled feature is not
-the same as a loaded or usable model.
+Settings presents three independent ingestion stages:
 
-Choose the tier and model paths in Settings. The UI shows availability and diagnostics instead of silently pretending a missing backend ran.
+1. **Tier 1 — PDF extraction:** the local PDFium baseline. This must be enabled
+   for imports to proceed.
+2. **Tier 2 — OCR:** Tesseract fallback for sparse-text PDFs. It is used only
+   when the toggle is enabled and the native executable and language data are
+   available.
+3. **Tier 3 — Hybrid OCR + LLM:** low-confidence escalation auditing for the
+   optional olmOCR-2 and Phi-4 runtimes. At present this records a transparent
+   candidate with model readiness details; it does not silently rewrite report
+   output. The audit payload marks `output_modified: false` until a complete
+   model inference path is available.
+
+Distributed builds compile the optional Tesseract, olmOCR-2, and Phi-4
+integrations, but compiled code is not the same as an enabled, downloaded, or
+loaded runtime asset. Choose the stage toggles and model paths in Settings. The
+UI shows availability, download progress, cancellation, and diagnostics instead
+of pretending a missing backend ran.
 
 ## After import
 

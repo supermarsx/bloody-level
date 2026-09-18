@@ -195,6 +195,19 @@ async fn ingest_one(
             .hint("Verify the path is reachable and the file wasn't moved or deleted.");
     }
 
+    let ingestion_tiers = read_json_setting(state, "ingestion_tiers")
+        .await
+        .stage("loading_ingestion_settings")
+        .path(path_str)?;
+    if !setting_bool(&ingestion_tiers, "pdf_extraction", true) {
+        return Err(AppError::BadRequest(
+            "PDF extraction (tier 1) is disabled in Settings > Ingestion.".into(),
+        ))
+        .stage("ingestion_policy")
+        .path(path_str)
+        .hint("Enable Tier 1 PDF extraction before importing reports.");
+    }
+
     emit_simple(app, path_str, STAGE_STARTED, 0.02, started);
 
     // ── Hashing + extraction (10% → 40%) ──────────────────────────────────
@@ -290,9 +303,10 @@ async fn ingest_one(
         Some(&state.data_dir),
         state.resource_dir.as_deref(),
     );
+    let ocr_tier_enabled = setting_bool(&ingestion_tiers, "ocr", tesseract_config.enabled);
 
     if crate::ocr::should_fallback_to_ocr(&extracted.combined_text, extracted.page_count) {
-        if tesseract_config.enabled && crate::ocr::is_available() {
+        if ocr_tier_enabled && tesseract_config.enabled && crate::ocr::is_available() {
             {
                 let mut p = IngestProgress::new(path_str, STAGE_EXTRACTING, 0.30, started);
                 p.bytes = Some(extracted.byte_count);
@@ -715,7 +729,13 @@ async fn ingest_one(
             .hint("Commit failed; transaction was rolled back and DB is clean.");
     }
 
-    audit_model_tier_escalation_candidates(&db.conn, &report_id, path_str, doc_confidence);
+    audit_model_tier_escalation_candidates(
+        &db.conn,
+        &report_id,
+        path_str,
+        doc_confidence,
+        setting_bool(&ingestion_tiers, "hybrid_ocr_llm", false),
+    );
 
     audit::log(
         &db.conn,
@@ -863,7 +883,11 @@ fn audit_model_tier_escalation_candidates(
     report_id: &str,
     source_path: &str,
     doc_confidence: f32,
+    hybrid_enabled: bool,
 ) {
+    if !hybrid_enabled {
+        return;
+    }
     let thresholds = read_setting_json(conn, "tier_thresholds");
     let olmocr = read_setting_json(conn, "olmocr");
     let llm = read_setting_json(conn, "llm");
@@ -940,6 +964,13 @@ fn setting_enabled(setting: &serde_json::Value) -> bool {
         .get("enabled")
         .and_then(|v| v.as_bool())
         .unwrap_or(false)
+}
+
+fn setting_bool(setting: &serde_json::Value, key: &str, fallback: bool) -> bool {
+    setting
+        .get(key)
+        .and_then(|value| value.as_bool())
+        .unwrap_or(fallback)
 }
 
 fn setting_f32(setting: &serde_json::Value, key: &str, fallback: f32) -> f32 {

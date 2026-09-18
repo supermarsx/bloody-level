@@ -12,7 +12,23 @@ Configure reference-band display, chart behavior, and saved comparison presets. 
 
 ## Ingestion
 
-Select the enabled ingestion tier and review the status of optional OCR/model paths. Use the file picker to set a local model path when a feature requires one. A path being configured does not prove that the model is installed, compatible, or used successfully; check the displayed load status and report diagnostics.
+Use the Ingestion pipeline toggles to control the three stages independently:
+
+1. **Tier 1 · PDF extraction** — the required PDFium foundation. Imports fail
+   closed when this is disabled.
+2. **Tier 2 · OCR** — allows Tesseract to run when embedded PDF text is sparse.
+   It requires the compiled feature, a native Tesseract executable, and language
+   data at runtime.
+3. **Tier 3 · Hybrid OCR + LLM** — enables low-confidence escalation auditing
+   for the optional olmOCR/Phi-4 model tiers. The current runtime records an
+   explicit candidate and availability state; it does not claim to have changed
+   report output unless a completed model path says so.
+
+Below the pipeline controls, review the status of optional OCR/model paths. Use
+the file picker to set a local model path when a feature requires one. A path
+being configured does not prove that the model is installed, compatible, or used
+successfully; check the displayed load status and report diagnostics. Model and
+language downloads show their current file, byte progress, and a Cancel action.
 
 ## Ontology
 

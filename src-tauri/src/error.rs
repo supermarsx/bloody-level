@@ -8,6 +8,7 @@ pub enum ErrorKind {
     AlreadyInitialized,
     NotFound,
     BadRequest,
+    Cancelled,
     Crypto,
     Database,
     Filesystem,
@@ -66,6 +67,9 @@ pub enum AppError {
     #[error("bad request: {0}")]
     BadRequest(String),
 
+    #[error("cancelled")]
+    Cancelled,
+
     #[error("pdf: {0}")]
     Pdf(String),
 
@@ -94,6 +98,7 @@ impl AppError {
             Self::AlreadyInitialized => ErrorKind::AlreadyInitialized,
             Self::NotFound(_) => ErrorKind::NotFound,
             Self::BadRequest(_) => ErrorKind::BadRequest,
+            Self::Cancelled => ErrorKind::Cancelled,
             Self::Pdf(_) => ErrorKind::Pdf,
             Self::Internal(_) => ErrorKind::Internal,
         }
@@ -125,6 +130,7 @@ impl AppError {
             Self::AlreadyInitialized => "auth.already_initialized",
             Self::NotFound(_) => "not_found",
             Self::BadRequest(_) => "bad_request",
+            Self::Cancelled => "cancelled",
             Self::Pdf(_) => "pdf.failed",
             Self::Internal(_) => "internal",
         }
@@ -152,6 +158,7 @@ impl AppError {
             Self::Context { source, .. } => source.user_message(),
             Self::Locked => "Database is locked. Please unlock to continue.".into(),
             Self::AlreadyInitialized => "App is already initialized.".into(),
+            Self::Cancelled => "Operation cancelled.".into(),
             Self::NotFound(what) => format!("Not found: {what}"),
             Self::BadRequest(msg) => msg.clone(),
             Self::Crypto(_) => "Decryption failed. Check your password.".into(),

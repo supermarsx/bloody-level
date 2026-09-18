@@ -1,5 +1,6 @@
 use secrecy::SecretBox;
 use std::path::{Path, PathBuf};
+use std::sync::{atomic::AtomicBool, Arc};
 use tokio::sync::Mutex;
 
 use crate::db::Database;
@@ -10,6 +11,7 @@ pub struct AppState {
     pub db: Mutex<Option<Database>>,
     pub dmk: Mutex<Option<SecretBox<[u8; 32]>>>,
     pub pdf_key: Mutex<Option<SecretBox<[u8; 32]>>>,
+    pub download_cancel: Mutex<Option<Arc<AtomicBool>>>,
 }
 
 impl AppState {
@@ -20,6 +22,7 @@ impl AppState {
             db: Mutex::new(None),
             dmk: Mutex::new(None),
             pdf_key: Mutex::new(None),
+            download_cancel: Mutex::new(None),
         }
     }
 

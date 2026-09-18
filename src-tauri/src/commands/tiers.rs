@@ -1,5 +1,9 @@
 use serde::Serialize;
-use tauri::State;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
+use tauri::{AppHandle, Emitter, State};
 
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
@@ -29,6 +33,7 @@ const OLMOCR_FILES: &[&str] = &[
     "video_preprocessor_config.json",
     "vocab.json",
 ];
+const EVT_DOWNLOAD_PROGRESS: &str = "tier:download-progress";
 
 #[derive(Serialize)]
 pub struct ModelLoadStatus {
@@ -206,13 +211,70 @@ pub async fn tier_unload_olmocr(state: State<'_, AppState>) -> AppResult<ModelLo
     tier_status_olmocr(state).await
 }
 
+fn download_context(
+    app: &AppHandle,
+    resource: &str,
+    file_index: usize,
+    file_count: usize,
+    cancel: Arc<AtomicBool>,
+) -> crate::resources::DownloadContext {
+    let reporter_app = app.clone();
+    crate::resources::DownloadContext {
+        resource: resource.to_string(),
+        file_index,
+        file_count,
+        cancel,
+        reporter: Arc::new(move |progress| {
+            let _ = reporter_app.emit(EVT_DOWNLOAD_PROGRESS, &progress);
+        }),
+    }
+}
+
+async fn begin_download(state: &AppState) -> AppResult<Arc<AtomicBool>> {
+    let mut active = state.download_cancel.lock().await;
+    if active.is_some() {
+        return Err(AppError::BadRequest(
+            "another resource download is already in progress".into(),
+        ));
+    }
+    let cancel = Arc::new(AtomicBool::new(false));
+    *active = Some(cancel.clone());
+    Ok(cancel)
+}
+
+async fn finish_download(state: &AppState, cancel: &Arc<AtomicBool>) {
+    let mut active = state.download_cancel.lock().await;
+    if active
+        .as_ref()
+        .is_some_and(|current| Arc::ptr_eq(current, cancel))
+    {
+        *active = None;
+    }
+}
+
+#[tauri::command]
+pub async fn tier_cancel_download(state: State<'_, AppState>) -> AppResult<()> {
+    if let Some(cancel) = state.download_cancel.lock().await.as_ref() {
+        cancel.store(true, Ordering::Relaxed);
+    }
+    Ok(())
+}
+
 async fn download_one(
+    app: AppHandle,
+    resource: &str,
+    file_index: usize,
+    file_count: usize,
     url: String,
     destination: std::path::PathBuf,
+    cancel: Arc<AtomicBool>,
 ) -> AppResult<crate::resources::DownloadResult> {
-    tokio::task::spawn_blocking(move || crate::resources::download_file(&url, &destination))
-        .await
-        .map_err(|error| AppError::Internal(format!("resource download task failed: {error}")))?
+    let context = download_context(&app, resource, file_index, file_count, cancel);
+    tokio::task::spawn_blocking(move || {
+        crate::resources::download_file(&url, &destination, &context)
+    })
+    .await
+    .map_err(|error| AppError::Internal(format!("resource download task failed: {error}")))?
 }
 
 async fn set_model_path(state: &AppState, key: &str, path: &std::path::Path) -> AppResult<()> {
@@ -243,34 +305,70 @@ async fn set_model_path(state: &AppState, key: &str, path: &std::path::Path) -> 
 }
 
 #[tauri::command]
-pub async fn tier_download_llm(state: State<'_, AppState>) -> AppResult<ModelLoadStatus> {
+pub async fn tier_download_llm(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> AppResult<ModelLoadStatus> {
+    let cancel = begin_download(&state).await?;
     let destination = state.models_dir().join("phi-4-mini-reasoning-Q4_K_M.gguf");
-    download_one(PHI4_URL.to_string(), destination.clone()).await?;
+    let result = download_one(
+        app,
+        "llm",
+        0,
+        1,
+        PHI4_URL.to_string(),
+        destination.clone(),
+        cancel.clone(),
+    )
+    .await;
+    finish_download(&state, &cancel).await;
+    result?;
     set_model_path(&state, "llm", &destination).await?;
     tier_status_llm(state).await
 }
 
 #[tauri::command]
-pub async fn tier_download_olmocr(state: State<'_, AppState>) -> AppResult<ModelLoadStatus> {
+pub async fn tier_download_olmocr(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> AppResult<ModelLoadStatus> {
+    let cancel = begin_download(&state).await?;
     let root = state.models_dir().join("olmOCR-2-7B-1025");
     let root_for_download = root.clone();
-    tokio::task::spawn_blocking(move || -> AppResult<()> {
-        for file in OLMOCR_FILES {
+    let app_for_download = app.clone();
+    let cancel_for_download = cancel.clone();
+    let result = match tokio::task::spawn_blocking(move || -> AppResult<()> {
+        for (index, file) in OLMOCR_FILES.iter().enumerate() {
             let url =
                 format!("https://huggingface.co/{OLMOCR_REPO}/resolve/main/{file}?download=true");
             let destination = crate::resources::safe_child(&root_for_download, file)?;
-            crate::resources::download_file(&url, &destination)?;
+            let context = download_context(
+                &app_for_download,
+                "olmocr",
+                index,
+                OLMOCR_FILES.len(),
+                cancel_for_download.clone(),
+            );
+            crate::resources::download_file(&url, &destination, &context)?;
         }
         Ok(())
     })
     .await
-    .map_err(|error| AppError::Internal(format!("olmOCR download task failed: {error}")))??;
+    {
+        Ok(result) => result,
+        Err(error) => Err(AppError::Internal(format!(
+            "olmOCR download task failed: {error}"
+        ))),
+    };
+    finish_download(&state, &cancel).await;
+    result?;
     set_model_path(&state, "olmocr", &root).await?;
     tier_status_olmocr(state).await
 }
 
 #[tauri::command]
 pub async fn tier_download_tesseract_language(
+    app: AppHandle,
     state: State<'_, AppState>,
     language: String,
 ) -> AppResult<TierStatus> {
@@ -293,7 +391,10 @@ pub async fn tier_download_tesseract_language(
         .join("tesseract")
         .join("tessdata")
         .join(format!("{language}.traineddata"));
-    download_one(url, destination).await?;
+    let cancel = begin_download(&state).await?;
+    let result = download_one(app, "tesseract", 0, 1, url, destination, cancel.clone()).await;
+    finish_download(&state, &cancel).await;
+    result?;
     tier_status_tesseract(state).await
 }
 

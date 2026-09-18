@@ -107,6 +107,7 @@ pub fn run() {
             commands::tiers::tier_unload_olmocr,
             commands::tiers::tier_download_olmocr,
             commands::tiers::tier_download_tesseract_language,
+            commands::tiers::tier_cancel_download,
             commands::tiers::tier_status_pdfium,
             commands::app_info::app_info,
             commands::app_info::export_vault,

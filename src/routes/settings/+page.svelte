@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import * as settings from '$api/settings';
   import * as tiers from '$api/tiers';
   import * as security from '$api/security';
@@ -14,6 +14,7 @@
   import Icon, { type IconName } from '$components/icon.svelte';
   import { dashboardPrefs, DASHBOARD_SECTIONS } from '$lib/dashboard/prefs.svelte';
   import { discardPending } from '$api/debounced-settings';
+  import { AppError } from '$api/errors';
 
   // ── Library credits — typed once so each row is a real link ───────────
   type Credit = { name: string; note: string; url: string };
@@ -85,6 +86,9 @@
   let info   = $state<appInfo.AppInfo | null>(null);
   let raw    = $state<Record<string, unknown>>({});
   let err    = $state<string | null>(null);
+  let downloadProgress = $state<tiers.DownloadProgress | null>(null);
+  let downloadCanceling = $state(false);
+  let stopDownloadProgress: (() => void) | null = null;
 
   async function refresh() {
     err = null;
@@ -105,9 +109,77 @@
     await refresh();
   }
 
+  type IngestionTierKey = 'pdf_extraction' | 'ocr' | 'hybrid_ocr_llm';
+
+  function ingestionPolicy(): Record<string, unknown> {
+    return (raw.ingestion_tiers as Record<string, unknown> | undefined) ?? {};
+  }
+
+  function ingestionTierEnabled(key: IngestionTierKey): boolean {
+    const policy = ingestionPolicy();
+    if (typeof policy[key] === 'boolean') return policy[key] as boolean;
+    if (key === 'pdf_extraction') return true;
+    if (key === 'ocr') return Boolean((raw.tesseract as Record<string, unknown> | undefined)?.enabled);
+    return false;
+  }
+
+  async function toggleIngestionTier(key: IngestionTierKey, enabled: boolean) {
+    await settings.set('ingestion_tiers', { ...ingestionPolicy(), [key]: enabled });
+    if (key === 'ocr') {
+      const current = (raw.tesseract as Record<string, unknown> | undefined) ?? {};
+      await settings.set('tesseract', { ...current, enabled });
+    }
+    await refresh();
+  }
+
   type ModelTierKey = 'llm' | 'olmocr';
   let tierAction = $state<ModelTierKey | null>(null);
   let tierDownload = $state<'tesseract' | ModelTierKey | null>(null);
+
+  onMount(() => {
+    let active = true;
+    void tiers.subscribeDownloadProgress((progress) => {
+      downloadProgress = progress;
+    }).then((unlisten) => {
+      if (active) stopDownloadProgress = unlisten;
+      else unlisten();
+    });
+    return () => {
+      active = false;
+      stopDownloadProgress?.();
+      stopDownloadProgress = null;
+    };
+  });
+
+  onDestroy(() => {
+    stopDownloadProgress?.();
+    stopDownloadProgress = null;
+  });
+
+  function formatDownloadBytes(value: number): string {
+    return appInfo.formatBytes(value);
+  }
+
+  function downloadResourceLabel(resource: string): string {
+    if (resource === 'llm') return 'Phi-4-mini-reasoning';
+    if (resource === 'olmocr') return 'olmOCR-2';
+    return 'Tesseract language data';
+  }
+
+  async function cancelTierDownload() {
+    if (!tierDownload || downloadCanceling) return;
+    downloadCanceling = true;
+    try {
+      await tiers.cancelDownload();
+    } catch (e) {
+      toasts.error(e);
+      downloadCanceling = false;
+    }
+  }
+
+  function isCancelled(error: unknown): boolean {
+    return AppError.fromUnknown(error).kind === 'cancelled';
+  }
 
   function configuredModelPath(key: ModelTierKey, status?: tiers.TierStatus | null): string {
     const value = (raw[key] as Record<string, unknown> | undefined)?.model_path;
@@ -152,24 +224,34 @@
       : 'Download the complete olmOCR-2 7B model snapshot (about 16 GB) into the app data folder?';
     if (!await ask(details, { title: `Download ${key === 'llm' ? 'Phi-4' : 'olmOCR-2'} model`, kind: 'warning' })) return;
     tierDownload = key;
+    downloadProgress = null;
+    downloadCanceling = false;
     try {
       if (key === 'llm') await tiers.downloadLlm();
       else await tiers.downloadOlmocr();
       toasts.success('Model download complete', `${key === 'llm' ? 'Phi-4' : 'olmOCR-2'} is configured for this instance.`);
       await refresh();
-    } catch (e) { toasts.error(e); await refresh(); }
-    finally { tierDownload = null; }
+    } catch (e) {
+      if (isCancelled(e)) toasts.info('Download cancelled', `${key === 'llm' ? 'Phi-4' : 'olmOCR-2'} was not installed.`);
+      else toasts.error(e);
+      await refresh();
+    } finally { tierDownload = null; downloadCanceling = false; }
   }
 
   async function downloadTesseractLanguage(language: string) {
     if (tierDownload) return;
     tierDownload = 'tesseract';
+    downloadProgress = null;
+    downloadCanceling = false;
     try {
       await tiers.downloadTesseractLanguage(language);
       toasts.success('Language data downloaded', `Tesseract ${language} data is ready in the managed models folder.`);
       await refresh();
-    } catch (e) { toasts.error(e); await refresh(); }
-    finally { tierDownload = null; }
+    } catch (e) {
+      if (isCancelled(e)) toasts.info('Download cancelled', `Tesseract ${language} data was not installed.`);
+      else toasts.error(e);
+      await refresh();
+    } finally { tierDownload = null; downloadCanceling = false; }
   }
 
   async function chooseModelPath(key: ModelTierKey) {
@@ -1744,6 +1826,49 @@
       {#if activeTab === 'ingestion'}
         <section class="card p-5 space-y-4">
           <div>
+            <h2 class="text-sm font-semibold">Ingestion pipeline</h2>
+            <p class="text-xs text-fg2">
+              Choose which extraction stages are allowed when a PDF is imported. Tier 1 is the
+              foundation; higher tiers are opt-in fallbacks for difficult documents.
+            </p>
+          </div>
+          <div class="ingestion-tier-grid">
+            <label class="ingestion-tier-toggle">
+              <input type="checkbox"
+                checked={ingestionTierEnabled('pdf_extraction')}
+                onchange={(e) => toggleIngestionTier('pdf_extraction', e.currentTarget.checked)} />
+              <span>
+                <strong>Tier 1 · PDF extraction</strong>
+                <small>Required foundation for every import.</small>
+              </span>
+            </label>
+            <label class="ingestion-tier-toggle">
+              <input type="checkbox"
+                checked={ingestionTierEnabled('ocr')}
+                disabled={!tess?.compiled}
+                onchange={(e) => toggleIngestionTier('ocr', e.currentTarget.checked)} />
+              <span>
+                <strong>Tier 2 · OCR</strong>
+                <small>Run Tesseract when embedded PDF text is sparse.</small>
+              </span>
+            </label>
+            <label class="ingestion-tier-toggle">
+              <input type="checkbox"
+                checked={ingestionTierEnabled('hybrid_ocr_llm')}
+                onchange={(e) => toggleIngestionTier('hybrid_ocr_llm', e.currentTarget.checked)} />
+              <span>
+                <strong>Tier 3 · Hybrid OCR + LLM</strong>
+                <small>Record low-confidence escalation candidates when model tiers are enabled.</small>
+              </span>
+            </label>
+          </div>
+          {#if !ingestionTierEnabled('pdf_extraction')}
+            <p class="ingestion-tier-warning"><Icon name="warning" size={14} /> Tier 1 is disabled; imports will fail closed until PDF extraction is enabled.</p>
+          {/if}
+        </section>
+
+        <section class="card p-5 space-y-4">
+          <div>
             <h2 class="text-sm font-semibold">PDF extraction (tier 1)</h2>
             <p class="text-xs text-fg2">Always-on baseline. Other tiers below are opt-in.</p>
           </div>
@@ -1757,6 +1882,31 @@
                 {#if pdfium.error}<div class="text-[11px] text-warn break-words mt-1">{pdfium.error}</div>{/if}
               </div>
               <span class={pdfium.available ? 'pill-ok' : 'pill-crit'}>{pdfium.available ? 'OK' : 'Missing'}</span>
+            </div>
+          {/if}
+          {#if tierDownload && downloadProgress}
+            <div class="download-progress" aria-live="polite">
+              <div class="download-progress__head">
+                <div>
+                  <strong>{downloadResourceLabel(downloadProgress.resource)}</strong>
+                  <span>{downloadProgress.file}</span>
+                </div>
+                <button class="mini-btn" type="button" disabled={downloadCanceling} onclick={cancelTierDownload}>
+                  {downloadCanceling ? 'Canceling…' : 'Cancel'}
+                </button>
+              </div>
+              {#if downloadProgress.resource === 'olmocr'}
+                <div class="download-progress__meta">File {downloadProgress.file_index + 1} of {downloadProgress.file_count}</div>
+              {/if}
+              <div class="download-progress__track">
+                <div class:download-progress__fill--indeterminate={downloadProgress.progress === null}
+                  class="download-progress__fill"
+                  style={`width: ${downloadProgress.progress === null ? 35 : Math.round(downloadProgress.progress * 100)}%`}></div>
+              </div>
+              <div class="download-progress__meta">
+                {formatDownloadBytes(downloadProgress.downloaded_bytes)}
+                {#if downloadProgress.total_bytes !== null} / {formatDownloadBytes(downloadProgress.total_bytes)} · {Math.round((downloadProgress.progress ?? 0) * 100)}%{/if}
+              </div>
             </div>
           {/if}
         </section>
@@ -1793,9 +1943,9 @@
                 </div>
               </div>
               <input type="checkbox"
-                bind:checked={tess.enabled_in_settings}
+                checked={ingestionTierEnabled('ocr')}
                 disabled={!tess.compiled}
-                onchange={(e) => toggleTier('tesseract', e.currentTarget.checked)} />
+                onchange={(e) => toggleIngestionTier('ocr', e.currentTarget.checked)} />
             </label>
           {/if}
 
@@ -2445,6 +2595,87 @@
   }
   .row__hint { font-size: 0.7rem; color: rgb(var(--fg-3)); line-height: 1.35; }
   .row__hint--error { color: rgb(var(--crit)); }
+  .ingestion-tier-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+  .ingestion-tier-toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    min-width: 0;
+    padding: 0.7rem;
+    border: 1px solid rgb(var(--line));
+    border-radius: 0.45rem;
+    background: rgb(var(--bg-1));
+    cursor: pointer;
+  }
+  .ingestion-tier-toggle:has(input:checked) {
+    border-color: rgb(var(--accent) / 0.55);
+    background: rgb(var(--accent) / 0.06);
+  }
+  .ingestion-tier-toggle > span {
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+    min-width: 0;
+  }
+  .ingestion-tier-toggle strong { font-size: 0.72rem; color: rgb(var(--fg-1)); }
+  .ingestion-tier-toggle small { font-size: 0.67rem; line-height: 1.35; color: rgb(var(--fg-3)); }
+  .ingestion-tier-warning {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0;
+    color: rgb(var(--warn));
+    font-size: 0.7rem;
+  }
+  .download-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.7rem;
+    border: 1px solid rgb(var(--accent) / 0.35);
+    border-radius: 0.45rem;
+    background: rgb(var(--accent) / 0.06);
+  }
+  .download-progress__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+  }
+  .download-progress__head > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+  .download-progress__head strong { font-size: 0.75rem; color: rgb(var(--fg-1)); }
+  .download-progress__head span,
+  .download-progress__meta { font-size: 0.66rem; color: rgb(var(--fg-3)); }
+  .download-progress__head span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .download-progress__track {
+    height: 0.35rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgb(var(--bg-3));
+  }
+  .download-progress__fill {
+    height: 100%;
+    border-radius: inherit;
+    background: rgb(var(--accent));
+    transition: width 120ms ease;
+  }
+  .download-progress__fill--indeterminate { animation: download-progress-pulse 1.1s ease-in-out infinite; }
+  @keyframes download-progress-pulse {
+    0%, 100% { transform: translateX(-65%); }
+    50% { transform: translateX(185%); }
+  }
+  @media (max-width: 760px) {
+    .ingestion-tier-grid { grid-template-columns: 1fr; }
+  }
   .dashboard-sections { display: flex; flex-direction: column; gap: 0.25rem; }
   .dashboard-section-row {
     display: flex;
