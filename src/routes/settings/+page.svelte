@@ -368,6 +368,31 @@
     }
   }
 
+  async function removeVaultPassword() {
+    if (vaultPasswordBusy || !authStatus?.has_password) return;
+    if (!authStatus.has_passkey && !authStatus.os_vault_configured) {
+      toasts.error(new Error('Add a passkey or enable the native OS vault before removing the password.'));
+      return;
+    }
+    if (!await ask(
+      'Remove the vault password? You will use your configured passkey or native OS vault to unlock this instance. Keep a recovery method available before continuing.',
+      { title: 'Remove vault password', kind: 'warning' }
+    )) return;
+    vaultPasswordBusy = true;
+    try {
+      await auth.removePassword();
+      vaultPasswordCurrent = '';
+      vaultPasswordNew = '';
+      vaultPasswordConfirm = '';
+      authStatus = await auth.status();
+      toasts.success('Vault password removed', 'The remaining configured recovery method is still available.');
+    } catch (e) {
+      toasts.error(e);
+    } finally {
+      vaultPasswordBusy = false;
+    }
+  }
+
   async function registerPasskey() {
     if (passkeyBusy) return;
     if (!auth.isWebAuthnAvailable()) {
@@ -1969,7 +1994,15 @@
                 <button class="btn-accent security-password-button" type="button" disabled={!authStatus || vaultPasswordBusy || !vaultPasswordNew || !vaultPasswordConfirm || (authStatus?.has_password && !vaultPasswordCurrent)} onclick={saveVaultPassword}>
                   <Icon name="key" size={14} /> {vaultPasswordBusy ? 'Saving…' : authStatus?.has_password ? 'Change password' : 'Add password'}
                 </button>
+                {#if authStatus?.has_password}
+                  <button class="btn security-password-remove" type="button" disabled={vaultPasswordBusy || (!authStatus.has_passkey && !authStatus.os_vault_configured)} onclick={removeVaultPassword}>
+                    <Icon name="trash" size={14} /> Remove password
+                  </button>
+                {/if}
               </div>
+              {#if authStatus?.has_password && !authStatus.has_passkey && !authStatus.os_vault_configured}
+                <p class="text-[11px] text-fg3">Add a passkey or enable the native OS vault before removing the last recovery method.</p>
+              {/if}
             </section>
 
             <section class="security-subsection">
@@ -2767,6 +2800,16 @@
     flex: 0 1 15rem;
   }
   .security-password-button { width: fit-content; }
+  .security-password-remove {
+    width: fit-content;
+    color: rgb(var(--crit));
+    border-color: rgb(var(--crit) / 0.45);
+  }
+  .security-password-remove:hover:not(:disabled) {
+    color: rgb(var(--crit));
+    border-color: rgb(var(--crit));
+    background: rgb(var(--crit) / 0.08);
+  }
   .security-rotate-form {
     display: flex;
     align-items: center;

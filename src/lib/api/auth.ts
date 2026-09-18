@@ -59,6 +59,10 @@ export async function changePassword(
   });
 }
 
+export async function removePassword(): Promise<void> {
+  await invoke("auth_remove_password");
+}
+
 export async function lock(): Promise<void> {
   await invoke("auth_lock", undefined, { silentAuth: true });
 }

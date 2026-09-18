@@ -43,6 +43,8 @@ native unlock path.
   supported.
 - Change an existing vault password in Settings → Security, or add the first
   password to an OS-vault-only instance while it is unlocked.
+- Remove the password wrapper when a passkey or native OS-vault recovery route
+  remains configured. The app blocks removal of the last recovery method.
 - Lock the app before leaving the device and protect exports, screenshots,
   original source files, and backups separately.
 

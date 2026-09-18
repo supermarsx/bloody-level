@@ -367,6 +367,34 @@ pub async fn auth_change_password(
     Ok(())
 }
 
+/// Remove the password wrapper from an unlocked vault. A passkey or a
+/// configured native OS-vault credential must remain so the vault is never
+/// left without a recovery route.
+#[tauri::command]
+pub async fn auth_remove_password(state: State<'_, AppState>) -> AppResult<()> {
+    let ks_path = state.keystore_path();
+    let mut ks = Keystore::load(&ks_path)?;
+    if !ks.has_password() {
+        return Err(AppError::BadRequest(
+            "no vault password is configured".into(),
+        ));
+    }
+    let has_os_vault =
+        ks.os_vault_enabled && crate::crypto::native_vault::status().credential_present;
+    if !ks.has_passkey() && !has_os_vault {
+        return Err(AppError::BadRequest(
+            "add a passkey or enable the native OS vault before removing the last password recovery method".into(),
+        ));
+    }
+    ks.wrappers.retain(|wrapper| {
+        !matches!(
+            wrapper,
+            Wrapper::Password { .. } | Wrapper::DmkTransition { .. }
+        )
+    });
+    ks.save(&ks_path)
+}
+
 #[tauri::command]
 pub async fn auth_lock(state: State<'_, AppState>) -> AppResult<()> {
     *state.db.lock().await = None;
