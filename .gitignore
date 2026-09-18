@@ -54,3 +54,4 @@ Thumbs.db
 *.swp
 *.swo
 *~
+/src-tauri/target-native-check

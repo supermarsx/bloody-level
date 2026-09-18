@@ -92,13 +92,48 @@
     files = new Map(files);
   }
 
+  /**
+   * Progress events are deliberately best-effort UI telemetry. Reconcile the
+   * final IPC response as the source of truth as well, so a dropped final
+   * event can never leave a completed item displaying "Queued" forever.
+   */
+  function applyOutcome(outcome: import('$api/ingest').IngestOutcome) {
+    const f = ensureFile(outcome.path);
+    const result = outcome.result;
+    f.stage = outcome.ok
+      ? result?.already_ingested ? 'duplicate' : 'completed'
+      : 'error';
+    f.progress = 1;
+    f.error = outcome.error;
+    if (result) {
+      f.rowsParsed = result.rows_parsed;
+      f.rowsUnmatched = result.rows_unmatched;
+      f.inlinePriors = result.inline_priors_emitted;
+      f.docConfidence = result.doc_confidence;
+      f.alreadyIngested = result.already_ingested;
+      f.message = result.already_ingested
+        ? `already ingested as ${result.report_id}`
+        : `ingested as ${result.report_id}`;
+    }
+    files = new Map(files);
+  }
+
   async function runIngest(paths: string[]) {
     if (busy || paths.length === 0) return;
     busy = true;
     for (const p of paths) ensureFile(p);
     files = new Map(files);
     try {
-      await ingestPdfs(paths);
+      const outcomes = await ingestPdfs(paths);
+      for (const outcome of outcomes) applyOutcome(outcome);
+      const completed = outcomes.filter((outcome) => outcome.ok).length;
+      batch = {
+        total: outcomes.length,
+        completed,
+        failed: outcomes.length - completed,
+        current_path: null,
+        elapsed_ms: batch?.elapsed_ms ?? 0
+      };
     } catch (e) {
       toasts.error(e);
     } finally {

@@ -71,15 +71,20 @@ function addPythonClangCandidates(candidates, pythonRoot) {
   }
 }
 
+function isUnixToolchainPath(value) {
+  const lower = value.toLowerCase().replaceAll("\\", "/");
+  return lower.includes("/msys") || lower.includes("/mingw") || lower.includes("/cygwin");
+}
+
 function findLibclang() {
   const candidates = [];
   const configured = process.env.LIBCLANG_PATH?.split(delimiter) ?? [];
   configured.forEach((value) => addCandidate(candidates, value));
 
-  const pathEntries = process.env.PATH?.split(delimiter) ?? [];
-  pathEntries.forEach((value) => addCandidate(candidates, value));
-
   if (platform() === "win32") {
+    // Prefer a native LLVM installation. A MinGW/MSYS libclang can load for
+    // bindgen, but allowing its toolchain directory to win also makes CMake
+    // select MinGW headers while compiling the MSVC llama.cpp build.
     addCandidate(candidates, "C:/Program Files/LLVM/bin");
     addCandidate(candidates, "C:/Program Files (x86)/LLVM/bin");
     addCandidate(
@@ -96,7 +101,19 @@ function findLibclang() {
         ? join(process.env.LOCALAPPDATA, "Python")
         : undefined,
     );
+
+    // Keep PATH discovery as a fallback, but defer Unix-like Windows
+    // toolchains until after native locations have been considered.
+    const pathEntries = process.env.PATH?.split(delimiter) ?? [];
+    pathEntries
+      .filter((value) => !isUnixToolchainPath(value))
+      .forEach((value) => addCandidate(candidates, value));
+    pathEntries
+      .filter(isUnixToolchainPath)
+      .forEach((value) => addCandidate(candidates, value));
   } else {
+    const pathEntries = process.env.PATH?.split(delimiter) ?? [];
+    pathEntries.forEach((value) => addCandidate(candidates, value));
     addCandidate(candidates, "/usr/lib/llvm/lib");
     addCandidate(candidates, "/usr/lib/x86_64-linux-gnu");
     addCandidate(candidates, "/usr/lib/aarch64-linux-gnu");
@@ -130,7 +147,10 @@ if (libclangPath) {
 }
 
 const nativeCmake = findNativeCmake();
-if (!process.env.CMAKE && nativeCmake) {
+if (
+  nativeCmake &&
+  (!process.env.CMAKE || isUnixToolchainPath(process.env.CMAKE))
+) {
   process.env.CMAKE = nativeCmake;
   console.log(`[bloody-level] Using native CMake from ${nativeCmake}`);
 }
