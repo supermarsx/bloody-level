@@ -24,17 +24,18 @@ This page describes the capability boundary users and contributors should rely o
   language data, while an installed executable remains a supported fallback.
 - Ingestion stages are independently controlled in Settings: Tier 1 PDFium
   extraction, Tier 2 Tesseract OCR fallback, and Tier 3 hybrid OCR + LLM
-  escalation auditing. Tier 3 currently records readiness candidates without
-  modifying report output.
+  escalation. Tier 3 can load Phi-4 on demand and persist a Tier 3 report only
+  when repaired output was actually used; missing or failed optional models
+  fall back to the successful lower tier with diagnostics.
 - PDFium may need a target-matched manual library when the build-time download is unavailable.
 - Signing depends on platform credentials and repository secrets; default artifacts can be unsigned.
 
 ## In progress or experimental
 
-- olmOCR-2 and Phi-4 integrations are compiled into distributed builds. Their
-  settings controls can download/configure local model assets, but the current
-  runtime still covers configuration/path validation and lifecycle status
-  rather than a complete, guaranteed extraction path.
+- Phi-4 uses the bundled llama.cpp integration for local text repair when a
+  compatible GGUF model is configured and loaded. olmOCR-2 model management and
+  readiness reporting are present, but its safetensors vision inference runtime
+  is not yet connected to ingestion.
 - Production confidence still depends on expanding synthetic and sanitized PDF fixture coverage across real-world report layouts.
 
 For the full design history and acceptance criteria, read [the original implementation plan](../implementation-plan.md).

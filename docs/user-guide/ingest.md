@@ -41,17 +41,21 @@ Settings presents three independent ingestion stages:
 2. **Tier 2 — OCR:** Tesseract fallback for sparse-text PDFs. It is used only
    when the toggle is enabled and the native executable and language data are
    available.
-3. **Tier 3 — Hybrid OCR + LLM:** low-confidence escalation auditing for the
-   optional olmOCR-2 and Phi-4 runtimes. At present this records a transparent
-   candidate with model readiness details; it does not silently rewrite report
-   output. The audit payload marks `output_modified: false` until a complete
-   model inference path is available.
+3. **Tier 3 — Hybrid OCR + LLM:** when Tier 2 reports low OCR confidence and
+   the Phi-4 model is enabled, the app loads it on demand, repairs the OCR text,
+   and parses that repaired text. The stored report is marked as Tier 3 only
+   when a non-empty model output was actually used. If the model is missing,
+   unloaded, or fails, the app keeps the Tier 1/2 text and records the reason.
+   olmOCR-2 remains an optional vision resource and is shown as unavailable until
+   its native inference runtime is ready.
 
 Distributed builds compile the optional Tesseract, olmOCR-2, and Phi-4
 integrations, but compiled code is not the same as an enabled, downloaded, or
 loaded runtime asset. Choose the stage toggles and model paths in Settings. The
 UI shows availability, download progress, cancellation, and diagnostics instead
-of pretending a missing backend ran.
+of pretending a missing backend ran. A normal text-based report should remain
+Tier 1: enabling a higher tier makes it an escalation fallback, not a forced
+second pass over every document.
 
 ## After import
 

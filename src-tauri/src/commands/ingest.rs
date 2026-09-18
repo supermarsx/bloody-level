@@ -85,6 +85,7 @@ pub struct IngestResult {
     pub rows_unmatched: usize,
     pub inline_priors_emitted: usize,
     pub doc_confidence: f32,
+    pub ingest_tier: i64,
     pub already_ingested: bool,
 }
 
@@ -280,6 +281,7 @@ async fn ingest_one(
                 rows_unmatched: 0,
                 inline_priors_emitted: 0,
                 doc_confidence: 1.0,
+                ingest_tier: 1,
                 already_ingested: true,
             });
         }
@@ -304,6 +306,17 @@ async fn ingest_one(
         state.resource_dir.as_deref(),
     );
     let ocr_tier_enabled = setting_bool(&ingestion_tiers, "ocr", tesseract_config.enabled);
+    let hybrid_tier_enabled = setting_bool(&ingestion_tiers, "hybrid_ocr_llm", false);
+    let llm_setting = if hybrid_tier_enabled {
+        Some(
+            read_json_setting(state, "llm")
+                .await
+                .stage("loading_llm_settings")
+                .path(path_str)?,
+        )
+    } else {
+        None
+    };
 
     if crate::ocr::should_fallback_to_ocr(&extracted.combined_text, extracted.page_count) {
         if ocr_tier_enabled && tesseract_config.enabled && crate::ocr::is_available() {
@@ -369,6 +382,92 @@ async fn ingest_one(
         }
     }
 
+    // Tier 3 is a real escalation, not merely an audit marker: when the
+    // OCR confidence is below the configured repair threshold, load the
+    // configured Phi-4 model on demand and let it repair the OCR text before
+    // header/row parsing begins. If the optional model is unavailable or
+    // fails, keep the Tier 1/2 text and continue with an audit warning.
+    if hybrid_tier_enabled {
+        if let Some(llm) = llm_setting.as_ref() {
+            let llm_threshold = setting_f32(llm, "trigger_below_confidence", 0.7);
+            let should_repair = setting_enabled(llm)
+                && ocr_mean_confidence.is_some_and(|confidence| confidence < llm_threshold);
+            if should_repair {
+                let model_path = llm
+                    .get("model_path")
+                    .and_then(|value| value.as_str())
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(ToOwned::to_owned);
+                let mut progress = IngestProgress::new(path_str, STAGE_EXTRACTING, 0.39, started);
+                progress.bytes = Some(extracted.byte_count);
+                progress.pages = Some(extracted.page_count);
+                progress.doc_confidence = ocr_mean_confidence;
+                progress.message =
+                    Some("OCR confidence is low; preparing Tier 3 Phi-4 repair".into());
+                let _ = app.emit(EVT_PROGRESS, &progress);
+
+                if !crate::llm::is_loaded() {
+                    if let Some(model_path) = model_path.clone() {
+                        let load_result =
+                            tokio::task::spawn_blocking(move || crate::llm::load_model(model_path))
+                                .await;
+                        if let Ok(Err(error)) = load_result {
+                            tracing::warn!(path = path_str, %error, "Tier 3 LLM could not be loaded");
+                        } else if let Err(error) = load_result {
+                            tracing::warn!(path = path_str, %error, "Tier 3 LLM load task failed");
+                        }
+                    }
+                }
+
+                if crate::llm::is_loaded() {
+                    let source_text = extracted.combined_text.clone();
+                    let repair_result = tokio::task::spawn_blocking(move || {
+                        crate::llm::repair_text(crate::llm::RepairRequest {
+                            source_text,
+                            doc_confidence: ocr_mean_confidence,
+                            report_id: None,
+                            max_output_chars: Some(16_000),
+                            hints: vec![
+                                "Preserve Portuguese PT-PT laboratory report structure".into(),
+                                "Do not invent analyte values, units, dates, or patient data"
+                                    .into(),
+                            ],
+                        })
+                    })
+                    .await;
+
+                    match repair_result {
+                        Ok(Ok(repair)) if !repair.repaired_text.trim().is_empty() => {
+                            extracted.combined_text = repair.repaired_text;
+                            ingest_tier = 3;
+                            let mut progress =
+                                IngestProgress::new(path_str, STAGE_EXTRACTING, 0.40, started);
+                            progress.bytes = Some(extracted.byte_count);
+                            progress.pages = Some(extracted.page_count);
+                            progress.doc_confidence = Some(repair.confidence);
+                            progress.message =
+                                Some("Tier 3 Phi-4 repair completed; parsing repaired text".into());
+                            let _ = app.emit(EVT_PROGRESS, &progress);
+                        }
+                        Ok(Ok(_)) => {
+                            tracing::warn!(
+                                path = path_str,
+                                "Tier 3 LLM returned empty text; keeping OCR text"
+                            );
+                        }
+                        Ok(Err(error)) => {
+                            tracing::warn!(path = path_str, %error, "Tier 3 LLM repair failed; keeping OCR text");
+                        }
+                        Err(error) => {
+                            tracing::warn!(path = path_str, %error, "Tier 3 LLM repair task failed; keeping OCR text");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     {
         let mut p = IngestProgress::new(path_str, STAGE_EXTRACTED, 0.40, started);
         p.bytes = Some(extracted.byte_count);
@@ -377,10 +476,10 @@ async fn ingest_one(
             "{} pages, {} chars{}",
             extracted.page_count,
             extracted.combined_text.len(),
-            if ingest_tier == 2 {
-                " (Tesseract OCR)"
-            } else {
-                ""
+            match ingest_tier {
+                2 => " (Tesseract OCR)",
+                3 => " (Tier 3 OCR + Phi-4 repair)",
+                _ => "",
             }
         ));
         let _ = app.emit(EVT_PROGRESS, &p);
@@ -734,7 +833,7 @@ async fn ingest_one(
         &report_id,
         path_str,
         doc_confidence,
-        setting_bool(&ingestion_tiers, "hybrid_ocr_llm", false),
+        hybrid_tier_enabled,
     );
 
     audit::log(
@@ -781,6 +880,7 @@ async fn ingest_one(
         rows_unmatched,
         inline_priors_emitted,
         doc_confidence,
+        ingest_tier,
         already_ingested: false,
     })
 }

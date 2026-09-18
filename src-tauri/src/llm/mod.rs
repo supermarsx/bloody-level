@@ -12,12 +12,20 @@ use crate::error::{AppError, AppResult};
 static STATE: Lazy<Mutex<ModelRuntimeState>> =
     Lazy::new(|| Mutex::new(ModelRuntimeState::default()));
 
-#[derive(Debug, Default)]
+#[cfg(feature = "embedded-llm")]
+struct LoadedModel {
+    model: llama_cpp_2::model::LlamaModel,
+    backend: llama_cpp_2::llama_backend::LlamaBackend,
+}
+
+#[derive(Default)]
 struct ModelRuntimeState {
     model_path: Option<PathBuf>,
     loading: bool,
     loaded: bool,
     last_error: Option<String>,
+    #[cfg(feature = "embedded-llm")]
+    runtime: Option<LoadedModel>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -116,11 +124,40 @@ pub fn load_model(model_path: impl AsRef<Path>) -> AppResult<ModelStatus> {
         state.last_error = None;
     }
 
-    // The real llama.cpp session belongs here. This feature-gated skeleton
-    // only validates/tracks the local model path and state transition.
+    #[cfg(feature = "embedded-llm")]
+    let runtime = (|| {
+        let backend = llama_cpp_2::llama_backend::LlamaBackend::init()
+            .map_err(|error| AppError::Internal(format!("initialize llama.cpp: {error}")))?;
+        let model = llama_cpp_2::model::LlamaModel::load_from_file(
+            &backend,
+            &canonical,
+            &llama_cpp_2::model::params::LlamaModelParams::default(),
+        )
+        .map_err(|error| AppError::Internal(format!("load LLM model: {error}")))?;
+        Ok::<LoadedModel, AppError>(LoadedModel { model, backend })
+    })();
+
+    #[cfg(feature = "embedded-llm")]
+    let runtime = match runtime {
+        Ok(runtime) => runtime,
+        Err(error) => {
+            let mut state = STATE
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            state.loading = false;
+            state.loaded = false;
+            state.last_error = Some(error.to_string());
+            return Err(error);
+        }
+    };
+
     let mut state = STATE
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
+    #[cfg(feature = "embedded-llm")]
+    {
+        state.runtime = Some(runtime);
+    }
     state.loading = false;
     state.loaded = true;
     drop(state);
@@ -134,7 +171,7 @@ pub fn unload_model() {
     *state = ModelRuntimeState::default();
 }
 
-pub fn repair_text(_request: RepairRequest) -> AppResult<RepairOutput> {
+pub fn repair_text(request: RepairRequest) -> AppResult<RepairOutput> {
     if !is_available() {
         return Err(AppError::BadRequest(
             "embedded LLM tier is not compiled; rebuild with --features embedded-llm".into(),
@@ -146,9 +183,116 @@ pub fn repair_text(_request: RepairRequest) -> AppResult<RepairOutput> {
                 .into(),
         ));
     }
-    Err(AppError::Internal(
-        "Phi-4 repair runtime is not implemented yet; no repaired output was produced".into(),
-    ))
+    #[cfg(feature = "embedded-llm")]
+    {
+        use std::num::NonZeroU32;
+
+        use llama_cpp_2::context::params::LlamaContextParams;
+        use llama_cpp_2::llama_batch::LlamaBatch;
+        use llama_cpp_2::model::AddBos;
+        use llama_cpp_2::sampling::LlamaSampler;
+
+        let state = STATE
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let loaded = state.runtime.as_ref().ok_or_else(|| {
+            AppError::BadRequest(
+                "embedded LLM model is not loaded; call load_model with a local Phi-4 model path first"
+                    .into(),
+            )
+        })?;
+
+        let max_output_chars = request.max_output_chars.unwrap_or(8_000).clamp(256, 16_000);
+        let source_text: String = request.source_text.chars().take(24_000).collect();
+        let prompt = format!(
+            "You repair OCR text from a Portuguese clinical laboratory report.\n\
+             Return only the corrected plain-text report, with no commentary, markdown,\n\
+             diagnosis, or invented values. Preserve patient names, dates, analyte names,\n\
+             numbers, units, and reference ranges. Fix broken line joins and obvious OCR\n\
+             character errors only. If uncertain, preserve the original text.\n\n\
+             OCR text:\n{}\n",
+            source_text
+        );
+        let tokens = loaded
+            .model
+            .str_to_token(&prompt, AddBos::Always)
+            .map_err(|error| AppError::Internal(format!("tokenize LLM prompt: {error}")))?;
+        let n_ctx = 4096usize;
+        if tokens.len() + 256 >= n_ctx {
+            return Err(AppError::BadRequest(
+                "LLM repair input is too large for the configured context window".into(),
+            ));
+        }
+        let max_output_tokens = max_output_chars.min(n_ctx - tokens.len() - 1);
+
+        let thread_count = std::thread::available_parallelism()
+            .map(|count| count.get().min(8) as i32)
+            .unwrap_or(4);
+        let ctx_params = LlamaContextParams::default()
+            .with_n_ctx(NonZeroU32::new(n_ctx as u32))
+            .with_n_batch(n_ctx as u32)
+            .with_n_threads(thread_count);
+        let mut ctx = loaded
+            .model
+            .new_context(&loaded.backend, ctx_params)
+            .map_err(|error| AppError::Internal(format!("create LLM context: {error}")))?;
+        let mut prompt_batch = LlamaBatch::new(tokens.len(), 1);
+        prompt_batch
+            .add_sequence(&tokens, 0, false)
+            .map_err(|error| AppError::Internal(format!("prepare LLM prompt: {error}")))?;
+        ctx.decode(&mut prompt_batch)
+            .map_err(|error| AppError::Internal(format!("evaluate LLM prompt: {error}")))?;
+
+        let mut sampler = LlamaSampler::greedy();
+        let mut output = String::new();
+        let mut next_batch = LlamaBatch::new(1, 1);
+        for (next_pos, _) in (tokens.len() as i32..).zip(0..max_output_tokens) {
+            let token = sampler.sample(&ctx, -1);
+            sampler.accept(token);
+            if token == loaded.model.token_eos() {
+                break;
+            }
+            let piece = loaded
+                .model
+                .token_to_piece_bytes(token, 128, false, None)
+                .map_err(|error| AppError::Internal(format!("decode LLM output: {error}")))?;
+            output.push_str(&String::from_utf8_lossy(&piece));
+            if output.chars().count() >= max_output_chars {
+                break;
+            }
+            next_batch.clear();
+            next_batch
+                .add(token, next_pos, &[0], true)
+                .map_err(|error| AppError::Internal(format!("prepare LLM token: {error}")))?;
+            ctx.decode(&mut next_batch)
+                .map_err(|error| AppError::Internal(format!("evaluate LLM token: {error}")))?;
+        }
+
+        let repaired_text = output.trim().to_string();
+        if repaired_text.is_empty() {
+            return Err(AppError::Internal(
+                "Phi-4 produced no repaired text; original OCR text was kept".into(),
+            ));
+        }
+        Ok(RepairOutput {
+            repaired_text,
+            confidence: 0.75,
+            model_path: state
+                .model_path
+                .as_ref()
+                .map(|path| path_to_string(path.as_path())),
+            prompt_hash: None,
+            warnings: vec![
+                "LLM output is advisory and must be reviewed against the source PDF".into(),
+            ],
+        })
+    }
+
+    #[cfg(not(feature = "embedded-llm"))]
+    {
+        let _ = request;
+        unreachable!("feature check above returns when embedded-llm is unavailable")
+    }
 }
 
 fn non_empty(value: &str) -> Option<&str> {
@@ -223,14 +367,13 @@ mod tests {
 
     #[test]
     #[cfg(feature = "embedded-llm")]
-    fn load_model_records_validated_path_when_feature_enabled() {
+    fn load_model_rejects_invalid_model_when_feature_enabled() {
         let _guard = TEST_STATE_LOCK.lock().unwrap();
         unload_model();
         let path = temp_model_file("llm-load");
-        let status = load_model(&path).unwrap();
-        assert!(status.loaded);
-        assert!(!status.loading);
-        assert!(status.loaded_model_path.is_some());
+        let error = load_model(&path).unwrap_err();
+        assert!(matches!(error, AppError::Internal(_)));
+        assert!(!is_loaded());
         unload_model();
         std::fs::remove_file(path).unwrap();
     }

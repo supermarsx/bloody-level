@@ -18,9 +18,11 @@ green before release builds run.
 - Tier 2 Tesseract OCR is feature-gated behind `tesseract-ocr`; sparse PDF text
   can fall back to rendered-page OCR and persist `ingest_tier = 2` when OCR text
   is selected.
-- Tier 3 and Tier 4 model settings/status paths validate local model files,
-  expose compiled, present, loading, and loaded state, and provide settings-page
-  file picking plus load/unload controls without faking OCR or repair output.
+- Tier 3 model settings/status paths validate local model files, expose
+  compiled, present, loading, and loaded state, and provide settings-page
+  file picking plus load/unload controls. Low-confidence Tesseract output can
+  invoke the local Phi-4 repair runtime and is promoted to `ingest_tier = 3`
+  only when non-empty repaired text is used.
 - Ingest and reparse now write `parse_audit` diagnostics for unmatched analytes,
   unparsed ranges, unrecognized units, missing values, and low-confidence rows.
 - Report detail now exposes those `parse_audit` diagnostics as a compact
@@ -50,7 +52,9 @@ Acceptance:
 
 - Settings continue to distinguish compiled, model present, loaded, and
   unavailable.
-- Low-confidence tier 2 output can escalate to tier 3 when enabled and loaded.
+- Low-confidence tier 2 output can escalate to tier 3 when enabled and loaded;
+  the successful lower tier remains the fallback when an optional model is not
+  ready or fails.
 - Errors clearly identify missing feature, missing model, or runtime failure.
 - No successful OCR result is returned unless the model runtime actually
   produced text.

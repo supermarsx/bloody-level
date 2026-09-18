@@ -27,6 +27,7 @@
     rowsUnmatched: number | null;
     inlinePriors: number | null;
     docConfidence: number | null;
+    ingestTier: number | null;
     alreadyIngested: boolean | null;
     error: AppErrorPayload | null;
   };
@@ -67,6 +68,7 @@
         rowsUnmatched: null,
         inlinePriors: null,
         docConfidence: null,
+        ingestTier: null,
         alreadyIngested: null,
         error: null
       };
@@ -122,6 +124,7 @@
       f.rowsUnmatched = result.rows_unmatched;
       f.inlinePriors = result.inline_priors_emitted;
       f.docConfidence = result.doc_confidence;
+      f.ingestTier = result.ingest_tier;
       f.alreadyIngested = result.already_ingested;
       f.message = result.already_ingested
         ? `already ingested as ${result.report_id}`
@@ -445,6 +448,9 @@
               {/if}
               {#if f.docConfidence != null}
                 <span>conf {(f.docConfidence * 100).toFixed(0)}%</span>
+              {/if}
+              {#if f.ingestTier != null}
+                <span class="pill-muted">Tier {f.ingestTier}</span>
               {/if}
             </div>
 

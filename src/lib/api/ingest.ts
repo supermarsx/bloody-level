@@ -12,6 +12,7 @@ export interface IngestResult {
   rows_unmatched: number;
   inline_priors_emitted: number;
   doc_confidence: number;
+  ingest_tier: number;
   already_ingested: boolean;
 }
 
