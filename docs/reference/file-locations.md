@@ -8,7 +8,7 @@ The app data area contains the local vault and supporting files, including:
 
 - encrypted SQLite database;
 - keystore and password/passkey wrapping material;
-- copied source PDFs under the PDF storage area;
+- encrypted copied source PDFs under the PDF storage area;
 - optional local model assets;
 - runtime manifests and backup staging data.
 

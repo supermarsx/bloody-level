@@ -1,3 +1,4 @@
+use secrecy::SecretBox;
 use std::path::{Path, PathBuf};
 use tokio::sync::Mutex;
 
@@ -7,6 +8,7 @@ pub struct AppState {
     pub data_dir: PathBuf,
     pub resource_dir: Option<PathBuf>,
     pub db: Mutex<Option<Database>>,
+    pub pdf_key: Mutex<Option<SecretBox<[u8; 32]>>>,
 }
 
 impl AppState {
@@ -15,6 +17,7 @@ impl AppState {
             data_dir,
             resource_dir,
             db: Mutex::new(None),
+            pdf_key: Mutex::new(None),
         }
     }
 

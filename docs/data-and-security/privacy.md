@@ -12,6 +12,20 @@ The vault uses a SQLCipher v4-compatible encrypted SQLite database. It is config
 
 The password wrapper uses Argon2id with 64 MiB memory, three iterations, and one lane. A strong password still matters: encryption cannot recover data when the password is forgotten.
 
+## Encrypted source-PDF cache
+
+When a report is imported, bloody-level stores a managed copy under the
+application data directory so later review does not depend on the original
+file remaining in place. That managed PDF cache is encrypted with
+XChaCha20-Poly1305 using an HKDF-derived key scoped to the vault. Existing
+plaintext cache files from older builds are converted during unlock before the
+vault is made available.
+
+Opening a report creates a temporary plaintext hand-off for the operating
+system's PDF viewer. It is kept outside the vault and scheduled for cleanup
+after a short review window. The original source file selected for import is
+not moved or encrypted by the app; protect that file separately.
+
 ## Passkeys
 
 On supported platforms, a passkey can unlock a password-wrapped vault key using the authenticator PRF capability. Passkeys are an additional local unlock mechanism, not a cloud account or a replacement for a backup password.

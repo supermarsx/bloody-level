@@ -102,7 +102,10 @@ pub async fn auth_setup_password(state: State<'_, AppState>, password: String) -
     let mut db = Database::open_encrypted(&state.db_path(), &dmk)?;
     db.migrate()?;
     let _ = db.ensure_ontology(state.ontology_seed_path().as_deref());
+    let pdf_key = kdf::derive_pdf_cache_key(&dmk)?;
+    crate::crypto::file::migrate_plaintext_pdf_cache(&state.pdf_dir(), &pdf_key)?;
     *state.db.lock().await = Some(db);
+    *state.pdf_key.lock().await = Some(pdf_key);
     Ok(())
 }
 
@@ -148,7 +151,10 @@ pub async fn auth_unlock_password(state: State<'_, AppState>, password: String) 
     let mut db = Database::open_encrypted(&state.db_path(), &dmk)?;
     db.migrate()?;
     let _ = db.ensure_ontology(state.ontology_seed_path().as_deref());
+    let pdf_key = kdf::derive_pdf_cache_key(&dmk)?;
+    crate::crypto::file::migrate_plaintext_pdf_cache(&state.pdf_dir(), &pdf_key)?;
     *state.db.lock().await = Some(db);
+    *state.pdf_key.lock().await = Some(pdf_key);
 
     ks.record_success();
     ks.save(&ks_path)?;
@@ -215,6 +221,7 @@ pub async fn auth_change_password(
 #[tauri::command]
 pub async fn auth_lock(state: State<'_, AppState>) -> AppResult<()> {
     *state.db.lock().await = None;
+    *state.pdf_key.lock().await = None;
     Ok(())
 }
 
@@ -237,6 +244,7 @@ pub async fn auth_reset_instance(state: State<'_, AppState>, confirm: bool) -> A
             ));
         }
     }
+    *state.pdf_key.lock().await = None;
 
     if state.data_dir.exists() {
         std::fs::remove_dir_all(&state.data_dir)
@@ -371,7 +379,10 @@ pub async fn auth_unlock_passkey(
     let mut db = Database::open_encrypted(&state.db_path(), &dmk)?;
     db.migrate()?;
     let _ = db.ensure_ontology(state.ontology_seed_path().as_deref());
+    let pdf_key = kdf::derive_pdf_cache_key(&dmk)?;
+    crate::crypto::file::migrate_plaintext_pdf_cache(&state.pdf_dir(), &pdf_key)?;
     *state.db.lock().await = Some(db);
+    *state.pdf_key.lock().await = Some(pdf_key);
 
     ks.record_success();
     ks.save(&ks_path)?;

@@ -1,6 +1,6 @@
 use argon2::{Algorithm, Argon2, Params, Version};
 use hkdf::Hkdf;
-use secrecy::SecretBox;
+use secrecy::{ExposeSecret, SecretBox};
 use sha2::Sha256;
 
 use crate::error::{AppError, AppResult};
@@ -30,4 +30,11 @@ pub fn derive_kek_from_prf(prf_output: &[u8], info: &[u8]) -> AppResult<SecretBo
     hk.expand(info, &mut key)
         .map_err(|e| AppError::Crypto(format!("hkdf: {e}")))?;
     Ok(SecretBox::new(Box::new(key)))
+}
+
+/// Derive the key used for the managed PDF cache from the vault's data master
+/// key. Keeping this as a separate HKDF context means the PDF cache key cannot
+/// be confused with the database key or a password/passkey wrapping key.
+pub fn derive_pdf_cache_key(dmk: &SecretBox<[u8; 32]>) -> AppResult<SecretBox<[u8; 32]>> {
+    derive_kek_from_prf(dmk.expose_secret(), b"bloody-level PDF cache v1")
 }

@@ -3,7 +3,9 @@
 // Confines the request to our managed pdf_dir / data_dir so a compromised
 // frontend can't ask us to launch arbitrary files.
 
+use secrecy::{ExposeSecret, SecretBox};
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::State;
 
 use crate::error::{AppError, AppResult};
@@ -33,7 +35,46 @@ pub async fn open_file_external(state: State<'_, AppState>, path: String) -> App
         )));
     }
 
-    spawn_opener(&canon).map_err(|e| AppError::Internal(format!("opener failed: {e}")))?;
+    let pdf_root = state
+        .pdf_dir()
+        .canonicalize()
+        .map_err(|e| AppError::Internal(format!("canonicalize pdf_dir: {e}")))?;
+    let is_managed_pdf = canon.is_file()
+        && canon
+            .extension()
+            .and_then(|extension| extension.to_str())
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("pdf"))
+        && is_within(&canon, &pdf_root);
+
+    let viewer_path = if is_managed_pdf {
+        let key = {
+            let guard = state.pdf_key.lock().await;
+            let key = guard.as_ref().ok_or(AppError::Locked)?;
+            SecretBox::new(Box::new(*key.expose_secret()))
+        };
+        let plaintext = crate::crypto::file::decrypt_file(&canon, &key)?;
+        let temp_dir = std::env::temp_dir().join("bloody-level-open");
+        std::fs::create_dir_all(&temp_dir)?;
+        let stamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_nanos())
+            .unwrap_or_default();
+        let temporary = temp_dir.join(format!("report-{}-{stamp}.pdf", std::process::id()));
+        std::fs::write(&temporary, plaintext)?;
+
+        // External PDF viewers need a plaintext hand-off. Keep that hand-off
+        // outside the vault and remove it after a short review window.
+        let cleanup_path = temporary.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_secs(15 * 60));
+            let _ = std::fs::remove_file(cleanup_path);
+        });
+        temporary
+    } else {
+        canon
+    };
+
+    spawn_opener(&viewer_path).map_err(|e| AppError::Internal(format!("opener failed: {e}")))?;
     Ok(())
 }
 

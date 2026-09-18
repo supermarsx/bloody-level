@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::time::Instant;
 
+use secrecy::{ExposeSecret, SecretBox};
 use serde::Serialize;
 use serde_json::json;
 use tauri::{AppHandle, Emitter, State};
@@ -508,7 +509,12 @@ async fn ingest_one(
     let pdf_dest_dir = state.pdf_dir();
     std::fs::create_dir_all(&pdf_dest_dir)?;
     let pdf_dest = pdf_dest_dir.join(format!("{}.pdf", extracted.sha256_hex));
-    std::fs::copy(&pdf_path, &pdf_dest)?;
+    let pdf_key = {
+        let guard = state.pdf_key.lock().await;
+        let key = guard.as_ref().ok_or(AppError::Locked)?;
+        SecretBox::new(Box::new(*key.expose_secret()))
+    };
+    crate::crypto::file::encrypt_file(&pdf_path, &pdf_dest, &pdf_key)?;
     let pdf_dest_str = pdf_dest.to_string_lossy().to_string();
 
     let raw_text_blob = extracted.combined_text.clone().into_bytes();

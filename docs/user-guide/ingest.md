@@ -26,11 +26,11 @@ The pipeline records these stages:
 3. Extract text with PDFium.
 4. Use OCR when the extracted text is sparse and the selected tier is available.
 5. Parse and normalize rows against the local ontology.
-6. Write the report, rows, source copy, and audit events to the encrypted vault.
+6. Encrypt the managed source copy, then write the report, rows, and audit events to the encrypted vault.
 
 ## Duplicate handling
 
-The source SHA-256 is the identity check for an imported file. Importing the same bytes again is treated as a duplicate rather than creating a second report. A report's original PDF is copied into application data so later review does not depend on the original path continuing to exist.
+The source SHA-256 is the identity check for an imported file. Importing the same bytes again is treated as a duplicate rather than creating a second report. A report's original PDF is copied into application data so later review does not depend on the original path continuing to exist. The managed copy is encrypted at rest; opening it creates a temporary hand-off for the system PDF viewer.
 
 ## Ingestion tiers
 
