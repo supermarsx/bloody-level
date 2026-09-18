@@ -134,9 +134,10 @@
         <p class="mt-1 text-xs text-fg3">Open Customize to choose which information appears here.</p>
       </div>
     {:else}
+      <div class="dashboard-sections">
       {#each displayedSections as section (section)}
         {#if section === 'kpis'}
-          <section class="grid grid-cols-2 md:grid-cols-4 gap-3" aria-label="Summary cards">
+          <section class="dashboard-section dashboard-section--full grid grid-cols-2 md:grid-cols-4 gap-3" aria-label="Summary cards">
             <div class="card p-3"><div class="text-xs text-fg2">Patients</div><div class="text-2xl font-semibold tabular-nums">{kpis.patients}</div><div class="text-[10px] text-fg3 mt-0.5">tracked</div></div>
             <div class="card p-3"><div class="text-xs text-fg2">Reports</div><div class="text-2xl font-semibold tabular-nums">{kpis.totalReports}</div><div class="text-[10px] text-fg3 mt-0.5">{kpis.totalRecent} in last 12 mo</div></div>
             <div class="card p-3"><div class="text-xs text-fg2">Abnormal results</div><div class="text-2xl font-semibold tabular-nums {kpis.recentAbnormal > 0 ? 'text-warn' : ''}">{kpis.totalAbnormal}</div><div class="text-[10px] text-fg3 mt-0.5">{kpis.recentAbnormal} recent</div></div>
@@ -144,7 +145,7 @@
           </section>
         {:else if section === 'spotlight'}
           {#if spotlight.length > 0}
-            <section>
+            <section class="dashboard-section dashboard-section--full">
               <h2 class="text-sm font-semibold mb-2 flex items-center gap-2"><span class="inline-block w-2 h-2 rounded-full bg-warn"></span>Recent abnormal flags <span class="text-xs text-fg3 font-normal">(last 12 months)</span></h2>
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {#each spotlight as p}
@@ -158,17 +159,17 @@
             </section>
           {/if}
         {:else if section === 'reports'}
-          <section>
+          <section class="dashboard-section dashboard-section--column">
             <h2 class="text-sm font-semibold mb-2">Recent reports</h2>
             {#if recentReports.length === 0}<div class="card p-3 text-xs text-fg3">No reports yet.</div>{:else}<div class="card divide-y divide-line">{#each recentReports as r}<a class="flex items-center justify-between gap-3 px-3 py-2 hover:bg-bg3 transition-colors" href={`/report/${r.id}`}><div class="flex flex-col min-w-0"><span class="text-sm font-medium truncate">{r.patient_name}{#if r.nickname}<span class="ml-1 text-fg3 font-normal">— {r.nickname}</span>{/if}</span><span class="text-xs text-fg3">{formatDate(r.collection_date_iso)} · {r.row_count} rows · tier {r.ingest_tier}</span></div><span class="text-xs text-fg2 tabular-nums">conf {(r.doc_confidence * 100).toFixed(0)}%</span></a>{/each}</div>{/if}
           </section>
         {:else if section === 'activity'}
-          <section>
+          <section class="dashboard-section dashboard-section--column">
             <h2 class="text-sm font-semibold mb-2 flex items-baseline justify-between"><span>Recent activity</span><a href="/audit" class="text-xs text-accent hover:underline font-normal">Open audit log <Icon name="arrow-right" size={12} /></a></h2>
             {#if recentAudit.length === 0}<div class="card p-3 text-xs text-fg3">No activity yet.</div>{:else}<div class="card divide-y divide-line">{#each recentAudit as a}<div class="px-3 py-2 text-xs"><div class="flex items-center justify-between gap-2"><span class="font-mono uppercase text-[10px] text-fg3">{a.action}</span><span class="text-[10px] text-fg3 tabular-nums">{fmtTs(a.ts)}</span></div><div class="text-fg1 mt-0.5">{a.summary}</div></div>{/each}</div>{/if}
           </section>
         {:else if section === 'patients'}
-          <section>
+          <section class="dashboard-section dashboard-section--column">
             <h2 class="text-sm font-semibold mb-2">Patients</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {#each patientsByActivity as p}
@@ -183,6 +184,28 @@
           </section>
         {/if}
       {/each}
+      </div>
     {/if}
   {/if}
 </div>
+
+<style>
+  .dashboard-sections {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+    align-items: stretch;
+  }
+
+  .dashboard-section--full { grid-column: 1 / -1; }
+  .dashboard-section--column { min-width: 0; }
+
+  @media (max-width: 980px) {
+    .dashboard-sections { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 680px) {
+    .dashboard-sections { grid-template-columns: minmax(0, 1fr); }
+    .dashboard-section--full { grid-column: auto; }
+  }
+</style>
