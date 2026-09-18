@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { listen, type UnlistenFn } from '@tauri-apps/api/event';
   import {
-    ingestPdfs,
+    ingestPdf,
     pickPdfs,
     subscribeProgress,
     STAGE_LABEL,
@@ -180,31 +180,47 @@
   async function runIngest(paths: string[]) {
     if (busy || paths.length === 0) return;
     busy = true;
-    for (const p of paths) {
-      const f = ensureFile(p);
-      if (f.stage === 'started') {
-        f.stage = 'hashing';
-        f.message = 'Preparing PDF…';
-      }
-    }
-    files = new Map(files);
+    let completed = 0;
+    let failed = 0;
+    const batchStarted = Date.now();
     try {
-      const outcomes = await ingestPdfs(paths);
-      if (!Array.isArray(outcomes)) {
-        throw new Error('Ingestion returned an invalid result');
+      // Process one file per IPC call so each item receives its terminal
+      // result immediately. A batch command only resolves after every PDF;
+      // when one native extraction was slow, that made every selected item
+      // look stuck in the initial "Hashing" state.
+      for (const path of paths) {
+        const f = ensureFile(path);
+        f.stage = 'hashing';
+        f.progress = 0.05;
+        f.elapsedMs = 0;
+        f.message = 'Preparing PDF…';
+        f.error = null;
+        files = new Map(files);
+        batch = {
+          total: paths.length,
+          completed,
+          failed,
+          current_path: path,
+          elapsed_ms: Date.now() - batchStarted
+        };
+
+        try {
+          const result = await ingestPdf(path);
+          applyOutcomes([path], [{ path, index: completed + failed, ok: true, error: null, result }]);
+          completed += 1;
+        } catch (error) {
+          applyOutcomes([path], [{ path, index: completed + failed, ok: false, error: toErrorPayload(error), result: null }]);
+          failed += 1;
+        }
+
+        batch = {
+          total: paths.length,
+          completed,
+          failed,
+          current_path: null,
+          elapsed_ms: Date.now() - batchStarted
+        };
       }
-      applyOutcomes(paths, outcomes);
-      const completed = paths.filter((path) => {
-        const stage = files.get(path)?.stage;
-        return stage === 'completed' || stage === 'duplicate';
-      }).length;
-      batch = {
-        total: paths.length,
-        completed,
-        failed: paths.length - completed,
-        current_path: null,
-        elapsed_ms: batch?.elapsed_ms ?? 0
-      };
     } catch (e) {
       markBatchError(paths, e);
       toasts.error(e);
@@ -385,7 +401,7 @@
            {dragging ? 'bg-bg3 border-accent' : ''}"
   >
     <p class="text-sm text-fg2">{dragging ? 'Release to ingest' : 'Drop PDFs here'}</p>
-    <p class="text-xs text-fg3 mt-1">tier-1 pdfium → parser → SQLite</p>
+    <p class="text-xs text-fg3 mt-1">Tier 1 baseline: PDFium extraction → parser → encrypted SQLite</p>
   </div>
 
   {#if order.length > 0}
