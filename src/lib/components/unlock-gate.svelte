@@ -328,40 +328,43 @@
           </p>
         </div>
 
-        {#if status?.os_vault_configured}
+        {#if status?.os_vault_configured && status.has_password}
           <button class="btn w-full" disabled={busy} onclick={unlockOsVault}>
             <Icon name="shield" size={15} /> Unlock with OS vault
           </button>
           <p class="text-[11px] text-fg3">Uses your configured native credential store; your password remains available as a fallback.</p>
         {/if}
 
-        <label class="block">
-          <span class="text-xs text-fg2">Password</span>
-          <div class="mt-1 relative">
-            <input
-              type={showPw ? 'text' : 'password'}
-              class="block w-full bg-bg1 border border-line rounded-md pl-3 pr-9 py-2 text-sm focus:outline-none focus:border-accent"
-              bind:value={password}
-              autocomplete="current-password"
-              oncontextmenu={keepContextMenu}
-              onkeydown={(e) => e.key === 'Enter' && (!status?.has_password || password) && !busy && unlockPassword()}
-              placeholder={status?.has_password ? 'Your vault password' : 'Leave blank — no password is configured'}
-            />
-            <button type="button" class="gate__pw-toggle"
-              onclick={() => (showPw = !showPw)}
-              title={showPw ? 'Hide password' : 'Show password'}
-              aria-label={showPw ? 'Hide password' : 'Show password'}
-            ><Icon name={showPw ? 'eye-off' : 'eye'} size={16} /></button>
-          </div>
-        </label>
+        {#if status?.has_password}
+          <label class="block">
+            <span class="text-xs text-fg2">Password</span>
+            <div class="mt-1 relative">
+              <input
+                type={showPw ? 'text' : 'password'}
+                class="block w-full bg-bg1 border border-line rounded-md pl-3 pr-9 py-2 text-sm focus:outline-none focus:border-accent"
+                bind:value={password}
+                autocomplete="current-password"
+                oncontextmenu={keepContextMenu}
+                onkeydown={(e) => e.key === 'Enter' && password && !busy && unlockPassword()}
+                placeholder="Your vault password"
+              />
+              <button type="button" class="gate__pw-toggle"
+                onclick={() => (showPw = !showPw)}
+                title={showPw ? 'Hide password' : 'Show password'}
+                aria-label={showPw ? 'Hide password' : 'Show password'}
+              ><Icon name={showPw ? 'eye-off' : 'eye'} size={16} /></button>
+            </div>
+          </label>
 
-        <button
-          class="btn-accent w-full"
-          disabled={busy || (!!status?.has_password && !password) || (!!status && !status.has_password && !status.os_vault_configured)}
-          onclick={unlockPassword}
-        >{busy ? 'Unlocking…' : status?.has_password ? 'Unlock' : 'Unlock without password'}</button>
-        {#if status && !status.has_password && !status.os_vault_configured}
-          <p class="text-[11px] text-fg3">No passwordless OS-vault route is available. Use a registered passkey below.</p>
+          <button
+            class="btn-accent w-full"
+            disabled={busy || !password}
+            onclick={unlockPassword}
+          >{busy ? 'Unlocking…' : 'Unlock'}</button>
+        {:else if status?.os_vault_configured}
+          <button class="btn-accent w-full" disabled={busy} onclick={unlockPassword}>
+            <Icon name="shield" size={15} /> {busy ? 'Unlocking…' : 'Unlock without password'}
+          </button>
         {/if}
 
         <div class="gate__reset-area">
