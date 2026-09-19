@@ -3,6 +3,7 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/supermarsx/bloody-level/ci.yml?branch=master&label=CI&style=flat-square)](https://github.com/supermarsx/bloody-level/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/github/actions/workflow/status/supermarsx/bloody-level/docs.yml?branch=master&label=Docs&style=flat-square)](https://github.com/supermarsx/bloody-level/actions/workflows/docs.yml)
 [![Latest release](https://img.shields.io/github/v/release/supermarsx/bloody-level?display_name=tag&style=flat-square)](https://github.com/supermarsx/bloody-level/releases)
+[![Downloads](https://img.shields.io/github/downloads/supermarsx/bloody-level/total?label=downloads&style=flat-square)](https://github.com/supermarsx/bloody-level/releases)
 [![License](https://img.shields.io/github/license/supermarsx/bloody-level?style=flat-square)](license.md)
 [![Made with Tauri](https://img.shields.io/badge/Made%20with-Tauri%202-FFC131?logo=tauri&logoColor=black&style=flat-square)](https://v2.tauri.app/)
 
