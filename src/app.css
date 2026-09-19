@@ -221,6 +221,71 @@ body {
   background-color: rgb(var(--accent) / 0.3);
 }
 
+/* UI chrome should behave like a control, not like document copy. Keep
+   navigation, menus, picker options, tabs, badges, and toolbar actions from
+   leaving accidental selection highlights while preserving selection inside
+   actual editable fields and report/library content. */
+:is(
+  button,
+  select,
+  summary,
+  nav,
+  menu,
+  [role="button"],
+  [role="menu"],
+  [role="menuitem"],
+  [role="tab"],
+  [role="option"],
+  [role="listbox"],
+  [role="toolbar"],
+  .pill,
+  .span-pill,
+  .ont-tag,
+  .hrt-tag,
+  .ref-chip,
+  .hrt-card__chip,
+  .filter-bar__badge,
+  .ingestion-tier-badge,
+  .nav-tab,
+  .settings__nav
+),
+:is(
+    button,
+    select,
+    summary,
+    nav,
+    menu,
+    [role="button"],
+    [role="menu"],
+    [role="menuitem"],
+    [role="tab"],
+    [role="option"],
+    [role="listbox"],
+    [role="toolbar"],
+    .pill,
+    .span-pill,
+    .ont-tag,
+    .hrt-tag,
+    .ref-chip,
+    .hrt-card__chip,
+    .filter-bar__badge,
+    .ingestion-tier-badge,
+    .nav-tab,
+    .settings__nav
+  )
+  * {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+}
+
+label:has(input[type="checkbox"]),
+label:has(input[type="radio"]) {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+}
+
 /* ---------- Component primitives ---------- */
 
 .card {
