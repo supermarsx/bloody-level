@@ -175,6 +175,7 @@ jobs:
       APPLE_SIGNING_ENABLED: ${{ secrets.APPLE_CERTIFICATE != '' }}
       RELEASE_VERSION: ${{ needs.metadata.outputs.version }}
       APP_VERSION: ${{ needs.metadata.outputs.app_version }}
+      BLOODY_LEVEL_RELEASE_VERSION: ${{ needs.metadata.outputs.version }}
     strategy:
       fail-fast: false
       matrix:

@@ -12,6 +12,13 @@ use crate::state::AppState;
 use zip::write::FileOptions;
 use zip::{CompressionMethod, ZipArchive, ZipWriter};
 
+/// Release-facing version shown in About. CI injects the exact YY.N release
+/// tag for packaged builds; local development falls back to Cargo's semver.
+pub const BUILD_VERSION: &str = match option_env!("BLOODY_LEVEL_RELEASE_VERSION") {
+    Some(version) if !version.is_empty() => version,
+    _ => env!("CARGO_PKG_VERSION"),
+};
+
 #[derive(Serialize)]
 pub struct AppInfo {
     pub name: &'static str,
@@ -135,7 +142,7 @@ pub async fn app_info(state: State<'_, AppState>) -> AppResult<AppInfo> {
 
     Ok(AppInfo {
         name: env!("CARGO_PKG_NAME"),
-        version: env!("CARGO_PKG_VERSION"),
+        version: BUILD_VERSION,
         build_profile: if cfg!(debug_assertions) {
             "debug"
         } else {
