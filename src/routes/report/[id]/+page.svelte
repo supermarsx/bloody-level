@@ -604,10 +604,9 @@
               {@const phaseRef = r.value_numeric != null && r.analyte_cycle_dependent && sex === 'f'
                                  ? phaseRefFor(r.analyte_cycle_phases_json, detail.report.cycle_phase)
                                  : null}
-              <!-- Compute the sex-aware default_ref. Note: we look it up
-                   regardless of whether the row has a printed range, so we
-                   can OVERRIDE the stored flag when the printed range was
-                   sex-stratified or otherwise mis-keyed for this patient. -->
+              <!-- Compute the sex-aware default_ref as a fallback for reports
+                   without a usable printed range. The lab's own range is the
+                   source of truth whenever it was captured on this row. -->
               {@const sexFallback = !phaseRef && r.value_numeric != null
                                    ? defaultRefFor(r.analyte_default_ref_json, sex) : null}
               {@const preferDefaultRef = r.analyte_cycle_dependent && sex === 'f' && sexFallback}
@@ -620,9 +619,11 @@
                                   : (defaultRef && r.value_numeric != null
                                        ? flagForDefaultRef(r.value_numeric, defaultRef)
                                        : null)}
+              {@const hasPrintedRange = r.ref_low != null || r.ref_high != null}
               <!-- Reference-source policy honours the user's preference
                    (Settings ▸ Charts ▸ Reference source):
-                   - auto    → derived (ontology) wins, fall back to stored.
+                   - auto    → printed flag wins when a range was captured;
+                               library fallback is used only when it was not.
                    - library → always ontology.
                    - printed → always the lab's printed range. -->
               {@const displayFlag =
@@ -630,7 +631,7 @@
                   ? r.flag
                   : chartPrefs.referenceSource === 'library'
                     ? derivedFlag
-                    : (derivedFlag ?? r.flag)}
+                    : (hasPrintedRange ? r.flag : (derivedFlag ?? r.flag))}
               {@const series = trendReadings(r)}
               <tr class="border-b border-line/50 hover:bg-bg3/50 {r.inline_prior_pdf ? 'opacity-70' : ''}">
                 <td class="px-3 py-2">

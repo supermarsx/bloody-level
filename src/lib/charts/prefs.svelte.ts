@@ -70,9 +70,8 @@ const KEY_TIME_WINDOW = "chart.time_window";
 /**
  * Where flag derivation and chart bands draw their reference range from:
  *
- *   - `auto` (default): library wins when the ontology has any usable
- *     reference (sex-keyed, tier, cycle phase, or universal default);
- *     falls back to the printed range stored on the row otherwise.
+ *   - `auto` (default): use the printed range captured on the row whenever
+ *     one exists; fall back to the ontology reference otherwise.
  *   - `library`: always derive from the analyte ontology, even when the
  *     PDF printed a different range. Ignores the parser-stored flag.
  *   - `printed`: always trust the lab's printed range, even when the

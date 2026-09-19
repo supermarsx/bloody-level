@@ -689,18 +689,18 @@
         label: r.source_report_nickname ?? null,
         flag: r.flag ?? null,
       }));
-      // Reference band: prefer the analyte's library default for this sex,
-      // fall back to the most-recently-printed range if any.
+      // Auto/per-report mode follows the captured report range first. Library
+      // mode intentionally uses only ontology defaults.
       let refBands: Card['refBands'] = [];
-      if (meta?.default_ref_json) {
+      const printed = filtered.find((x) => x.ref_low != null || x.ref_high != null);
+      if (chartPrefs.referenceSource === 'printed' || (chartPrefs.referenceSource === 'auto' && printed)) {
+        if (printed) refBands = [{ low: printed.ref_low, high: printed.ref_high, tier: 'normal' }];
+      }
+      if (refBands.length === 0 && chartPrefs.referenceSource !== 'printed' && meta?.default_ref_json) {
         const ref = defaultRefFor(meta.default_ref_json, sex);
         if (ref && (ref.low != null || ref.high != null)) {
           refBands = [{ low: ref.low, high: ref.high, tier: 'normal' }];
         }
-      }
-      if (refBands.length === 0) {
-        const r = filtered.find((x) => x.ref_low != null || x.ref_high != null);
-        if (r) refBands = [{ low: r.ref_low, high: r.ref_high, tier: 'normal' }];
       }
       const unit = prettyUnit(filtered.find((r) => r.unit)?.unit ?? null);
       const latest = filtered.length ? { value: filtered[filtered.length - 1].value as number, date: filtered[filtered.length - 1].date } : null;

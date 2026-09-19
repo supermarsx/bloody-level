@@ -36,7 +36,7 @@ pub struct ReparseBatchResult {
     pub total_parse_audit_entries: usize,
 }
 
-const PARSE_VERSION: &str = "0.1.0";
+pub(crate) const PARSE_VERSION: &str = "0.2.0";
 
 #[tauri::command]
 pub async fn reparse_report(

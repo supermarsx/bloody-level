@@ -247,10 +247,9 @@
 
   // Reference band priority — matches the flag-derivation order so the chart
   // and the per-row badges agree:
-  //   1. Sex-keyed ontology default_ref (when analyte is sex_dependent and
-  //      readings have a single dominant patient sex)
-  //   2. Categorical tier labelled "Normal" / "Suficiência" from the ontology
-  //   3. First printed range we observe in any reading
+  //   1. In auto/per-report mode, the first printed range we observe.
+  //   2. In auto/library mode, the sex-aware ontology default.
+  //   3. A categorical tier labelled "Normal" / "Suficiência".
   const refBands = $derived.by(() => {
     // Pick the dominant patient sex among visible readings (works whether the
     // page is filtered to one patient or showing many).
@@ -260,6 +259,13 @@
       sexCounts[s] = (sexCounts[s] ?? 0) + 1;
     }
     const dominantSex = Object.entries(sexCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '?';
+
+    const printed = chronologicalVisibleReadings.find((r) => r.ref_low != null || r.ref_high != null);
+    if (chartPrefs.referenceSource === 'printed' || (chartPrefs.referenceSource === 'auto' && printed)) {
+      return printed
+        ? [{ low: printed.ref_low, high: printed.ref_high, tier: 'normal' as const }]
+        : [];
+    }
 
     // 1. Sex-keyed default
     if (info?.sex_dependent) {
@@ -286,10 +292,8 @@
       }
     }
 
-    // 3. Fallback: first printed range we observed
-    const bounds = chronologicalVisibleReadings.find((r) => r.ref_low != null || r.ref_high != null);
-    if (!bounds) return [];
-    return [{ low: bounds.ref_low, high: bounds.ref_high, tier: 'normal' as const }];
+    // Library mode intentionally does not silently switch to a printed band.
+    return [];
   });
 
   const unit = $derived(prettyUnit(chronologicalVisibleReadings.find((r) => r.unit)?.unit ?? null));
@@ -663,11 +667,10 @@
             {#each visibleReadings as r, i}
               {@const tiers = info?.categorical_tiers_json ? parseTiers(info.categorical_tiers_json) : []}
               {@const sex = r.patient_sex}
-              <!-- Compute the sex-aware default_ref unconditionally — the
-                   per-report printed range can be sex-stratified, parser-
-                   misread, or simply the wrong sex's column, so we OVERRIDE
-                   with the ontology truth whenever the analyte is sex- or
-                   tier-dependent. -->
+              <!-- Compute the sex-aware default_ref as a fallback. The
+                   per-report printed range remains authoritative whenever it
+                   is present, including for sex-dependent analytes such as
+                   SHBG. -->
               {@const sexFallback = r.value != null
                                    ? defaultRefFor(info?.default_ref_json, sex) : null}
               {@const preferDefaultRef = info?.cycle_dependent && sex === 'f' && sexFallback}
@@ -678,18 +681,19 @@
                                   : (defaultRef && r.value != null
                                        ? flagForDefaultRef(r.value, defaultRef)
                                        : null)}
+              {@const hasPrintedRange = r.ref_low != null || r.ref_high != null}
               <!-- Reference-source policy honours the user's preference:
-                   - auto    → derived (ontology) wins, falls back to stored.
+                   - auto    → printed flag wins when a range was captured;
+                               library fallback is used only when it was not.
                    - library → always ontology; ignores parser-stored flag.
                    - printed → always the lab's printed range as captured
-                               by the parser; ignores ontology even when
-                               sex/cycle/tier-aware. -->
+                               by the parser. -->
               {@const finalFlag =
                 chartPrefs.referenceSource === 'printed'
                   ? r.flag
                   : chartPrefs.referenceSource === 'library'
                     ? derivedFlag
-                    : (derivedFlag ?? r.flag)}
+                    : (hasPrintedRange ? r.flag : (derivedFlag ?? r.flag))}
               {@const prevReading = i + 1 < visibleReadings.length ? visibleReadings[i + 1] : null}
               {@const tDelta = prevReading ? formatRelativeSpan(prevReading.date, r.date) : null}
               <tr class="border-b border-line/50 hover:bg-bg3/50 {r.inline_prior ? 'opacity-70' : ''}">

@@ -738,7 +738,7 @@ async fn ingest_one(
             h_proc,
             h_origin,
             ingest_tier,
-            "0.1.0",
+            crate::commands::reparse::PARSE_VERSION,
             doc_confidence as f64,
             raw_text_blob,
             pdf_dest_str,

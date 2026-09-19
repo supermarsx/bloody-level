@@ -125,7 +125,8 @@ fn try_parse_numeric_row(
     let value = parse_numeric_decimal(&value_str)
         .or_else(|| parse_inequality_value(&value_str).map(|(_, v)| v));
 
-    let (range, after_range) = peel_range(after_unit.trim());
+    let paired_absolute = paired_absolute_value(after_unit.trim());
+    let (mut range, after_range) = peel_range(after_unit.trim());
 
     let prior_values: Vec<f64> = after_range
         .split_whitespace()
@@ -139,6 +140,15 @@ fn try_parse_numeric_row(
 
     let analyte_id = reg.resolve(&analyte_text).map(String::from);
     let unit_canon = normalize_unit(&unit_raw).map(String::from);
+
+    if unit_canon.as_deref() == Some("%") {
+        range = select_paired_percent_range(
+            range,
+            value,
+            paired_absolute,
+            reg.paired_percent_ref(analyte_id.as_deref()),
+        );
+    }
 
     let flag = derive_flag(value, range.low, range.high);
     let confidence = compute_confidence(&analyte_id, value.is_some(), &range, unit_canon.is_some());
@@ -297,9 +307,69 @@ static RE_ABS_COUNT_LEAD: Lazy<Regex> = Lazy::new(|| {
 //             " 4.5 5.0 "      (no unit between)
 static RE_PAIRED_ABSOLUTE_LEAD: Lazy<Regex> = Lazy::new(|| {
     Regex::new(
-        r"^\s*\d+(?:[.,]\d+)?\s+(?:g/d[lL]|mg/d[lL]|ng/m[lL]|ng/d[lL]|pg/m[lL]|U/[lL]|UI/m[lL]|mUI/[mlL]+|mmol/[lL]|nmol/[lL]|[µu]g/d[lL])\s+"
+        r"^\s*(\d+(?:[.,]\d+)?)\s+(?:g/d[lL]|mg/d[lL]|ng/m[lL]|ng/d[lL]|pg/m[lL]|U/[lL]|UI/m[lL]|mUI/[mlL]+|mmol/[lL]|nmol/[lL]|[µu]g/d[lL])\s+"
     ).unwrap()
 });
+
+fn paired_absolute_value(s: &str) -> Option<f64> {
+    let captures = RE_PAIRED_ABSOLUTE_LEAD.captures(s)?;
+    parse_numeric_decimal(captures.get(1)?.as_str())
+}
+
+/// Select the reference range that belongs to the primary percentage value in
+/// a paired row. CUF/Germano de Sousa electrophoresis rows commonly place the
+/// absolute concentration and its range immediately after the percentage;
+/// using that range for the percentage produces false `high` flags such as
+/// `62.6 %` against `3.5–5.0 g/dL`.
+///
+/// Compare the candidate range's scale with both values. If it clearly belongs
+/// to the absolute companion, use the analyte's percentage default when known;
+/// otherwise discard the mismatched range so it cannot create a false flag.
+fn select_paired_percent_range(
+    range: ParsedRange,
+    value: Option<f64>,
+    absolute_value: Option<f64>,
+    default_ref: Option<(Option<f64>, Option<f64>)>,
+) -> ParsedRange {
+    let (Some(value), Some(absolute_value)) = (value, absolute_value) else {
+        return range;
+    };
+    if range.low.is_none() && range.high.is_none() {
+        return range;
+    }
+
+    let value_distance = range_distance(&range, value);
+    let absolute_distance = range_distance(&range, absolute_value);
+    if value_distance <= absolute_distance {
+        return range;
+    }
+
+    if let Some((low, high)) = default_ref {
+        return ParsedRange {
+            low,
+            high,
+            grammar: RangeGrammar::None,
+            raw: "paired percentage default".into(),
+        };
+    }
+
+    ParsedRange::none(range.raw)
+}
+
+fn range_distance(range: &ParsedRange, value: f64) -> f64 {
+    let magnitude = value.abs().max(f64::MIN_POSITIVE);
+    if let Some(low) = range.low {
+        if value < low {
+            return (low.abs().max(f64::MIN_POSITIVE) / magnitude).ln().abs();
+        }
+    }
+    if let Some(high) = range.high {
+        if value > high {
+            return (magnitude / high.abs().max(f64::MIN_POSITIVE)).ln().abs();
+        }
+    }
+    0.0
+}
 
 fn trailing_number_or_inequality(s: &str) -> Option<&str> {
     let trimmed = s.trim_end();
@@ -532,11 +602,32 @@ mod tests {
     fn empty_reg() -> AnalyteRegistry {
         let conn = rusqlite::Connection::open_in_memory().unwrap();
         conn.execute_batch(
-            "CREATE TABLE analytes(id TEXT PRIMARY KEY, pt_name TEXT NOT NULL);
+            "CREATE TABLE analytes(
+                id TEXT PRIMARY KEY,
+                pt_name TEXT NOT NULL,
+                paired_value INTEGER NOT NULL DEFAULT 0,
+                default_ref_json TEXT
+             );
              CREATE TABLE analyte_aliases(alias TEXT PRIMARY KEY, analyte_id TEXT NOT NULL, source TEXT NOT NULL);
-             INSERT INTO analytes(id, pt_name) VALUES('hemoglobina', 'Hemoglobina');
+             INSERT INTO analytes(id, pt_name, paired_value, default_ref_json)
+             VALUES('hemoglobina', 'Hemoglobina', 0, NULL);
              INSERT INTO analyte_aliases(alias, analyte_id, source) VALUES('Hemoglobina', 'hemoglobina', 'seed');"
         ).unwrap();
+        for (id, name, low, high) in [
+            ("albumina", "Albumina", 55.8, 66.1),
+            ("alfa1_globulinas", "Alfa 1-Globulinas", 2.9, 4.9),
+            ("alfa2_globulinas", "Alfa 2-Globulinas", 7.1, 11.8),
+            ("beta1_globulinas", "Beta 1-Globulinas", 4.7, 7.2),
+            ("beta2_globulinas", "Beta 2-Globulinas", 3.2, 6.5),
+            ("gama_globulinas", "Gama-Globulinas", 11.1, 18.8),
+        ] {
+            conn.execute(
+                "INSERT INTO analytes(id, pt_name, paired_value, default_ref_json)
+                 VALUES(?1, ?2, 1, json_object('all', json_array(?3, ?4)))",
+                rusqlite::params![id, name, low, high],
+            )
+            .unwrap();
+        }
         AnalyteRegistry::load_from_db(&conn).unwrap()
     }
 
@@ -716,6 +807,21 @@ mod tests {
     }
 
     #[test]
+    fn shbg_uses_the_reported_range() {
+        // SHBG is not a paired percentage row. Its printed range must remain
+        // authoritative; a sex-specific library fallback must not turn a
+        // value inside the report range into a false high flag later in the UI.
+        let ctx = SectionContext::default();
+        let reg = empty_reg();
+        let row = parse_row("SHBG 60 nmol/l 18 - 144", &ctx, &reg).unwrap();
+        assert_eq!(row.value.numeric, Some(60.0));
+        assert_eq!(row.unit.as_deref(), Some("nmol/L"));
+        assert_eq!(row.ref_low, Some(18.0));
+        assert_eq!(row.ref_high, Some(144.0));
+        assert_eq!(row.flag, Some("normal"));
+    }
+
+    #[test]
     fn ferritina_threshold_lines_are_filtered() {
         let ctx = SectionContext::default();
         let reg = empty_reg();
@@ -769,7 +875,9 @@ mod tests {
     fn electroforese_paired_value_picks_percent() {
         // Albumina 62.6 % 4.5 g/dl 3.5 - 5.0 — same shape as the leucograma
         // case, but the absolute column is "<num> g/dl" instead of
-        // "<num> x 10^N/". Both forms must skip past the absolute column.
+        // "<num> x 10^N/". The range belongs to the absolute value, so the
+        // parser must fall back to the percentage default instead of marking
+        // 62.6% as high against 3.5–5.0 g/dL.
         let ctx = SectionContext::default();
         let reg = empty_reg();
         let row = parse_row("Albumina 62.6 % 4.5 g/dl 3.5 - 5.0", &ctx, &reg).unwrap();
@@ -779,8 +887,26 @@ mod tests {
             "value should be the percent (62.6), not the absolute (4.5)"
         );
         assert_eq!(row.unit.as_deref(), Some("%"));
-        assert_eq!(row.ref_low, Some(3.5));
-        assert_eq!(row.ref_high, Some(5.0));
+        assert_eq!(row.ref_low, Some(55.8));
+        assert_eq!(row.ref_high, Some(66.1));
+        assert_eq!(row.flag, Some("normal"));
+    }
+
+    #[test]
+    fn electroforese_fraction_rows_do_not_use_absolute_ranges() {
+        let ctx = SectionContext::default();
+        let reg = empty_reg();
+        for line in [
+            "Alfa 1-Globulinas 3.7 % 0.23 g/dl 0.20 - 0.40",
+            "Alfa 2-Globulinas 9.4 % 0.64 g/dl 0.50 - 0.90",
+            "Beta 1-Globulinas 5.8 % 0.40 g/dl 0.30 - 0.60",
+            "Beta 2-Globulinas 4.5 % 0.31 g/dl 0.20 - 0.50",
+            "Gama-Globulinas 15.2 % 1.05 g/dl 0.70 - 1.40",
+        ] {
+            let row = parse_row(line, &ctx, &reg).unwrap();
+            assert_eq!(row.unit.as_deref(), Some("%"), "{line}");
+            assert_ne!(row.flag, Some("high"), "{line}: {row:?}");
+        }
     }
 
     #[test]

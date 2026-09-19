@@ -1135,7 +1135,7 @@
             {/each}
           </div>
           <ul class="text-xs text-fg2 space-y-1 pt-1">
-            <li><strong>{t('Auto')}</strong> ({t('default')}): {t('the Library wins when it has any usable reference (sex/cycle/tier/universal); falls back to the lab-printed range otherwise.')}</li>
+            <li><strong>{t('Auto')}</strong> ({t('default')}): {t('the lab-printed range wins when one was captured; the Library is used only when the report has no usable range.')}</li>
             <li><strong>{t('Library')}</strong>: {t('always derive from the analyte Library — sex- and cycle-aware where applicable. Printed ranges from the PDF are ignored for flag computation.')}</li>
             <li><strong>{t('Per-report')}</strong>: {t('trust whatever range the lab printed on each individual report, even when the Library has a more specific default. Useful when your lab uses non-standard cutoffs you want to honour exactly.')}</li>
           </ul>

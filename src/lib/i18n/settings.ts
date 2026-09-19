@@ -146,14 +146,12 @@ export const settingsPtPT: Record<string, string> = {
   "Always use the analyte Library": "Usar sempre a Biblioteca de analitos",
   "Per-report": "Por relatório",
   default: "predefinição",
-  "library wins when the ontology has any usable reference (sex/cycle/tier/universal); falls back to the lab-printed range otherwise.":
-    "a biblioteca prevalece quando a ontologia tem uma referência utilizável (sexo/ciclo/nível/universal); caso contrário, usa o intervalo impresso pelo laboratório.",
+  "the lab-printed range wins when one was captured; the Library is used only when the report has no usable range.":
+    "o intervalo impresso pelo laboratório prevalece quando foi capturado; a Biblioteca só é usada quando o relatório não tem um intervalo utilizável.",
   "always derive from the analyte ontology — sex- and cycle-aware where applicable. Printed ranges from the PDF are ignored for flag computation.":
     "derivar sempre da ontologia do analito — considerando sexo e ciclo quando aplicável. Os intervalos impressos no PDF são ignorados ao calcular as classificações.",
   "trust whatever range the lab printed on each individual report, even when the ontology has a more specific default. Useful when your lab uses non-standard cutoffs you want to honour exactly.":
     "confiar no intervalo impresso pelo laboratório em cada relatório, mesmo quando a ontologia tem uma predefinição mais específica. Útil quando o laboratório usa limites não standard que pretende respeitar exatamente.",
-  "the Library wins when it has any usable reference (sex/cycle/tier/universal); falls back to the lab-printed range otherwise.":
-    "a Biblioteca é prioritária quando tem uma referência utilizável (sexo/ciclo/nível/universal); caso contrário, usa o intervalo impresso pelo laboratório.",
   "always derive from the analyte Library — sex- and cycle-aware where applicable. Printed ranges from the PDF are ignored for flag computation.":
     "derivar sempre da Biblioteca de analitos — considerando sexo e ciclo quando aplicável. Os intervalos do PDF são ignorados ao calcular alertas.",
   "trust whatever range the lab printed on each individual report, even when the Library has a more specific default. Useful when your lab uses non-standard cutoffs you want to honour exactly.":
