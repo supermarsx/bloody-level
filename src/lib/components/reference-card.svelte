@@ -8,6 +8,7 @@
   import type { AnalyteInfo } from '$api/analyte-info';
   import { defaultRefFor, formatDefaultRef } from '$format/default-ref';
   import { parseTiers, formatTierRange } from '$format/tiers';
+  import { t } from '$lib/i18n/index.svelte';
 
   let {
     info,
@@ -38,9 +39,9 @@
       high: ref.high,
       source: ref.source,
       sourceLabel:
-        ref.source === 'm' ? 'male'
-        : ref.source === 'f' ? 'female'
-        : 'all'
+        ref.source === 'm' ? t('Male')
+        : ref.source === 'f' ? t('Female')
+        : t('All')
     };
   });
 
@@ -77,7 +78,7 @@
        card with tier/phase chip rows lives elsewhere. -->
   <div class="card p-3 ref-card--compact">
     <div class="text-xs text-fg2 flex items-center justify-between gap-1">
-      <span>Reference</span>
+        <span>{t('Reference')}</span>
       {#if primary && primary.source !== 'all'}
         <span class="ref-card__source ref-card__source--{primary.source}">
           {primary.sourceLabel}
@@ -91,10 +92,10 @@
         {#if tiers.length > 0 && !primary} · {tiers.length} tiers{/if}
       </div>
     {:else if tiers.length > 0}
-      <div class="text-sm font-semibold">{tiers.length} tier ranges</div>
+      <div class="text-sm font-semibold">{t('{count} tier ranges', { count: tiers.length })}</div>
       <div class="text-[10px] text-fg3">{tiers.map((t) => t.label).slice(0, 3).join(' · ')}</div>
     {:else if cyclePhases.length > 0}
-      <div class="text-sm font-semibold">{cyclePhases.length} cycle phases</div>
+      <div class="text-sm font-semibold">{t('{count} cycle phases', { count: cyclePhases.length })}</div>
       <div class="text-[10px] text-fg3">{cyclePhases.map((c) => c.phase).slice(0, 3).join(' · ')}</div>
     {/if}
   </div>
@@ -103,9 +104,9 @@
   <section class="ref-card">
     <header class="ref-card__head">
       <span class="ref-card__pill" aria-hidden="true">REF</span>
-      <span class="ref-card__title">Applicable reference</span>
+      <span class="ref-card__title">{t('Applicable reference')}</span>
       {#if unit}
-        <span class="ref-card__unit" title="Reported unit">{unit}</span>
+        <span class="ref-card__unit" title={t('Reported unit')}>{unit}</span>
       {/if}
     </header>
 
@@ -126,12 +127,12 @@
     <!-- Categorical tiers (Vit D, Ferritina, IgE, …) -->
     {#if tiers.length > 0}
       <div class="ref-card__group">
-        <div class="ref-card__group-label">Tiers</div>
+        <div class="ref-card__group-label">{t('Tiers')}</div>
         <div class="ref-card__chips">
-          {#each tiers as t}
-            <span class="ref-chip" title={t.label}>
-              <span class="ref-chip__name">{t.label}</span>
-              <span class="ref-chip__range">{formatTierRange(t)}</span>
+          {#each tiers as tier}
+            <span class="ref-chip" title={tier.label}>
+              <span class="ref-chip__name">{tier.label}</span>
+              <span class="ref-chip__range">{formatTierRange(tier)}</span>
             </span>
           {/each}
         </div>
@@ -141,7 +142,7 @@
     <!-- Cycle-phase ranges (Estradiol, Progesterona, FSH/LH female) -->
     {#if cyclePhases.length > 0}
       <div class="ref-card__group">
-        <div class="ref-card__group-label">Cycle phases</div>
+        <div class="ref-card__group-label">{t('Cycle phases')}</div>
         <div class="ref-card__chips">
           {#each cyclePhases as cp}
             <span class="ref-chip" title="{cp.phase}: {fmtRange(cp.low, cp.high)}">
@@ -156,9 +157,9 @@
     <!-- Footnote: which combination of sex / age / cycle drove the headline. -->
     {#if info.sex_dependent || info.cycle_dependent || info.age_dependent}
       <p class="ref-card__note">
-        {#if info.sex_dependent}This range varies by sex.{/if}
-        {#if info.cycle_dependent} This range varies across the menstrual cycle.{/if}
-        {#if info.age_dependent}   This range varies by age.{/if}
+        {#if info.sex_dependent}{t('This range varies by sex.')}{/if}
+        {#if info.cycle_dependent}{t(' This range varies across the menstrual cycle.')}{/if}
+        {#if info.age_dependent}{t('   This range varies by age.')}{/if}
       </p>
     {/if}
   </section>

@@ -10,6 +10,8 @@
   import { comparePresets, EMPTY_FILTERS, type ComparePreset } from '$charts/compare-presets.svelte';
   import { toasts } from '../../lib/toasts/store.svelte';
   import Icon from '$components/icon.svelte';
+  import { t } from '$lib/i18n/index.svelte';
+  import '$lib/i18n/data-routes';
 
   // The Compare view does multi-analyte overlay for a single patient.
   // Cross-patient comparison of the same analyte is intentionally out of scope:
@@ -370,12 +372,11 @@
   async function onClearAll() {
     if (!hasAnyState) return;
     const ok = await confirmAsk(
-      'Clear every picked analyte, every filter, and every per-card override?\n\n' +
-      'The current patient selection stays.'
+      t('Clear every picked analyte, every filter, and every per-card override?\n\nThe current patient selection stays.')
     );
     if (!ok) return;
     clearAll();
-    toasts.success('Compare reset', 'All picks, filters, and overrides cleared.');
+    toasts.success(t('Compare reset'), t('All picks, filters, and overrides cleared.'));
   }
 
   // Tiny wrapper around the Tauri ask dialog so the rest of the file
@@ -384,7 +385,7 @@
   async function confirmAsk(message: string): Promise<boolean> {
     try {
       const { ask } = await import('@tauri-apps/plugin-dialog');
-      return await ask(message, { title: 'Clear Compare state', kind: 'warning' });
+      return await ask(message, { title: t('Clear Compare state'), kind: 'warning' });
     } catch {
       return false;
     }
@@ -865,18 +866,16 @@
 <div class="space-y-3">
   <header class="flex items-baseline justify-between gap-3 flex-wrap">
     <div>
-      <h1 class="text-xl font-semibold">Compare</h1>
+      <h1 class="text-xl font-semibold">{t('Compare')}</h1>
       <p class="text-xs text-fg3">
-        Stack multiple analytes for one patient on a shared timeline. Each plot has
-        its own scale and reference band. Selections, filters, and per-card overrides
-        persist across reloads.
+        {t('Stack multiple analytes for one patient on a shared timeline. Each plot has its own scale and reference band. Selections, filters, and per-card overrides persist across reloads.')}
       </p>
     </div>
     <div class="flex items-center gap-2">
       <button class="btn text-xs" onclick={() => (filtersOpen = !filtersOpen)}>
-        {filtersOpen ? '▾ Hide filters' : '▸ Filters'}
+        {filtersOpen ? `▾ ${t('Hide filters')}` : `▸ ${t('Filters')}`}
         {#if filterActive}
-          <span class="pill-warn ml-1">{filterSummary.dropped} hidden</span>
+          <span class="pill-warn ml-1">{t('{count} hidden', { count: filterSummary.dropped })}</span>
         {/if}
       </button>
       <!-- Wipes the entire Compare-page state: picks, filters, isolated
@@ -885,8 +884,8 @@
       <button class="btn text-xs text-crit border-crit/40 hover:bg-crit/10"
               onclick={onClearAll}
               disabled={!hasAnyState}
-              title="Clear picks, filters, and any per-card overrides. Patient selection stays.">
-        Clear all
+              title={t('Clear picks, filters, and any per-card overrides. Patient selection stays.')}>
+        {t('Clear all')}
       </button>
     </div>
   </header>
@@ -897,85 +896,83 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3">
         <!-- Date range -->
         <div>
-          <h3 class="text-xs font-semibold text-fg2 mb-1.5">Date range</h3>
+          <h3 class="text-xs font-semibold text-fg2 mb-1.5">{t('Date range')}</h3>
           <div class="grid grid-cols-2 gap-2">
             <label class="flex flex-col gap-1 text-[11px] text-fg3">
-              <span>From</span>
+              <span>{t('From')}</span>
               <input class="input" type="date" bind:value={dateFromIso} />
             </label>
             <label class="flex flex-col gap-1 text-[11px] text-fg3">
-              <span>Until</span>
+              <span>{t('Until')}</span>
               <input class="input" type="date" bind:value={dateUntilIso} />
             </label>
           </div>
           <label class="flex items-center gap-2 mt-2 text-xs text-fg2 cursor-pointer">
             <input type="checkbox" bind:checked={intersectOnly} />
             <span>
-              Intersection only
-              <span class="text-fg3 block text-[10px]">Clip to the date span where every selected analyte has at least one reading.</span>
+              {t('Intersection only')}
+              <span class="text-fg3 block text-[10px]">{t('Clip to the date span where every selected analyte has at least one reading.')}</span>
             </span>
           </label>
         </div>
 
         <!-- Value bounds -->
         <div>
-          <h3 class="text-xs font-semibold text-fg2 mb-1.5">Value bounds</h3>
+          <h3 class="text-xs font-semibold text-fg2 mb-1.5">{t('Value bounds')}</h3>
           <div class="grid grid-cols-2 gap-2">
             <label class="flex flex-col gap-1 text-[11px] text-fg3">
-              <span>Min</span>
+              <span>{t('Min')}</span>
               <input class="input" type="number" inputmode="decimal" placeholder="—" bind:value={valueMin} />
             </label>
             <label class="flex flex-col gap-1 text-[11px] text-fg3">
-              <span>Max</span>
+              <span>{t('Max')}</span>
               <input class="input" type="number" inputmode="decimal" placeholder="—" bind:value={valueMax} />
             </label>
           </div>
           <p class="text-[10px] text-fg3 mt-1.5">
-            Applies the same numeric cutoff to every selected analyte. Useful for clipping outliers
-            on a single-unit panel; less useful when comparing analytes with different magnitudes.
+            {t('Applies the same numeric cutoff to every selected analyte. Useful for clipping outliers on a single-unit panel; less useful when comparing analytes with different magnitudes.')}
           </p>
         </div>
 
         <!-- Flag filter -->
         <div>
-          <h3 class="text-xs font-semibold text-fg2 mb-1.5">Flag filter</h3>
+          <h3 class="text-xs font-semibold text-fg2 mb-1.5">{t('Flag filter')}</h3>
           <div class="grid grid-cols-2 gap-y-1.5 gap-x-3 text-xs text-fg2">
             <label class="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" bind:checked={onlyNormal} />
-              <span>Normal only</span>
+              <span>{t('Normal only')}</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" bind:checked={onlyAbnormal} />
-              <span class="text-warn">Abnormal</span>
+              <span class="text-warn">{t('Abnormal')}</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" bind:checked={onlyCritical} />
-              <span class="text-crit">Critical</span>
+              <span class="text-crit">{t('Critical')}</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" bind:checked={onlyUnflagged} />
-              <span class="text-fg3">Unflagged</span>
+              <span class="text-fg3">{t('Unflagged')}</span>
             </label>
           </div>
           <p class="text-[10px] text-fg3 mt-1.5">
-            All four off = no flag filter. Multiple checks are unioned (e.g. abnormal + critical
-            shows everything outside the normal range).
+            {t('All four off = no flag filter. Multiple checks are unioned (e.g. abnormal + critical shows everything outside the normal range).')}
           </p>
         </div>
 
         <!-- Inline-priors + last-N -->
         <div>
-          <h3 class="text-xs font-semibold text-fg2 mb-1.5">Reading source</h3>
+          <h3 class="text-xs font-semibold text-fg2 mb-1.5">{t('Reading source')}</h3>
           <label class="flex items-center gap-2 text-xs text-fg2 cursor-pointer">
             <input type="checkbox" bind:checked={includeInlinePriors} />
             <span>
-              Include inline-prior values
-              <span class="text-fg3 block text-[10px]">Older values printed on newer reports' "previous" columns. Off keeps things to first-class readings.</span>
+              {t('Include inline-prior values')}
+              <span class="text-fg3 block text-[10px]">{t('Older values printed on newer reports\' "previous" columns. Off keeps things to first-class readings.')}</span>
             </span>
           </label>
           <div class="mt-2">
             <label class="flex flex-col gap-1 text-[11px] text-fg3">
-              <span>Keep last N per analyte (0 = all)</span>
+              <span>{t('Keep last N per analyte (0 = all)')}</span>
               <input class="input w-24" type="number" min="0" max="500" step="1" bind:value={lastNPerAnalyte} />
             </label>
           </div>
@@ -983,15 +980,13 @@
 
         <!-- Excluded report IDs -->
         <div class="md:col-span-2 lg:col-span-2">
-          <h3 class="text-xs font-semibold text-fg2 mb-1.5">Exclude specific reports</h3>
+          <h3 class="text-xs font-semibold text-fg2 mb-1.5">{t('Exclude specific reports')}</h3>
           <input class="input w-full font-mono text-xs"
                  type="text"
                  placeholder="2024-09-07-abc12345, 2023-01-15-def67890"
                  bind:value={excludeReportIds} />
           <p class="text-[10px] text-fg3 mt-1.5">
-            Comma- or space-separated report IDs. Every reading sourced from these reports is
-            dropped from every chart in the comparison. Useful for redacting a redo / unreliable
-            draw without deleting it.
+            {t('Comma- or space-separated report IDs. Every reading sourced from these reports is dropped from every chart in the comparison. Useful for redacting a redo / unreliable draw without deleting it.')}
           </p>
         </div>
 
@@ -1000,13 +995,13 @@
              see WHY it's missing for unanchored patients (the muted hint
              stays visible). -->
         <div>
-          <h3 class="text-xs font-semibold text-fg2 mb-1.5">HRT anchor</h3>
+          <h3 class="text-xs font-semibold text-fg2 mb-1.5">{t('HRT anchor')}</h3>
           {#if activePatient?.hrt_start_iso}
             <div class="seg seg--wrap-compare">
               {#each [
-                { id: 'all',  label: 'All readings' },
-                { id: 'pre',  label: 'Pre-HRT'      },
-                { id: 'post', label: 'Post-HRT'     }
+                { id: 'all',  label: t('All readings') },
+                { id: 'pre',  label: t('Pre-HRT')      },
+                { id: 'post', label: t('Post-HRT')     }
               ] as opt}
                 <button type="button"
                         class="seg__opt {hrtFilter === opt.id ? 'seg__opt--on' : ''}"
@@ -1016,13 +1011,13 @@
               {/each}
             </div>
             <p class="text-[10px] text-fg3 mt-1.5">
-              Anchor: <span class="font-mono">{activePatient.hrt_start_iso}</span>.
-              Pre keeps readings strictly before this date; Post keeps the anchor day onwards.
+              {t('Anchor:')} <span class="font-mono">{activePatient.hrt_start_iso}</span>.
+              {t('Pre keeps readings strictly before this date; Post keeps the anchor day onwards.')}
             </p>
           {:else}
             <p class="text-[10px] text-fg3 italic">
-              No HRT anchor set for this patient. Set <span class="font-mono">hrt_start_iso</span>
-              on the patient page to enable pre/post filtering here.
+              {t('No HRT anchor set for this patient. Set')} <span class="font-mono">hrt_start_iso</span>
+              {t('on the patient page to enable pre/post filtering here.')}
             </p>
           {/if}
         </div>
@@ -1031,17 +1026,20 @@
       <div class="flex items-center justify-between text-xs text-fg2 border-t border-line pt-3">
         <div>
           {#if filterActive}
-            <span class="font-medium">{filterSummary.kept}</span> of
-            <span class="text-fg3">{filterSummary.before}</span> readings kept across
-            <span class="font-medium">{cards.length}</span> chart{cards.length === 1 ? '' : 's'}.
+            {t(
+              cards.length === 1
+                ? '{kept} of {before} readings kept across {charts} chart.'
+                : '{kept} of {before} readings kept across {charts} charts.',
+              { kept: filterSummary.kept, before: filterSummary.before, charts: cards.length },
+            )}
             {#if filterSummary.dropped > 0}
-              <span class="text-warn">{filterSummary.dropped} hidden</span> by the active filters.
+              <span class="text-warn">{t('{count} hidden by the active filters.', { count: filterSummary.dropped })}</span>
             {/if}
           {:else}
-            No filters active.
+            {t('No filters active.')}
           {/if}
         </div>
-        <button class="btn text-xs" onclick={clearFilters} disabled={!filterActive}>Clear filters</button>
+        <button class="btn text-xs" onclick={clearFilters} disabled={!filterActive}>{t('Clear filters')}</button>
       </div>
     </div>
   {/if}
@@ -1050,7 +1048,7 @@
     <!-- Left: patient + analyte picker -->
     <div class="space-y-3">
       <label class="flex flex-col gap-1 text-xs text-fg2">
-        <span>Patient</span>
+        <span>{t('Patient')}</span>
         <div class="relative" bind:this={patientPickerElement}>
           <button
             type="button"
@@ -1061,7 +1059,7 @@
             onclick={() => patientMenuOpen ? closePatientMenu() : openPatientMenu()}
           >
             <span class="truncate {activePatient ? '' : 'text-fg3'}">
-              {activePatient ? `${activePatient.display_name} (${activePatient.report_count})` : 'Select…'}
+              {activePatient ? `${activePatient.display_name} (${activePatient.report_count})` : t('Select…')}
             </span>
             <Icon name="chevron-down" size={14} />
           </button>
@@ -1071,13 +1069,13 @@
               <input
                 type="search"
                 class="input w-full"
-                placeholder="Search patients…"
-                aria-label="Search patients"
+                placeholder={t('Search patients…')}
+                aria-label={t('Search patients')}
                 bind:value={patientSearch}
                 bind:this={patientSearchElement}
                 onkeydown={onPatientSearchKeydown}
               />
-              <div id="compare-patient-options" class="mt-1 max-h-60 overflow-y-auto" role="listbox" aria-label="Patients">
+              <div id="compare-patient-options" class="mt-1 max-h-60 overflow-y-auto" role="listbox" aria-label={t('Patients')}>
                 {#each filteredPatients as p, index (p.id)}
                   <button
                     type="button"
@@ -1087,11 +1085,11 @@
                     onmousedown={(event) => { event.preventDefault(); selectPatient(p.id); }}
                   >
                     <span class="block truncate font-medium">{p.display_name}</span>
-                    <span class="block text-[10px] text-fg3">{p.report_count} report{p.report_count === 1 ? '' : 's'} · {p.id}</span>
+                    <span class="block text-[10px] text-fg3">{t('{count} report(s)', { count: p.report_count })} · {p.id}</span>
                   </button>
                 {/each}
                 {#if filteredPatients.length === 0}
-                  <div class="px-2 py-3 text-center text-xs text-fg3">No patients match.</div>
+                  <div class="px-2 py-3 text-center text-xs text-fg3">{t('No patients match.')}</div>
                 {/if}
               </div>
             </div>
@@ -1100,7 +1098,7 @@
       </label>
 
       <div class="flex flex-col gap-1 text-xs text-fg2">
-        <span>Presets {flaggedLoading ? '· loading…' : ''}</span>
+        <span>{t('Presets')} {flaggedLoading ? `· ${t('loading…')}` : ''}</span>
         <div class="flex flex-wrap gap-1">
           {#each presets as p}
             {@const count = presetCount(p)}
@@ -1113,8 +1111,8 @@
                     onclick={() => !dynamicEmpty && applyPreset(p)}
                     disabled={dynamicEmpty}
                     title={(p.kind === 'dynamic'
-                      ? `${(p as { hint?: string }).hint ?? ''}${dynamicEmpty ? ' — none for this patient.' : ` (${count} for this patient)`}`
-                      : `${count} analyte${count === 1 ? '' : 's'}`) + (hasFilters ? ' · sets filters' : '')}>
+                      ? `${(p as { hint?: string }).hint ?? ''}${dynamicEmpty ? ` — ${t('none for this patient.')}` : ` (${t('{count} for this patient', { count })})`}`
+                      : t('{count} analyte(s)', { count })) + (hasFilters ? ` · ${t('sets filters')}` : '')}>
               {#if p.kind === 'dynamic'}
                 <Icon name="dot" size={10} />
               {:else if p.source === 'user'}
@@ -1125,7 +1123,7 @@
                 <span class="text-[9px] text-fg3 tabular-nums">{count}</span>
               {/if}
               {#if hasFilters}
-                <Icon name="filter" size={10} title="This preset also sets filters" />
+                <Icon name="filter" size={10} title={t('This preset also sets filters')} />
               {/if}
             </button>
           {/each}
@@ -1133,14 +1131,14 @@
       </div>
 
       <label class="flex flex-col gap-1 text-xs text-fg2">
-        <span>Filter analytes</span>
-        <input class="input" type="text" placeholder="search…" bind:value={analyteFilter} />
+        <span>{t('Filter analytes')}</span>
+        <input class="input" type="text" placeholder={t('search…')} bind:value={analyteFilter} />
       </label>
 
       <div class="flex items-center justify-between text-xs text-fg2">
-        <span>{pickedAnalyteIds.size} selected</span>
+        <span>{pickedAnalyteIds.size} {t('selected')}</span>
         {#if pickedAnalyteIds.size > 0}
-          <button class="text-xs text-accent hover:underline" onclick={clearPicked}>Clear</button>
+          <button class="text-xs text-accent hover:underline" onclick={clearPicked}>{t('Clear')}</button>
         {/if}
       </div>
       <div class="border border-line rounded max-h-[60vh] overflow-y-auto">
@@ -1156,7 +1154,7 @@
             <span class="text-[10px] text-fg3 tabular-nums">{a.result_count}</span>
           </button>
         {:else}
-          <div class="px-2 py-3 text-xs text-fg3 text-center">No analytes match that filter.</div>
+          <div class="px-2 py-3 text-xs text-fg3 text-center">{t('No analytes match that filter.')}</div>
         {/each}
       </div>
     </div>
@@ -1168,13 +1166,13 @@
          1fr column track's bounds in both directions. -->
     <div class="space-y-3 min-w-0">
       {#if !patientId}
-        <div class="card p-6 text-sm text-fg3 text-center">Pick a patient to begin.</div>
+        <div class="card p-6 text-sm text-fg3 text-center">{t('Pick a patient to begin.')}</div>
       {:else if pickedAnalyteIds.size === 0}
         <div class="card p-6 text-sm text-fg3 text-center">
-          Select one or more analytes from the list, or apply a preset.
+          {t('Select one or more analytes from the list, or apply a preset.')}
         </div>
       {:else if loading}
-        <div class="card p-6 text-sm text-fg3 text-center">Loading…</div>
+        <div class="card p-6 text-sm text-fg3 text-center">{t('Loading…')}</div>
       {:else}
         {#each cards as c, idx (c.id)}
           {@const isolated = isolatedAnalyteIds.has(c.id)}
@@ -1203,17 +1201,17 @@
                      drag affordance; the arrows offer a keyboard / touch
                      alternative for users who can't drag. -->
                 <span class="cursor-grab active:cursor-grabbing text-fg3 hover:text-fg1 select-none px-1"
-                      title="Drag to reorder"><Icon name="grip" size={15} /></span>
+                      title={t('Drag to reorder')}><Icon name="grip" size={15} /></span>
                 <button type="button"
                         class="reorder-btn"
                         onclick={(e) => { e.stopPropagation(); moveAnalyte(idx, -1); }}
                         disabled={idx === 0}
-                        title="Move up"><Icon name="arrow-up" size={14} /></button>
+                        title={t('Move up')}><Icon name="arrow-up" size={14} /></button>
                 <button type="button"
                         class="reorder-btn"
                         onclick={(e) => { e.stopPropagation(); moveAnalyte(idx, +1); }}
                         disabled={idx === cards.length - 1}
-                        title="Move down"><Icon name="arrow-down" size={14} /></button>
+                        title={t('Move down')}><Icon name="arrow-down" size={14} /></button>
               </div>
               <!-- Right-side cluster — analyte name first, then stats. The
                    `ml-auto` on this wrapper pushes the whole cluster to the
@@ -1227,7 +1225,7 @@
                 </a>
                 <div class="text-xs text-fg2 tabular-nums flex items-center gap-3">
                   {#if c.unit}<span class="font-mono text-fg3">{c.unit}</span>{/if}
-                  <span>{c.n}{c.n !== c.nBefore ? `/${c.nBefore}` : ''} reading{c.n === 1 ? '' : 's'}</span>
+                  <span>{c.n}{c.n !== c.nBefore ? `/${c.nBefore}` : ''} {t(c.n === 1 ? 'reading' : 'readings')}</span>
                   {#if c.latest}
                     <span class="font-medium">{c.latest.value}</span>
                   {/if}
@@ -1241,19 +1239,19 @@
                        the global chartPrefs. On → swaps in a LocalChartPrefs
                        so every toolbar tweak on this card stays scoped to it. -->
                   <label class="flex items-center gap-1 cursor-pointer text-[11px] text-fg3 hover:text-fg1"
-                         title={isolated
+                         title={t(isolated
                            ? "Reading from a per-chart preference snapshot — toolbar toggles here won't affect the global default."
-                           : "Reading from the global default. Tick to give this chart its own isolated copy."}>
+                           : "Reading from the global default. Tick to give this chart its own isolated copy.")}>
                     <input type="checkbox" checked={isolated}
                            onchange={() => toggleIsolatedFor(c.id)} />
                     {#if isolated}<Icon name="settings" size={12} />{/if}
-                    <span>{isolated ? 'custom' : 'global'}</span>
+                    <span>{t(isolated ? 'custom' : 'global')}</span>
                   </label>
                   {#if isolated}
                     <button class="text-[11px] text-accent hover:underline"
                             onclick={() => resyncIsolatedFromGlobal(c.id)}
-                            title="Discard this chart's local overrides and snapshot the current global defaults again.">
-                      resync
+                            title={t("Discard this chart's local overrides and snapshot the current global defaults again.")}>
+                      {t('resync')}
                     </button>
                   {/if}
                 </div>
@@ -1262,8 +1260,8 @@
             {#if c.points.length === 0}
               <div class="text-xs text-fg3 italic px-2 py-6 text-center">
                 {filterActive
-                  ? `No readings match the active filters for ${c.name}.`
-                  : `No readings for ${activePatient?.display_name ?? 'this patient'}.`}
+                  ? t('No readings match the active filters for {name}.', { name: c.name })
+                  : t('No readings for {name}.', { name: activePatient?.display_name ?? t('this patient') })}
               </div>
             {:else}
               <TimeSeries
@@ -1281,8 +1279,8 @@
 
         {#if sharedXRange}
           <div class="text-[11px] text-fg3 text-center">
-            Shared timeline: {fmtDate(sharedXRange.min)} → {fmtDate(sharedXRange.max)}
-            {#if intersectOnly} (intersection){/if}
+            {t('Shared timeline')}: {fmtDate(sharedXRange.min)} → {fmtDate(sharedXRange.max)}
+            {#if intersectOnly} ({t('intersection')}){/if}
           </div>
         {/if}
       {/if}

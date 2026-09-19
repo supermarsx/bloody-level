@@ -24,6 +24,8 @@
   import FlagPill from '$charts/flag-pill.svelte';
   import { formatNumber, formatDelta } from '$format/numbers';
   import Icon, { type IconName } from '$components/icon.svelte';
+  import { t } from '$lib/i18n/index.svelte';
+  import '$lib/i18n/data-routes';
 
   let patientId = $derived($page.params.id ?? '');
   let reports = $state<ReportSummary[]>([]);
@@ -38,7 +40,7 @@
     return sex === 'm' ? 'male' : sex === 'f' ? 'female' : sex === 'x' ? 'gender' : 'info';
   }
   function sexLabel(sex: string): string {
-    return sex === 'm' ? 'Male' : sex === 'f' ? 'Female' : sex === 'x' ? 'Other' : 'Unknown';
+    return t(sex === 'm' ? 'Male' : sex === 'f' ? 'Female' : sex === 'x' ? 'Other' : 'Unknown');
   }
 
   type AnalyteCategory = 'abnormal' | 'elevated' | 'subclinical';
@@ -107,7 +109,7 @@
 
   $effect(() => { if (patientId) refresh(); });
   $effect(() => {
-    setPageTitle(patient?.nickname ?? patient?.display_name ?? 'Patient');
+    setPageTitle(patient?.nickname ?? patient?.display_name ?? t('Patient'));
   });
 
   // ── Edit metadata ──────────────────────────────────────────────────────
@@ -141,7 +143,7 @@
       if (next !== (patient.hrt_start_iso ?? null)) {
         await admin.setPatientHrtStart(patientId, next);
       }
-      toasts.success('Patient updated');
+      toasts.success(t('Patient updated'));
       editing = false;
       await refresh();
     } catch (e) { toasts.error(e); }
@@ -157,7 +159,7 @@
     const next = nicknameDraft.trim();
     try {
       await admin.setPatientNickname(patientId, next.length === 0 ? null : next);
-      toasts.success('Nickname saved', next || 'cleared');
+      toasts.success(t('Nickname saved'), next || t('cleared'));
       editingNickname = false;
       await refresh();
     } catch (e) { toasts.error(e); }
@@ -176,7 +178,7 @@
     savingNotes = true;
     try {
       await admin.setPatientNotes(patientId, notesDraft.trim() ? notesDraft : null);
-      toasts.success('Notes saved');
+      toasts.success(t('Notes saved'));
       editingNotes = false;
       await refresh();
     } catch (e) { toasts.error(e); }
@@ -204,7 +206,7 @@
       if (target) target.nickname = next.length === 0 ? null : next;
       reports = [...reports];
       editingReportId = null;
-      toasts.success('Report nickname saved', next || 'cleared');
+      toasts.success(t('Report nickname saved'), next || t('cleared'));
     } catch (e) { toasts.error(e); }
   }
   function cancelEditReportNickname() {
@@ -215,15 +217,15 @@
   async function onMergeInto(target: PatientSummary) {
     if (!patient) return;
     const ok = await ask(
-      `Merge "${patient.display_name}" INTO "${target.display_name}"?\n\nAll ${patient.report_count} report${patient.report_count === 1 ? '' : 's'} will be reassigned to ${target.display_name}, then ${patient.display_name} will be deleted. This cannot be undone.`,
-      { title: 'Merge patients', kind: 'warning' }
+      t('Merge "{source}" INTO "{target}"?\n\nAll {count} report(s) will be reassigned to {target}, then {source} will be deleted. This cannot be undone.', { source: patient.display_name, target: target.display_name, count: patient.report_count }),
+      { title: t('Merge patients'), kind: 'warning' }
     );
     if (!ok) return;
     try {
       const r = await admin.mergePatients({ source_id: patientId, target_id: target.id });
       toasts.success(
-        'Patients merged',
-        `${r.reports_moved} report${r.reports_moved === 1 ? '' : 's'} moved to ${target.display_name}.`
+        t('Patients merged'),
+        t('{count} report(s) moved to {target}.', { count: r.reports_moved, target: target.display_name })
       );
       await goto(`/patient/${target.id}`);
     } catch (e) { toasts.error(e); }
@@ -232,26 +234,26 @@
   async function onDeletePatient() {
     if (!patient) return;
     const ok = await ask(
-      `Delete patient "${patient.display_name}" and ALL ${patient.report_count} report${patient.report_count === 1 ? '' : 's'}?\n\nThis cannot be undone.`,
-      { title: 'Delete patient', kind: 'warning' }
+      t('Delete patient "{name}" and ALL {count} report(s)?\n\nThis cannot be undone.', { name: patient.display_name, count: patient.report_count }),
+      { title: t('Delete patient'), kind: 'warning' }
     );
     if (!ok) return;
     try {
       await admin.deletePatient(patientId);
-      toasts.success('Patient deleted');
+      toasts.success(t('Patient deleted'));
       await goto('/patients');
     } catch (e) { toasts.error(e); }
   }
 
   async function onDeleteReport(r: ReportSummary) {
     const ok = await ask(
-      `Delete report ${formatDate(r.collection_date_iso)}?`,
-      { title: 'Delete report', kind: 'warning' }
+      t('Delete report {date}?', { date: formatDate(r.collection_date_iso) }),
+      { title: t('Delete report'), kind: 'warning' }
     );
     if (!ok) return;
     try {
       await admin.deleteReport(r.id);
-      toasts.success('Report deleted');
+      toasts.success(t('Report deleted'));
       await refresh();
     } catch (e) { toasts.error(e); }
   }
@@ -376,9 +378,9 @@
   }
 
   function categoryLabel(category: AnalyteCategory | null): string {
-    return category === 'elevated' ? 'Elevated'
+    return t(category === 'elevated' ? 'Elevated'
       : category === 'subclinical' ? 'Subclinical'
-        : 'Abnormal';
+        : 'Abnormal');
   }
 
   function categoryCount(category: 'all' | AnalyteCategory): number {
@@ -405,13 +407,13 @@
             type="button"
             class="text-xs text-fg3 hover:text-accent ml-1"
             onclick={startEditNickname}
-            title={patient?.nickname ? 'Edit nickname' : 'Add a friendly nickname for this patient'}
-          ><Icon name={patient?.nickname ? 'edit' : 'plus'} size={13} /> {patient?.nickname ? 'rename' : 'nickname'}</button>
+            title={t(patient?.nickname ? 'Edit nickname' : 'Add a friendly nickname for this patient')}
+          ><Icon name={patient?.nickname ? 'edit' : 'plus'} size={13} /> {t(patient?.nickname ? 'rename' : 'nickname')}</button>
         {:else}
           <!-- svelte-ignore a11y_autofocus -->
           <input
             class="input text-base flex-1 min-w-[12rem]"
-            placeholder="e.g. Mom, Dad, J.A."
+            placeholder={t('e.g. Mom, Dad, J.A.')}
             bind:value={nicknameDraft}
             autofocus
             onkeydown={(e) => {
@@ -419,8 +421,8 @@
               else if (e.key === 'Escape') { e.preventDefault(); cancelEditNickname(); }
             }}
           />
-          <button class="btn text-xs" onclick={saveNickname}>Save</button>
-          <button class="btn text-xs" onclick={cancelEditNickname}>Cancel</button>
+          <button class="btn text-xs" onclick={saveNickname}>{t('Save')}</button>
+          <button class="btn text-xs" onclick={cancelEditNickname}>{t('Cancel')}</button>
         {/if}
       </h1>
       {#if headerSub}
@@ -432,16 +434,16 @@
             <button type="button"
                     class="sex-pill sex-pill--{patient.sex}"
                     onclick={startEdit}
-                    title="Click to change — sex is the global truth driving every flag derivation. Edit it through the patient metadata form.">
+                    title={t('Click to change — sex is the global truth driving every flag derivation. Edit it through the patient metadata form.')}>
               <Icon name={sexIcon(patient.sex)} size={13} /> {sexLabel(patient.sex)}
             </button>
           {/if}
-          <span>{patient.report_count} report{patient.report_count === 1 ? '' : 's'}</span>
+          <span>{t('{count} report(s)', { count: patient.report_count })}</span>
           {#if patient.latest_collection_date_iso}
-            <span>· latest {formatDate(patient.latest_collection_date_iso)}</span>
+            <span>· {t('latest')} {formatDate(patient.latest_collection_date_iso)}</span>
           {/if}
           {#if patient.dob_iso}
-            <span>· DOB {formatDate(patient.dob_iso)}{#if ageFromDob(patient.dob_iso) !== null}<span class="text-fg2 ml-1">({ageFromDob(patient.dob_iso)} y)</span>{/if}</span>
+            <span>· {t('DOB')} {formatDate(patient.dob_iso)}{#if ageFromDob(patient.dob_iso) !== null}<span class="text-fg2 ml-1">({ageFromDob(patient.dob_iso)} y)</span>{/if}</span>
           {/if}
           <span>· <span class="font-mono">{patient.id}</span></span>
         </p>
@@ -453,8 +455,8 @@
       <div class="flex items-center gap-1">
         <button type="button" class="row-icon"
                 onclick={startEditNotes}
-                title={patient.notes ? 'Edit clinical notes' : 'Add clinical notes'}
-                aria-label="Notes">
+                title={t(patient.notes ? 'Edit clinical notes' : 'Add clinical notes')}
+                aria-label={t('Notes')}>
           <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M5 3 H13 L16 6 V16 a1 1 0 0 1 -1 1 H5 a1 1 0 0 1 -1 -1 V4 a1 1 0 0 1 1 -1 z"/>
             <path d="M7 8 H13 M7 11 H13 M7 14 H10"/>
@@ -463,8 +465,8 @@
         </button>
         <button type="button" class="row-icon"
                 onclick={startEdit}
-                title="Edit name, nickname, sex, DOB"
-                aria-label="Edit">
+                title={t('Edit name, nickname, sex, DOB')}
+                aria-label={t('Edit')}>
           <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M4 16 L4 13 L13 4 L16 7 L7 16 z"/>
             <path d="M11 6 L14 9"/>
@@ -472,8 +474,8 @@
         </button>
         <button type="button" class="row-icon"
                 onclick={() => (mergeDialogOpen = true)}
-                title="Merge this patient into another (e.g. legal name change)"
-                aria-label="Merge">
+                title={t('Merge this patient into another (e.g. legal name change)')}
+                aria-label={t('Merge')}>
           <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M5 4 v5 a3 3 0 0 0 3 3 h6"/>
             <path d="M15 4 v5 a3 3 0 0 1 -3 3"/>
@@ -482,8 +484,8 @@
         </button>
         <button type="button" class="row-icon row-icon--danger"
                 onclick={onDeletePatient}
-                title="Delete patient and all reports"
-                aria-label="Delete">
+                title={t('Delete patient and all reports')}
+                aria-label={t('Delete')}>
           <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M5 6 H15 M8 6 V4 H12 V6 M6 6 L7 16 a1 1 0 0 0 1 1 H12 a1 1 0 0 0 1 -1 L14 6"/>
             <path d="M9 9 V14 M11 9 V14"/>
@@ -496,8 +498,8 @@
   <PatientPickerDialog
     bind:open={mergeDialogOpen}
     excludeId={patientId}
-    title="Merge into which patient?"
-    confirmLabel="Merge"
+    title={t('Merge into which patient?')}
+    confirmLabel={t('Merge')}
     onPick={onMergeInto}
   />
 
@@ -513,33 +515,33 @@
               <path d="M11 6 L14 9"/>
             </svg>
           </span>
-          Editing patient
+          {t('Editing patient')}
         </span>
-        <span class="edit-card__id" title="Patient slug — derived from the display name">{patient.id}</span>
+        <span class="edit-card__id" title={t('Patient slug — derived from the display name')}>{patient.id}</span>
       </header>
 
       <div class="edit-card__grid">
         <label class="edit-field">
-          <span class="edit-field__label">Display name</span>
+          <span class="edit-field__label">{t('Display name')}</span>
           <input class="edit-field__input"
-                 placeholder="LASTNAME GIVEN NAME"
+                 placeholder={t('LASTNAME GIVEN NAME')}
                  bind:value={editForm.display_name}
                  onkeydown={(e) => { if (e.key === 'Enter') saveEdit(); else if (e.key === 'Escape') editing = false; }} />
-          <span class="edit-field__hint">As printed on the lab PDF.</span>
+          <span class="edit-field__hint">{t('As printed on the lab PDF.')}</span>
         </label>
 
         <label class="edit-field">
-          <span class="edit-field__label">Nickname <span class="edit-field__opt">— optional</span></span>
+          <span class="edit-field__label">{t('Nickname')} <span class="edit-field__opt">— {t('optional')}</span></span>
           <input class="edit-field__input"
-                 placeholder="e.g. Mom, Dad, J.A."
+                 placeholder={t('e.g. Mom, Dad, J.A.')}
                  bind:value={editForm.nickname}
                  onkeydown={(e) => { if (e.key === 'Enter') saveEdit(); else if (e.key === 'Escape') editing = false; }} />
-          <span class="edit-field__hint">Friendly label shown in lists & titles.</span>
+          <span class="edit-field__hint">{t('Friendly label shown in lists & titles.')}</span>
         </label>
 
         <div class="edit-field">
-          <span class="edit-field__label">Sex</span>
-          <div class="edit-segmented" role="radiogroup" aria-label="Sex">
+          <span class="edit-field__label">{t('Sex')}</span>
+          <div class="edit-segmented" role="radiogroup" aria-label={t('Sex')}>
             {#each ['m','f','x','?'] as v}
               <button type="button" role="radio"
                       aria-checked={editForm.sex === v}
@@ -549,40 +551,39 @@
               </button>
             {/each}
           </div>
-          <span class="edit-field__hint">Used for every flag derivation across this patient's reports.</span>
+          <span class="edit-field__hint">{t("Used for every flag derivation across this patient's reports.")}</span>
         </div>
 
         <label class="edit-field">
-          <span class="edit-field__label">Date of birth <span class="edit-field__opt">— optional</span></span>
+          <span class="edit-field__label">{t('Date of birth')} <span class="edit-field__opt">— {t('optional')}</span></span>
           <input type="date" class="edit-field__input edit-field__input--narrow"
                  bind:value={editForm.dob_iso} />
           <span class="edit-field__hint">
             {#if editForm.dob_iso && ageFromDob(editForm.dob_iso) !== null}
-              ≈ {ageFromDob(editForm.dob_iso)} years old
+              ≈ {ageFromDob(editForm.dob_iso)} {t('years old')}
             {:else}
-              Drives the calculated age in the header.
+              {t('Drives the calculated age in the header.')}
             {/if}
           </span>
         </label>
 
         <label class="edit-field">
           <span class="edit-field__label">
-            HRT start date <span class="edit-field__opt">— optional</span>
+            {t('HRT start date')} <span class="edit-field__opt">— {t('optional')}</span>
           </span>
           <input type="date" class="edit-field__input edit-field__input--narrow"
                  bind:value={editForm.hrt_start_iso} />
           <span class="edit-field__hint">
-            Anchors the HRT timeline. Each report gets a "Day N / Month N / Year N" milestone
-            measured from this date. Leave blank to hide the timeline section.
+            {t('Anchors the HRT timeline. Each report gets a "Day N / Month N / Year N" milestone measured from this date. Leave blank to hide the timeline section.')}
           </span>
         </label>
       </div>
 
       <footer class="edit-card__footer">
-        <span class="edit-card__hotkeys">⏎ save · ⎋ cancel</span>
+        <span class="edit-card__hotkeys">⏎ {t('save · cancel')}</span>
         <div class="flex gap-2">
-          <button class="btn" onclick={() => (editing = false)}>Cancel</button>
-          <button class="btn-accent" onclick={saveEdit}>Save changes</button>
+          <button class="btn" onclick={() => (editing = false)}>{t('Cancel')}</button>
+          <button class="btn-accent" onclick={saveEdit}>{t('Save changes')}</button>
         </div>
       </footer>
     </section>
@@ -602,10 +603,10 @@
   {#if patient}
     <section class="card p-4 space-y-2">
       <div class="flex items-baseline justify-between gap-3">
-        <h2 class="text-sm font-semibold">Clinical notes</h2>
+        <h2 class="text-sm font-semibold">{t('Clinical notes')}</h2>
         {#if !editingNotes}
           <button class="text-xs text-accent hover:underline" onclick={startEditNotes}>
-            {patient.notes ? 'Edit' : 'Add'}
+            {t(patient.notes ? 'Edit' : 'Add')}
           </button>
         {/if}
       </div>
@@ -614,19 +615,19 @@
         <textarea
           class="block w-full bg-bg1 border border-line rounded-md px-3 py-2 text-sm font-mono"
           rows="8"
-          placeholder="Free-form clinical context: allergies, family hx, treatment plan, ongoing conditions…"
+          placeholder={t('Free-form clinical context: allergies, family hx, treatment plan, ongoing conditions…')}
           bind:value={notesDraft}
         ></textarea>
         <div class="flex justify-end gap-2 pt-1">
-          <button class="btn text-xs" onclick={cancelEditNotes}>Cancel</button>
+          <button class="btn text-xs" onclick={cancelEditNotes}>{t('Cancel')}</button>
           <button class="btn-accent text-xs" disabled={savingNotes} onclick={saveNotes}>
-            {savingNotes ? 'Saving…' : 'Save notes'}
+            {t(savingNotes ? 'Saving…' : 'Save notes')}
           </button>
         </div>
       {:else if patient.notes}
         <pre class="text-sm whitespace-pre-wrap font-sans text-fg1 leading-relaxed">{patient.notes}</pre>
       {:else}
-        <p class="text-xs text-fg3 italic">No notes yet — click <em>Add</em> to capture allergies, family history, ongoing conditions, etc.</p>
+        <p class="text-xs text-fg3 italic">{t('No notes yet — click')} <em>{t('Add')}</em> {t('to capture allergies, family history, ongoing conditions, etc.')}</p>
       {/if}
     </section>
   {/if}
@@ -640,16 +641,16 @@
       <section class="dashboard-column">
         <header class="dashboard-column__header">
           <div>
-            <h2 class="text-sm font-semibold">Reports <span class="text-fg3">({filteredReports.length}/{reports.length})</span></h2>
-            <p class="dashboard-column__hint">Recent source documents and review status.</p>
+            <h2 class="text-sm font-semibold">{t('Reports')} <span class="text-fg3">({filteredReports.length}/{reports.length})</span></h2>
+            <p class="dashboard-column__hint">{t('Recent source documents and review status.')}</p>
           </div>
-          <input class="input dashboard-filter" type="search" placeholder="Filter reports…" aria-label="Filter patient reports" bind:value={reportFilter} />
+          <input class="input dashboard-filter" type="search" placeholder={t('Filter reports…')} aria-label={t('Filter patient reports')} bind:value={reportFilter} />
         </header>
 
         {#if reports.length === 0 && !err}
-          <div class="dashboard-empty">No reports yet for this patient.</div>
+          <div class="dashboard-empty">{t('No reports yet for this patient.')}</div>
         {:else if filteredReports.length === 0}
-          <div class="dashboard-empty">No reports match “{reportFilter}”.</div>
+          <div class="dashboard-empty">{t('No reports match “{query}”.', { query: reportFilter })}</div>
         {:else}
           <div class="card dashboard-list divide-y divide-line">
         {#each filteredReports as r}
@@ -675,11 +676,11 @@
                       <path d="M4 16 L4 13 L13 4 L16 7 L7 16 z"/>
                       <path d="M11 6 L14 9"/>
                     </svg>
-                    Rename
+                    {t('Rename')}
                   </span>
                   <span class="rename-shell__date">{formatDate(r.collection_date_iso)}</span>
                   <span class="rename-shell__meta">
-                    {r.row_count} rows · tier {r.ingest_tier} · conf {(r.doc_confidence * 100).toFixed(0)}%
+                    {r.row_count} {t('rows')} · {t('tier')} {r.ingest_tier} · {t('conf')} {(r.doc_confidence * 100).toFixed(0)}%
                   </span>
                 </div>
 
@@ -687,7 +688,7 @@
                   <!-- svelte-ignore a11y_autofocus -->
                   <input
                     class="rename-shell__input"
-                    placeholder="e.g. Annual checkup, Pre-surgery panel…"
+                    placeholder={t('e.g. Annual checkup, Pre-surgery panel…')}
                     bind:value={reportNickDraft}
                     autofocus
                     onkeydown={(e) => {
@@ -696,15 +697,15 @@
                     }}
                   />
                   <button class="rename-shell__save" onclick={saveReportNickname}
-                          title="Save (⏎)">
+                          title={t('Save (⏎)')}>
                     <svg viewBox="0 0 20 20" width="13" height="13" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                       <path d="M4 10 L8 14 L16 6"/>
                     </svg>
-                    Save
+                    {t('Save')}
                   </button>
                   <button class="rename-shell__cancel" onclick={cancelEditReportNickname}
-                          title="Cancel (Esc)">
+                          title={t('Cancel (Esc)')}>
                     <svg viewBox="0 0 20 20" width="13" height="13" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                       <path d="M5 5 L15 15 M15 5 L5 15"/>
@@ -713,7 +714,7 @@
                 </div>
 
                 <span class="rename-shell__hint">
-                  ⏎ save · ⎋ cancel · empty input clears the nickname
+                  ⏎ {t('save · cancel · empty input clears the nickname')}
                 </span>
               </div>
             {:else}
@@ -724,8 +725,8 @@
                        navigation and flips the row into edit mode. -->
                   <button type="button"
                           class="row-edit-pencil"
-                          title={r.nickname ? 'Rename report' : 'Add a nickname for this report'}
-                          aria-label="Rename report"
+                          title={t(r.nickname ? 'Rename report' : 'Add a nickname for this report')}
+                          aria-label={t('Rename report')}
                           onclick={(e) => { e.preventDefault(); e.stopPropagation(); startEditReportNickname(r); }}>
                     <svg viewBox="0 0 20 20" width="12" height="12" fill="none" stroke="currentColor"
                          stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -743,10 +744,10 @@
                   {#if r.nickname}{formatDate(r.collection_date_iso)} · {/if}
                   {r.row_count} rows · tier {r.ingest_tier} · conf {(r.doc_confidence * 100).toFixed(0)}%
                   {#if r.annotations}
-                    <span class="text-fg2 inline-flex items-center gap-1">· <Icon name="edit" size={11} /> annotated</span>
+                    <span class="text-fg2 inline-flex items-center gap-1">· <Icon name="edit" size={11} /> {t('annotated')}</span>
                   {/if}
                   {#if sinceLast}
-                    <span class="span-pill" title="Time since the previous report ({formatDate(prevReport.collection_date_iso)})">
+                    <span class="span-pill" title={t('Time since the previous report ({date})', { date: formatDate(prevReport.collection_date_iso) })}>
                       {sinceLast}
                     </span>
                   {/if}
@@ -757,8 +758,8 @@
               type="button"
               class="row-icon row-icon--danger"
               onclick={() => onDeleteReport(r)}
-              title="Delete report"
-              aria-label="Delete report"
+              title={t('Delete report')}
+              aria-label={t('Delete report')}
             >
               <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M5 6 H15 M8 6 V4 H12 V6 M6 6 L7 16 a1 1 0 0 0 1 1 H12 a1 1 0 0 0 1 -1 L14 6"/>
@@ -775,17 +776,17 @@
       <section class="dashboard-column">
         <header class="dashboard-column__header">
           <div>
-            <h2 class="text-sm font-semibold">Signals <span class="text-fg3">({flaggedAnalytes.length})</span></h2>
-            <p class="dashboard-column__hint">Review-worthy analytes from the latest history.</p>
+            <h2 class="text-sm font-semibold">{t('Signals')} <span class="text-fg3">({flaggedAnalytes.length})</span></h2>
+            <p class="dashboard-column__hint">{t('Review-worthy analytes from the latest history.')}</p>
           </div>
         </header>
 
-        <div class="dashboard-segmented" role="tablist" aria-label="Filter analyte signals">
+        <div class="dashboard-segmented" role="tablist" aria-label={t('Filter analyte signals')}>
           {#each [
-            { id: 'all', label: 'All' },
-            { id: 'abnormal', label: 'Abnormal' },
-            { id: 'elevated', label: 'Elevated' },
-            { id: 'subclinical', label: 'Subclinical' },
+            { id: 'all', label: t('All') },
+            { id: 'abnormal', label: t('Abnormal') },
+            { id: 'elevated', label: t('Elevated') },
+            { id: 'subclinical', label: t('Subclinical') },
           ] as option}
             <button
               type="button"
@@ -798,12 +799,12 @@
             </button>
           {/each}
         </div>
-        <input class="input w-full mb-2" type="search" placeholder="Search analytes…" aria-label="Search flagged analytes" bind:value={analyteFilter} />
+        <input class="input w-full mb-2" type="search" placeholder={t('Search analytes…')} aria-label={t('Search flagged analytes')} bind:value={analyteFilter} />
 
         {#if dashboardLoading}
-          <div class="dashboard-empty">Loading analyte signals…</div>
+          <div class="dashboard-empty">{t('Loading analyte signals…')}</div>
         {:else if flaggedAnalytes.length === 0}
-          <div class="dashboard-empty">No analytes match this filter.</div>
+          <div class="dashboard-empty">{t('No analytes match this filter.')}</div>
         {:else}
           <div class="dashboard-list space-y-1">
             {#each flaggedAnalytes as analyte (analyte.id)}
@@ -828,28 +829,28 @@
       <section class="dashboard-column">
         <header class="dashboard-column__header">
           <div>
-            <h2 class="text-sm font-semibold">Trends</h2>
-            <p class="dashboard-column__hint">Most measured analytes and largest changes.</p>
+            <h2 class="text-sm font-semibold">{t('Trends')}</h2>
+            <p class="dashboard-column__hint">{t('Most measured analytes and largest changes.')}</p>
           </div>
           <label class="trend-window">
-            <span>Window</span>
+            <span>{t('Window')}</span>
             <select
               class="select trend-window__select"
               value={trendWindowDays}
-              aria-label="Trend time window"
+              aria-label={t('Trend time window')}
               onchange={(event) => setTrendWindow(Number((event.currentTarget as HTMLSelectElement).value))}
             >
               {#each trendWindows as window}
-                <option value={window.id}>{window.label}</option>
+                <option value={window.id}>{t(window.label)}</option>
               {/each}
             </select>
           </label>
         </header>
 
         <div class="trend-group">
-          <h3 class="trend-group__title">Main analytes</h3>
+          <h3 class="trend-group__title">{t('Main analytes')}</h3>
           {#if mainAnalytes.length === 0}
-            <div class="dashboard-empty">No numeric history yet.</div>
+            <div class="dashboard-empty">{t('No numeric history yet.')}</div>
           {:else}
             <div class="space-y-1">
               {#each mainAnalytes as analyte (analyte.id)}
@@ -858,7 +859,7 @@
                     <span class="truncate text-xs font-medium">{analyte.name}</span>
                     <span class="shrink-0 text-[10px] text-fg2 tabular-nums">{readingValue(analyte.latest)} {analyte.latest.unit ?? ''}</span>
                   </div>
-                  <svg class="sparkline" viewBox="0 0 100 28" preserveAspectRatio="none" aria-label={`${analyte.name} trend`} role="img">
+                  <svg class="sparkline" viewBox="0 0 100 28" preserveAspectRatio="none" aria-label={t('{name} trend', { name: analyte.name })} role="img">
                     <polyline points={sparklinePoints(analyte.readings)} fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" />
                   </svg>
                 </a>
@@ -868,9 +869,9 @@
         </div>
 
         <div class="trend-group">
-          <h3 class="trend-group__title">Biggest deltas</h3>
+          <h3 class="trend-group__title">{t('Biggest deltas')}</h3>
           {#if biggestDeltas.length === 0}
-            <div class="dashboard-empty">Need at least two numeric readings.</div>
+            <div class="dashboard-empty">{t('Need at least two numeric readings.')}</div>
           {:else}
             <div class="space-y-1">
               {#each biggestDeltas as analyte (analyte.id)}
@@ -883,7 +884,7 @@
                       </span>
                     {/if}
                   </div>
-                  <svg class="sparkline sparkline--delta" viewBox="0 0 100 28" preserveAspectRatio="none" aria-label={`${analyte.name} delta trend`} role="img">
+                  <svg class="sparkline sparkline--delta" viewBox="0 0 100 28" preserveAspectRatio="none" aria-label={t('{name} delta trend', { name: analyte.name })} role="img">
                     <polyline points={sparklinePoints(analyte.readings)} fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" />
                   </svg>
                 </a>

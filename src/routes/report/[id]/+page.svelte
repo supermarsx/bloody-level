@@ -26,6 +26,8 @@
   import { formatRelativeSpan } from '$format/dates';
   import Icon from '$components/icon.svelte';
   import { patientAnalyteSummaries, type AnalyteReading, type PatientAnalyteSummary } from '$api/reports';
+  import { t } from '$lib/i18n/index.svelte';
+  import '$lib/i18n/data-routes';
 
   // Time gap to the previous (older) report for this patient — surfaces in
   // the page header so users immediately see the cadence between draws.
@@ -83,7 +85,7 @@
   // switching when several reports are open across separate sessions.
   $effect(() => {
     if (!detail) {
-      setPageTitle('Report');
+      setPageTitle(t('Report'));
       return;
     }
     const r = detail.report;
@@ -114,23 +116,23 @@
   async function onDeleteReport() {
     if (!detail) return;
     const ok = await ask(
-      `Delete report ${formatDate(detail.report.collection_date_iso)} for ${detail.report.patient_name}?\n\nThis removes the report, all ${detail.stats.total_rows} parsed rows, and the cached PDF. This cannot be undone.`,
-      { title: 'Delete report', kind: 'warning' }
+      t('Delete report {date} for {name}?\n\nThis removes the report, all {rows} parsed rows, and the cached PDF. This cannot be undone.', { date: formatDate(detail.report.collection_date_iso), name: detail.report.patient_name, rows: detail.stats.total_rows }),
+      { title: t('Delete report'), kind: 'warning' }
     );
     if (!ok) return;
     try {
       await admin.deleteReport(reportId);
-      toasts.success('Report deleted');
+      toasts.success(t('Report deleted'));
       await goto('/records');
     } catch (e) { toasts.error(e); }
   }
 
   async function onDeleteRow(rowId: number) {
-    const ok = await ask('Delete this row?', { title: 'Delete row', kind: 'warning' });
+    const ok = await ask(t('Delete this row?'), { title: t('Delete row'), kind: 'warning' });
     if (!ok) return;
     try {
       await admin.deleteResult(rowId);
-      toasts.success('Row deleted');
+      toasts.success(t('Row deleted'));
       await refresh();
     } catch (e) { toasts.error(e); }
   }
@@ -147,17 +149,17 @@
     try {
       const out = await exportReportRowsCsv(reportId);
       const path = await saveTextFile(out.content, { defaultPath: out.filename });
-      if (path) toasts.success('Exported', path);
+      if (path) toasts.success(t('Exported'), path);
     } catch (e) { toasts.error(e); }
   }
 
   function diagnosticLabel(code: string): string {
     switch (code) {
-      case 'analyte_unmatched':          return 'Unmatched analyte';
-      case 'reference_range_unparsed':   return 'Unparsed range';
-      case 'unit_unrecognized':          return 'Unit mismatch';
-      case 'value_missing':              return 'Missing value';
-      case 'low_confidence':             return 'Low confidence';
+      case 'analyte_unmatched':          return t('Unmatched analyte');
+      case 'reference_range_unparsed':   return t('Unparsed range');
+      case 'unit_unrecognized':          return t('Unit mismatch');
+      case 'value_missing':              return t('Missing value');
+      case 'low_confidence':             return t('Low confidence');
       default:                           return code.replaceAll('_', ' ');
     }
   }
@@ -186,7 +188,7 @@
       await setReportNickname(reportId, next.length === 0 ? null : next);
       detail.report.nickname = next.length === 0 ? null : next;
       editingNickname = false;
-      toasts.success('Nickname saved', next || 'cleared');
+      toasts.success(t('Nickname saved'), next || t('cleared'));
     } catch (e) { toasts.error(e); }
   }
 
@@ -212,7 +214,7 @@
       await setReportAnnotations(reportId, next);
       detail.report.annotations = next;
       editingAnnotations = false;
-      toasts.success('Annotations saved');
+      toasts.success(t('Annotations saved'));
     } catch (e) { toasts.error(e); }
     finally { savingAnnotations = false; }
   }
@@ -227,7 +229,7 @@
     try {
       await setReportCyclePhase(reportId, phase);
       detail.report.cycle_phase = phase;
-      toasts.success('Cycle phase updated', phase ?? 'cleared');
+      toasts.success(t('Cycle phase updated'), phase ?? t('cleared'));
     } catch (e) { toasts.error(e); }
   }
 
@@ -239,8 +241,8 @@
       const delta = r.rows_after - r.rows_before;
       const sign = delta >= 0 ? '+' : '';
       toasts.success(
-        'Re-parsed',
-        `${r.rows_after} rows (${sign}${delta} vs before), ${r.rows_unmatched} unmatched, ${r.parse_audit_entries} diagnostics, conf ${(r.doc_confidence * 100).toFixed(0)}%`
+        t('Re-parsed'),
+        t('{rows} rows ({delta} vs before), {unmatched} unmatched, {diagnostics} diagnostics, conf {confidence}%', { rows: r.rows_after, delta: `${sign}${delta}`, unmatched: r.rows_unmatched, diagnostics: r.parse_audit_entries, confidence: (r.doc_confidence * 100).toFixed(0) })
       );
       await refresh();
     } catch (e) { toasts.error(e); }
@@ -299,7 +301,7 @@
             <a class="text-accent hover:underline text-sm font-normal" href={`/patient/${detail.report.patient_id}`}>{detail.report.patient_name}</a>
             <span class="text-fg2 font-normal text-sm">· {formatDate(detail.report.collection_date_iso)}</span>
           {:else if !editingNickname}
-            Report ·
+            {t('Report')} ·
             <a class="text-accent hover:underline text-base" href={`/patient/${detail.report.patient_id}`}>{detail.report.patient_name}</a>
             <span class="text-fg2 font-normal text-sm">· {formatDate(detail.report.collection_date_iso)}</span>
           {/if}
@@ -308,7 +310,7 @@
             <!-- svelte-ignore a11y_autofocus — explicit focus on entering edit mode is the desired UX -->
             <input
               class="input text-base flex-1 min-w-[12rem]"
-              placeholder="e.g. Annual checkup, Pre-surgery panel…"
+              placeholder={t('e.g. Annual checkup, Pre-surgery panel…')}
               bind:value={nicknameDraft}
               autofocus
               onkeydown={(e) => {
@@ -316,17 +318,17 @@
                 else if (e.key === 'Escape') { e.preventDefault(); cancelEditNickname(); }
               }}
             />
-            <button class="btn text-xs" onclick={saveNickname}>Save</button>
-            <button class="btn text-xs" onclick={cancelEditNickname}>Cancel</button>
+            <button class="btn text-xs" onclick={saveNickname}>{t('Save')}</button>
+            <button class="btn text-xs" onclick={cancelEditNickname}>{t('Cancel')}</button>
           {:else}
             <button
               class="text-xs text-fg3 hover:text-accent ml-1"
               onclick={startEditNickname}
-              title={detail.report.nickname ? 'Edit nickname' : 'Add a friendly nickname for this report'}
-            ><Icon name={detail.report.nickname ? 'edit' : 'plus'} size={13} /> {detail.report.nickname ? 'rename' : 'nickname'}</button>
+              title={t(detail.report.nickname ? 'Edit nickname' : 'Add a friendly nickname for this report')}
+            ><Icon name={detail.report.nickname ? 'edit' : 'plus'} size={13} /> {t(detail.report.nickname ? 'rename' : 'nickname')}</button>
           {/if}
         {:else}
-          Report {reportId}
+          {t('Report')} {reportId}
         {/if}
       </h1>
       {#if detail}
@@ -343,8 +345,8 @@
               <span class="text-fg3">· {milestone.long}</span>
             {/if}
             {#if sincePrev}
-              <span class="span-pill" title="Time since the previous report ({prevReportDateIso})">
-                {sincePrev} since prev
+              <span class="span-pill" title={t('Time since the previous report ({date})', { date: prevReportDateIso })}>
+                {sincePrev} {t('since previous')}
               </span>
             {/if}
           </p>
@@ -356,21 +358,21 @@
         <button
           class="btn"
           disabled={!detail.prev_report_id}
-          title={detail.prev_report_id ? 'Previous report (older) for this patient' : 'No earlier report for this patient'}
+          title={t(detail.prev_report_id ? 'Previous report (older) for this patient' : 'No earlier report for this patient')}
           onclick={() => detail!.prev_report_id && goto(`/report/${detail!.prev_report_id}`)}
-        ><Icon name="arrow-left" size={14} /> Prev</button>
+        ><Icon name="arrow-left" size={14} /> {t('Prev')}</button>
         <button
           class="btn"
           disabled={!detail.next_report_id}
-          title={detail.next_report_id ? 'Next report (newer) for this patient' : 'No later report for this patient'}
+          title={t(detail.next_report_id ? 'Next report (newer) for this patient' : 'No later report for this patient')}
           onclick={() => detail!.next_report_id && goto(`/report/${detail!.next_report_id}`)}
-        >Next <Icon name="arrow-right" size={14} /></button>
-        <button class="btn" onclick={onOpenPdf} title="Open the original PDF in your default viewer">Open PDF</button>
-        <button class="btn" onclick={onExportCsv} title="Download every parsed row as CSV">Export CSV</button>
+        >{t('Next')} <Icon name="arrow-right" size={14} /></button>
+        <button class="btn" onclick={onOpenPdf} title={t('Open the original PDF in your default viewer')}>{t('Open PDF')}</button>
+        <button class="btn" onclick={onExportCsv} title={t('Download every parsed row as CSV')}>{t('Export CSV')}</button>
         <button class="btn" disabled={reparsing} onclick={onReparse}>
-          {reparsing ? 'Re-parsing…' : 'Re-parse'}
+          {t(reparsing ? 'Re-parsing…' : 'Re-parse')}
         </button>
-        <button class="btn text-crit hover:bg-crit/10" onclick={onDeleteReport}>Delete report</button>
+        <button class="btn text-crit hover:bg-crit/10" onclick={onDeleteReport}>{t('Delete report')}</button>
       </div>
     {/if}
   </div>
@@ -383,92 +385,92 @@
   {/if}
 
   {#if loading}
-    <div class="card p-6 text-sm text-fg2">Loading…</div>
+    <div class="card p-6 text-sm text-fg2">{t('Loading…')}</div>
   {:else if detail}
     <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
       <div class="card p-3">
-        <div class="text-xs text-fg2">Total rows</div>
+        <div class="text-xs text-fg2">{t('Total rows')}</div>
         <div class="text-2xl font-semibold tabular-nums">{detail.stats.total_rows}</div>
       </div>
       <div class="card p-3">
-        <div class="text-xs text-fg2">Matched</div>
+        <div class="text-xs text-fg2">{t('Matched')}</div>
         <div class="text-2xl font-semibold tabular-nums text-ok">{detail.stats.matched_rows}</div>
       </div>
       <div class="card p-3">
-        <div class="text-xs text-fg2">Unmatched</div>
+        <div class="text-xs text-fg2">{t('Unmatched')}</div>
         <div class="text-2xl font-semibold tabular-nums {detail.stats.unmatched_rows > 0 ? 'text-warn' : ''}">{detail.stats.unmatched_rows}</div>
       </div>
       <div class="card p-3">
-        <div class="text-xs text-fg2">Abnormal</div>
+        <div class="text-xs text-fg2">{t('Abnormal')}</div>
         <div class="text-2xl font-semibold tabular-nums {detail.stats.abnormal_rows > 0 ? 'text-warn' : ''}">{detail.stats.abnormal_rows}</div>
       </div>
       <div class="card p-3">
-        <div class="text-xs text-fg2">Inline priors</div>
+        <div class="text-xs text-fg2">{t('Inline priors')}</div>
         <div class="text-2xl font-semibold tabular-nums">{detail.stats.inline_prior_rows}</div>
       </div>
       <div class="card p-3">
-        <div class="text-xs text-fg2">Avg confidence</div>
+        <div class="text-xs text-fg2">{t('Avg confidence')}</div>
         <div class="text-2xl font-semibold tabular-nums">{(detail.stats.avg_confidence * 100).toFixed(0)}%</div>
-        <div class="text-[10px] text-fg3">min {(detail.stats.min_confidence * 100).toFixed(0)}%</div>
+        <div class="text-[10px] text-fg3">{t('min')} {(detail.stats.min_confidence * 100).toFixed(0)}%</div>
       </div>
     </section>
 
     <section class="card p-4 space-y-2">
       <div class="flex items-baseline justify-between gap-3">
-        <h2 class="text-sm font-semibold">Report metadata</h2>
+        <h2 class="text-sm font-semibold">{t('Report metadata')}</h2>
         <span class="text-xs text-fg3 font-mono">{detail.report.id}</span>
       </div>
       <dl class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-xs">
-        <dt class="text-fg2">patient</dt>
+        <dt class="text-fg2">{t('patient')}</dt>
         <dd>{detail.report.patient_name} ({detail.report.patient_sex})
           {#if detail.report.age_at_collection != null} · {detail.report.age_at_collection} y/o{/if}
         </dd>
 
-        <dt class="text-fg2">collection</dt>
+        <dt class="text-fg2">{t('collection')}</dt>
         <dd>{formatDate(detail.report.collection_date_iso)}</dd>
 
         {#if detail.report.emission_date_iso}
-          <dt class="text-fg2">emission</dt>
+          <dt class="text-fg2">{t('emission')}</dt>
           <dd>{formatDate(detail.report.emission_date_iso)}</dd>
         {/if}
 
         {#if detail.report.lab_entity}
-          <dt class="text-fg2">lab</dt>
+          <dt class="text-fg2">{t('lab')}</dt>
           <dd>{detail.report.lab_entity}</dd>
         {/if}
 
         {#if detail.report.requesting_physician}
-          <dt class="text-fg2">requesting</dt>
+          <dt class="text-fg2">{t('requesting')}</dt>
           <dd>{detail.report.requesting_physician}</dd>
         {/if}
 
         {#if detail.report.inscription_id}
-          <dt class="text-fg2">inscription</dt>
+          <dt class="text-fg2">{t('inscription')}</dt>
           <dd class="font-mono">{detail.report.inscription_id}</dd>
         {/if}
 
         {#if detail.report.patient_sex === 'f'}
-          <dt class="text-fg2">cycle phase</dt>
+          <dt class="text-fg2">{t('cycle phase')}</dt>
           <dd>
             <select
               class="select text-xs"
               value={detail.report.cycle_phase ?? ''}
               onchange={onCyclePhaseChange}
-              title="Used to pick the right reference range for cycle-dependent analytes (Estradiol, FSH, LH)."
+              title={t('Used to pick the right reference range for cycle-dependent analytes (Estradiol, FSH, LH).')}
             >
-              <option value="">— unknown —</option>
-              <option value="follicular">Follicular (~days 1–13)</option>
-              <option value="ovulation">Ovulation (~day 14)</option>
-              <option value="luteal">Luteal (~days 15–28)</option>
-              <option value="postmenopause">Post-menopause</option>
+              <option value="">{t('— unknown —')}</option>
+              <option value="follicular">{t('Follicular (~days 1–13)')}</option>
+              <option value="ovulation">{t('Ovulation (~day 14)')}</option>
+              <option value="luteal">{t('Luteal (~days 15–28)')}</option>
+              <option value="postmenopause">{t('Post-menopause')}</option>
             </select>
           </dd>
         {/if}
 
-        <dt class="text-fg2">tier</dt>
+        <dt class="text-fg2">{t('tier')}</dt>
         <dd>{detail.report.ingest_tier} · parser {detail.report.parse_version}</dd>
 
-        <dt class="text-fg2">source</dt>
+        <dt class="text-fg2">{t('source')}</dt>
         <dd class="font-mono break-all">{detail.report.source_path}</dd>
       </dl>
     </section>
@@ -476,10 +478,10 @@
     <!-- ─── Annotations card ─── -->
     <section class="card p-4 space-y-2">
       <div class="flex items-baseline justify-between gap-3">
-        <h2 class="text-sm font-semibold">Annotations</h2>
+        <h2 class="text-sm font-semibold">{t('Annotations')}</h2>
         {#if !editingAnnotations}
           <button class="text-xs text-accent hover:underline" onclick={startEditAnnotations}>
-            {detail.report.annotations ? 'Edit' : 'Add'}
+            {t(detail.report.annotations ? 'Edit' : 'Add')}
           </button>
         {/if}
       </div>
@@ -488,21 +490,20 @@
         <textarea
           class="block w-full bg-bg1 border border-line rounded-md px-3 py-2 text-sm font-mono"
           rows="6"
-          placeholder="Context specific to this draw — e.g. 'fasting violated', 'first labs after starting estradiol valerate', 'redrawn after lab error'…"
+          placeholder={t("Context specific to this draw — e.g. 'fasting violated', 'first labs after starting estradiol valerate', 'redrawn after lab error'…")}
           bind:value={annotationsDraft}
         ></textarea>
         <div class="flex justify-end gap-2 pt-1">
-          <button class="btn text-xs" onclick={cancelEditAnnotations}>Cancel</button>
+          <button class="btn text-xs" onclick={cancelEditAnnotations}>{t('Cancel')}</button>
           <button class="btn-accent text-xs" disabled={savingAnnotations} onclick={saveAnnotations}>
-            {savingAnnotations ? 'Saving…' : 'Save annotations'}
+            {t(savingAnnotations ? 'Saving…' : 'Save annotations')}
           </button>
         </div>
       {:else if detail.report.annotations}
         <pre class="text-sm whitespace-pre-wrap font-sans text-fg1 leading-relaxed">{detail.report.annotations}</pre>
       {:else}
         <p class="text-xs text-fg3 italic">
-          No annotations on this report — click <em>Add</em> to capture context that's specific
-          to this draw (deviations from protocol, recent meds, milestone moments, etc.). Patient-level notes live on the patient page.
+          {t("No annotations on this report — click Add to capture context that's specific to this draw (deviations from protocol, recent meds, milestone moments, etc.). Patient-level notes live on the patient page.")}
         </p>
       {/if}
     </section>
@@ -511,15 +512,15 @@
       <section class="card p-4 space-y-2 border-l-4 border-warn">
         <div class="flex items-baseline justify-between gap-3">
           <h2 class="text-sm font-semibold text-warn">
-            {detail.parse_audit.length} parse diagnostic{detail.parse_audit.length === 1 ? '' : 's'}
+            {t('{count} parse diagnostic(s)', { count: detail.parse_audit.length })}
           </h2>
-          <span class="text-[10px] text-fg3 font-mono">tier {detail.report.ingest_tier}</span>
+          <span class="text-[10px] text-fg3 font-mono">{t('tier')} {detail.report.ingest_tier}</span>
         </div>
         <p class="text-xs text-fg2">{diagnosticSummary(detail.parse_audit)}</p>
         <ul class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-xs">
           {#each detail.parse_audit.slice(0, 8) as item}
             <li class="flex items-center gap-2 min-w-0">
-              <span class="font-mono text-fg3 shrink-0">row {item.row_index + 1}</span>
+              <span class="font-mono text-fg3 shrink-0">{t('row')} {item.row_index + 1}</span>
               <span class="text-fg1 truncate" title={diagnosticLabel(item.diagnostic)}>
                 {diagnosticLabel(item.diagnostic)}
               </span>
@@ -530,7 +531,7 @@
           {/each}
         </ul>
         {#if detail.parse_audit.length > 8}
-          <p class="text-[11px] text-fg3">Showing first 8 diagnostics; filter unmatched rows or re-parse after ontology fixes.</p>
+          <p class="text-[11px] text-fg3">{t('Showing first 8 diagnostics; filter unmatched rows or re-parse after Library fixes.')}</p>
         {/if}
       </section>
     {/if}
@@ -538,18 +539,17 @@
     {#if detail.unmatched_analytes.length > 0}
       <section class="card p-4 space-y-2 border-l-4 border-warn">
         <h2 class="text-sm font-semibold text-warn">
-          {detail.unmatched_analytes.length} unmatched analyte{detail.unmatched_analytes.length === 1 ? '' : 's'}
+          {t('{count} unmatched analyte(s)', { count: detail.unmatched_analytes.length })}
         </h2>
         <p class="text-xs text-fg2">
-          The parser couldn't link these names to entries in the analyte ontology.
-          Click <em>Link…</em> to map a raw name to an existing analyte (creates a user alias and re-links every row that matches).
+          {t("The parser couldn't link these names to entries in the analyte Library. Click Link… to map a raw name to an existing analyte (creates a user alias and re-links every row that matches).")}
         </p>
         <ul class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 text-xs">
           {#each detail.unmatched_analytes as name}
             <li class="flex items-center gap-2">
               <span class="font-mono text-fg2 truncate flex-1" title={name}>{name}</span>
               <button class="text-accent hover:underline text-xs" onclick={() => openLinkDialog(name)}>
-                Link…
+                {t('Link…')}
               </button>
             </li>
           {/each}
@@ -559,18 +559,18 @@
 
     <section class="space-y-2">
       <div class="flex items-center justify-between gap-3 flex-wrap">
-        <h2 class="text-sm font-semibold">Rows ({filteredRows.length} of {detail.rows.length})</h2>
+        <h2 class="text-sm font-semibold">{t('Rows ({shown} of {total})', { shown: filteredRows.length, total: detail.rows.length })}</h2>
         <div class="flex items-center gap-3">
           <label class="text-xs text-fg2 flex items-center gap-1.5 cursor-pointer">
             <input type="checkbox" bind:checked={showPriors} />
-            <span>Show previous values from inline-prior columns</span>
+            <span>{t('Show previous values from inline-prior columns')}</span>
           </label>
           <div class="flex items-center gap-1 text-xs">
             {#each ['all', 'matched', 'unmatched', 'abnormal', 'inline_prior'] as f}
               <button
                 class="btn {filter === f ? 'border-accent text-accent' : ''}"
                 onclick={() => (filter = f as typeof filter)}
-              >{f.replace('_', ' ')}</button>
+              >{t(f.replace('_', ' '))}</button>
             {/each}
           </div>
         </div>
@@ -580,15 +580,15 @@
         <table class="w-full text-sm">
           <thead class="text-fg2 text-xs uppercase tracking-wide">
             <tr class="border-b border-line">
-              <th class="text-left px-3 py-2">Analyte</th>
-              <th class="text-left px-3 py-2 w-32">Trend</th>
-              <th class="text-right px-3 py-2">Value</th>
-              <th class="text-left px-3 py-2">Unit</th>
-              <th class="text-left px-3 py-2">Ref</th>
-              <th class="text-left px-3 py-2">Flag</th>
-              <th class="text-right px-3 py-2">Conf</th>
-              <th class="text-left px-3 py-2">Method</th>
-              <th class="text-left px-3 py-2 w-16">Source</th>
+              <th class="text-left px-3 py-2">{t('Analyte')}</th>
+              <th class="text-left px-3 py-2 w-32">{t('Trend')}</th>
+              <th class="text-right px-3 py-2">{t('Value')}</th>
+              <th class="text-left px-3 py-2">{t('Unit')}</th>
+              <th class="text-left px-3 py-2">{t('Ref')}</th>
+              <th class="text-left px-3 py-2">{t('Flag')}</th>
+              <th class="text-right px-3 py-2">{t('Conf')}</th>
+              <th class="text-left px-3 py-2">{t('Method')}</th>
+              <th class="text-left px-3 py-2 w-16">{t('Source')}</th>
               <th class="text-left px-3 py-2 w-20"></th>
             </tr>
           </thead>
@@ -643,7 +643,7 @@
                     {:else if methodInBrackets}
                       <div class="text-[10px] text-fg3 font-mono">{methodInBrackets}</div>
                     {:else if r.analyte_pt_name && r.analyte_pt_name !== r.raw_analyte_text}
-                      <div class="text-[10px] text-fg3 italic" title="Printed in PDF as">{r.raw_analyte_text}</div>
+                      <div class="text-[10px] text-fg3 italic" title={t('Printed in PDF as')}>{r.raw_analyte_text}</div>
                     {/if}
                   {:else}
                     <button class="text-warn font-mono hover:underline" onclick={() => openLinkDialog(r.raw_analyte_text)}>
@@ -656,15 +656,15 @@
                 </td>
                 <td class="px-3 py-2 align-middle">
                   {#if r.analyte_id && series.length > 0}
-                    <a class="report-trend" href={`/analyte/${r.analyte_id}?patient=${detail.report.patient_id}`} title="Open the full longitudinal analyte history">
-                      <svg class="report-trend__spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-label={`${r.analyte_pt_name ?? cleanRaw} longitudinal trend`} role="img">
+                    <a class="report-trend" href={`/analyte/${r.analyte_id}?patient=${detail.report.patient_id}`} title={t('Open the full longitudinal analyte history')}>
+                      <svg class="report-trend__spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-label={t('{name} longitudinal trend', { name: r.analyte_pt_name ?? cleanRaw })} role="img">
                         {#if series.length >= 2}
                           <polyline points={sparklinePoints(series)} fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" />
                         {:else}
                           <circle cx="50" cy="14" r="3" fill="currentColor" stroke="none" />
                         {/if}
                       </svg>
-                      <span class="report-trend__count">{series.length} reading{series.length === 1 ? '' : 's'}</span>
+                      <span class="report-trend__count">{t('{count} reading(s)', { count: series.length })}</span>
                     </a>
                   {:else}
                     <span class="text-[11px] text-fg3">—</span>
@@ -694,7 +694,7 @@
                   {:else if defaultRef}
                     {formatDefaultRef(defaultRef)}
                     <span class="text-fg3 ml-1">
-                      ({defaultRef.source === 'all' ? 'reference' : defaultRef.source === 'm' ? 'male' : 'female'})
+                      ({t(defaultRef.source === 'all' ? 'reference' : defaultRef.source === 'm' ? 'male' : 'female')})
                     </span>
                   {:else if r.ref_grammar !== 'none'}
                     <span class="font-mono">{r.ref_grammar}</span>
@@ -711,14 +711,14 @@
                 </td>
                 <td class="px-3 py-2 text-[10px] font-mono text-fg3">
                   {r.parse_method.replace('parse_', '')}
-                  {#if r.inline_prior_pdf}<span class="ml-1 text-fg2">prior</span>{/if}
+                  {#if r.inline_prior_pdf}<span class="ml-1 text-fg2">{t('prior')}</span>{/if}
                 </td>
                 <td class="px-3 py-2">
                   <button
                     class="text-xs text-fg3 hover:text-crit"
                     onclick={() => onDeleteRow(r.id)}
-                    title="Delete row"
-                  >Delete</button>
+                    title={t('Delete row')}
+                  >{t('Delete')}</button>
                 </td>
               </tr>
             {/each}

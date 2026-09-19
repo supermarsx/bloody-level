@@ -5,6 +5,7 @@
   import { toasts, type Toast } from '../toasts/store.svelte';
   import { appearance } from '$theme/appearance.svelte';
   import Icon from '$components/icon.svelte';
+  import { t } from '$lib/i18n/index.svelte';
 
   function classFor(kind: Toast['kind']): string {
     switch (kind) {
@@ -32,69 +33,69 @@
 </script>
 
 <div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-md pointer-events-none">
-  {#each toasts.toasts as t (t.id)}
-    <div class="card p-3 border-l-4 {classFor(t.kind)} shadow-lg pointer-events-auto bg-bg2"
+  {#each toasts.toasts as toast (toast.id)}
+    <div class="card p-3 border-l-4 {classFor(toast.kind)} shadow-lg pointer-events-auto bg-bg2"
          in:fly={flyIn}
          out:fade={fadeOut}
          animate:flip={{ duration: flipMs, easing: quintOut }}>
       <div class="flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0">
-          <div class="text-sm font-semibold text-fg1 truncate">{t.title}</div>
-          {#if t.message}
-            <div class="text-xs text-fg2 mt-0.5 break-words whitespace-pre-wrap">{t.message}</div>
+          <div class="text-sm font-semibold text-fg1 truncate">{t(toast.title)}</div>
+          {#if toast.message}
+            <div class="text-xs text-fg2 mt-0.5 break-words whitespace-pre-wrap">{t(toast.message)}</div>
           {/if}
 
-          {#if t.context && (t.context.stage || t.context.path || t.context.section || t.context.line != null || t.context.patient)}
+          {#if toast.context && (toast.context.stage || toast.context.path || toast.context.section || toast.context.line != null || toast.context.patient)}
             <dl class="mt-2 grid grid-cols-[max-content_1fr] gap-x-2 gap-y-0.5 text-[11px] text-fg3">
-              {#if t.context.stage}
-                <dt class="font-medium">stage</dt>
-                <dd class="font-mono">{t.context.stage}</dd>
+              {#if toast.context.stage}
+                <dt class="font-medium">{t('stage')}</dt>
+                <dd class="font-mono">{toast.context.stage}</dd>
               {/if}
-              {#if t.context.path}
-                <dt class="font-medium">file</dt>
-                <dd class="font-mono truncate" title={t.context.path}>{t.context.path}</dd>
+              {#if toast.context.path}
+                <dt class="font-medium">{t('file')}</dt>
+                <dd class="font-mono truncate" title={toast.context.path}>{toast.context.path}</dd>
               {/if}
-              {#if t.context.section}
-                <dt class="font-medium">section</dt>
-                <dd class="font-mono truncate">{t.context.section}</dd>
+              {#if toast.context.section}
+                <dt class="font-medium">{t('section')}</dt>
+                <dd class="font-mono truncate">{toast.context.section}</dd>
               {/if}
-              {#if t.context.line != null}
-                <dt class="font-medium">line</dt>
-                <dd class="font-mono">{t.context.line}</dd>
+              {#if toast.context.line != null}
+                <dt class="font-medium">{t('line')}</dt>
+                <dd class="font-mono">{toast.context.line}</dd>
               {/if}
-              {#if t.context.patient}
-                <dt class="font-medium">patient</dt>
-                <dd class="truncate">{t.context.patient}</dd>
+              {#if toast.context.patient}
+                <dt class="font-medium">{t('patient')}</dt>
+                <dd class="truncate">{toast.context.patient}</dd>
               {/if}
             </dl>
           {/if}
 
-          {#if t.context?.hints && t.context.hints.length > 0}
+          {#if toast.context?.hints && toast.context.hints.length > 0}
             <ul class="mt-1.5 text-[11px] text-fg2 list-disc list-inside space-y-0.5">
-              {#each t.context.hints as h}
+              {#each toast.context.hints as h}
                 <li>{h}</li>
               {/each}
             </ul>
           {/if}
 
-          {#if t.code || t.command}
+          {#if toast.code || toast.command}
             <div class="text-[10px] text-fg3 mt-1.5 font-mono">
-              {t.command ?? ''}{t.command && t.code ? ' · ' : ''}{t.code ?? ''}
+              {toast.command ?? ''}{toast.command && toast.code ? ' · ' : ''}{toast.code ?? ''}
             </div>
           {/if}
 
-          {#if t.kind === 'error' && t.detail}
+          {#if toast.kind === 'error' && toast.detail}
             <details class="mt-1">
-              <summary class="text-[10px] text-fg3 cursor-pointer select-none">Detail</summary>
-              <pre class="text-[10px] text-fg3 mt-1 whitespace-pre-wrap font-mono">{t.detail}</pre>
+              <summary class="text-[10px] text-fg3 cursor-pointer select-none">{t('Detail')}</summary>
+              <pre class="text-[10px] text-fg3 mt-1 whitespace-pre-wrap font-mono">{toast.detail}</pre>
             </details>
           {/if}
 
-          {#if t.context?.breadcrumbs && t.context.breadcrumbs.length > 0}
+          {#if toast.context?.breadcrumbs && toast.context.breadcrumbs.length > 0}
             <details class="mt-1">
-              <summary class="text-[10px] text-fg3 cursor-pointer select-none">Breadcrumbs</summary>
+              <summary class="text-[10px] text-fg3 cursor-pointer select-none">{t('Breadcrumbs')}</summary>
               <ol class="text-[10px] text-fg3 mt-1 list-decimal list-inside space-y-0.5">
-                {#each t.context.breadcrumbs as b}
+                {#each toast.context.breadcrumbs as b}
                   <li class="font-mono">{b}</li>
                 {/each}
               </ol>
@@ -102,16 +103,16 @@
           {/if}
         </div>
         <div class="flex items-center gap-1 shrink-0">
-          {#if t.retry}
+          {#if toast.retry}
             <button
               class="text-xs text-accent hover:underline"
-              onclick={() => { t.retry?.(); toasts.dismiss(t.id); }}
-            >Retry</button>
+              onclick={() => { toast.retry?.(); toasts.dismiss(toast.id); }}
+            >{t('Retry')}</button>
           {/if}
           <button
             class="text-xs text-fg3 hover:text-fg1 px-1"
-            onclick={() => toasts.dismiss(t.id)}
-            aria-label="Dismiss"
+            onclick={() => toasts.dismiss(toast.id)}
+            aria-label={t('Dismiss')}
           ><Icon name="x" size={14} /></button>
         </div>
       </div>

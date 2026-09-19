@@ -24,6 +24,9 @@
   import Icon, { type IconName } from '$components/icon.svelte';
   import { ask } from '@tauri-apps/plugin-dialog';
   import { chartPrefs } from '$charts/prefs.svelte';
+  import { t } from '$lib/i18n/index.svelte';
+  import { localizeAnalyteText } from '$lib/i18n/analytes';
+  import '$lib/i18n/data-routes';
 
   let analyteId = $derived($page.params.id ?? '');
   let info = $state<analyteApi.AnalyteInfo | null>(null);
@@ -161,7 +164,7 @@
           // Don't swallow silently — surface why we're missing the info card.
           const ae = AppError.fromUnknown(e);
           if (ae.kind !== 'not_found') {
-            toasts.warn('Couldn’t load analyte info', ae.message);
+            toasts.warn(t('Couldn’t load analyte info'), ae.message);
           }
           return null;
         }),
@@ -193,24 +196,21 @@
       const pid = effectivePatient && effectivePatient !== '__all__' ? effectivePatient : undefined;
       const out = await exportAnalyteTimeseriesCsv(analyteId, pid);
       const path = await saveTextFile(out.content, { defaultPath: out.filename });
-      if (path) toasts.success('Exported', path);
+      if (path) toasts.success(t('Exported'), path);
     } catch (e) { toasts.error(e); }
   }
 
   let reloadingOntology = $state(false);
   async function reloadOntology() {
     const ok = await ask(
-      'Reload analyte ontology from the bundled seed?\n\n' +
-      '• Re-installs every seed-bundled analyte\'s descriptions, reference ranges, categorical tiers, and aliases — your edits to seed entries will be lost.\n' +
-      '• User-created analytes and user-added aliases are preserved.\n' +
-      '• Existing parsed results are not touched.',
-      { title: 'Reload ontology', kind: 'warning' }
+      t("Reload the analyte Library from the bundled seed?\n\n• Re-installs every seed-bundled analyte's descriptions, reference ranges, categorical tiers, and aliases — your edits to seed entries will be lost.\n• User-created analytes and user-added aliases are preserved.\n• Existing parsed results are not touched."),
+      { title: t('Reload Library'), kind: 'warning' }
     );
     if (!ok) return;
     reloadingOntology = true;
     try {
       const r = await admin.reloadOntology();
-      toasts.success('Ontology reloaded', `${r.analytes_installed} analytes installed.`);
+      toasts.success(t('Library reloaded'), t('{count} analytes installed.', { count: r.analytes_installed }));
       await refresh();
     } catch (e) { toasts.error(e); }
     finally { reloadingOntology = false; }
@@ -278,8 +278,8 @@
     // 2. Categorical "Normal" tier (Vit D Suficiência, PCR Normal, etc.)
     if (info?.categorical_tiers_json) {
       const tiers = parseTiers(info.categorical_tiers_json);
-      const normal = tiers.find((t) =>
-        ['normal', 'suficiência', 'suficiencia'].includes(t.label.toLowerCase())
+      const normal = tiers.find((tier) =>
+        ['normal', 'suficiência', 'suficiencia'].includes(tier.label.toLowerCase())
       );
       if (normal && (normal.min != null || normal.max != null)) {
         return [{ low: normal.min ?? null, high: normal.max ?? null, tier: 'normal' as const }];
@@ -316,7 +316,7 @@
 
   const activePatientLabel = $derived.by(() => {
     const p = patientsWithReadings.find((x) => x.id === effectivePatient);
-    return p ? p.name : 'No patients';
+    return p ? p.name : t('No patients');
   });
 
   // Sex driving every flag derivation on this page — taken from the
@@ -351,11 +351,11 @@
               aria-haspopup="listbox"
               aria-expanded={patientMenuOpen}
               aria-controls="analyte-patient-options"
-              title="Choose which patient's readings to display. Trends are always patient-scoped — values from different patients are never combined into the same line."
+              title={t("Choose which patient's readings to display. Trends are always patient-scoped — values from different patients are never combined into the same line.")}
               onclick={() => patientMenuOpen ? closePatientMenu() : openPatientMenu()}
             >
               <span class="truncate {activePatient ? '' : 'text-fg3'}">
-                {activePatient ? `${activePatient.name} (${activePatient.count})` : 'Select patient…'}
+                {activePatient ? `${activePatient.name} (${activePatient.count})` : t('Select patient…')}
               </span>
               <Icon name="chevron-down" size={14} />
             </button>
@@ -364,13 +364,13 @@
                 <input
                   type="search"
                   class="input w-full"
-                  placeholder="Search patients…"
-                  aria-label="Search patients for this analyte"
+                  placeholder={t('Search patients…')}
+                  aria-label={t('Search patients for this analyte')}
                   bind:value={patientSearch}
                   bind:this={patientSearchElement}
                   onkeydown={onPatientSearchKeydown}
                 />
-                <div id="analyte-patient-options" class="analyte-patient-options" role="listbox" aria-label="Patients with readings for this analyte">
+                <div id="analyte-patient-options" class="analyte-patient-options" role="listbox" aria-label={t('Patients with readings for this analyte')}>
                   {#each filteredPatients as p, index (p.id)}
                     <button
                       type="button"
@@ -380,11 +380,11 @@
                       onmousedown={(event) => { event.preventDefault(); selectPatient(p.id); }}
                     >
                       <span class="block truncate font-medium">{p.name}</span>
-                      <span class="block text-[10px] text-fg3">{p.count} reading{p.count === 1 ? '' : 's'} · {p.id}</span>
+                      <span class="block text-[10px] text-fg3">{t('{count} reading(s)', { count: p.count })} · {p.id}</span>
                     </button>
                   {/each}
                   {#if filteredPatients.length === 0}
-                    <div class="px-2 py-3 text-center text-xs text-fg3">No patients match.</div>
+                    <div class="px-2 py-3 text-center text-xs text-fg3">{t('No patients match.')}</div>
                   {/if}
                 </div>
               </div>
@@ -392,7 +392,7 @@
           </div>
         {/if}
         <button class="btn text-xs" onclick={onExportCsv} disabled={readings.length === 0}
-          title="Download all readings of this analyte as CSV">Export CSV</button>
+          title={t('Download all readings of this analyte as CSV')}>{t('Export CSV')}</button>
       </div>
       {#if info}
         <div class="flex items-center gap-2 text-xs text-fg3">
@@ -406,21 +406,21 @@
               type="button"
               class="cursor-pointer font-mono text-accent hover:underline"
               onclick={() => openLoinc(loinc)}
-              title="Open this code in the default browser"
+              title={t('Open this code in the default browser')}
             >LOINC {loinc} <Icon name="external" size={14} /></button>
           {/if}
         </div>
       {/if}
     </div>
     {#if !info?.is_panel_header}
-      <p class="text-xs text-fg3 mt-1">Showing readings for <span class="font-medium text-fg2">{activePatientLabel}</span></p>
+      <p class="text-xs text-fg3 mt-1">{t('Showing readings for')} <span class="font-medium text-fg2">{activePatientLabel}</span></p>
     {/if}
     {#if info?.method_annotation}
       <p class="text-xs text-fg3 mt-0.5 font-mono">{info.method_annotation}</p>
     {/if}
     {#if info && info.aliases.length > 0}
       <p class="text-[11px] text-fg3 mt-1">
-        Also known as: {#each info.aliases.slice(0, 8) as a, i}{i > 0 ? ', ' : ''}<span class="font-mono">{a}</span>{/each}
+        {t('Also known as:')} {#each info.aliases.slice(0, 8) as a, i}{i > 0 ? ', ' : ''}<span class="font-mono">{a}</span>{/each}
       </p>
     {/if}
   </div>
@@ -435,17 +435,17 @@
     <section class="card p-4 border-l-4 border-accent space-y-3">
       <div class="flex items-baseline justify-between gap-3 flex-wrap">
         <h2 class="text-sm font-semibold flex items-center gap-2">
-          <span class="ph-pill" aria-hidden="true">SECTION HEADER</span>
-          Not a measurable test
+          <span class="ph-pill" aria-hidden="true">{t('SECTION HEADER')}</span>
+          {t('Not a measurable test')}
         </h2>
         {#if info.panel}
-          <span class="text-xs text-fg3">Panel: <span class="font-mono">{info.panel}</span></span>
+          <span class="text-xs text-fg3">{t('Panel:')} <span class="font-mono">{info.panel}</span></span>
         {/if}
       </div>
       <p class="text-sm text-fg2">
-        <strong>{info.pt_name}</strong> is a heading the lab prints on the PDF
-        to introduce a group of related tests — it doesn't have its own value.
-        The actual measured analytes for this panel are listed below.
+        <strong>{info.pt_name}</strong> {t('is a heading the lab prints on the PDF')}
+        {t('to introduce a group of related tests — it does not have its own value.')}
+        {t('The actual measured analytes for this panel are listed below.')}
       </p>
 
       {#if siblingAnalytes.length > 0}
@@ -456,18 +456,17 @@
               <span class="text-sm font-medium">{s.pt_name}</span>
               <span class="text-[11px] text-fg3 font-mono">{s.id}</span>
               <span class="text-[11px] text-fg2 mt-1">
-                {s.result_count} reading{s.result_count === 1 ? '' : 's'} on file
+                {t(s.result_count === 1 ? '{count} reading on file' : '{count} readings on file', { count: s.result_count })}
               </span>
             </a>
           {/each}
         </div>
       {:else}
-        <p class="text-xs text-fg3 italic">No sibling analytes resolved for this panel yet.</p>
+        <p class="text-xs text-fg3 italic">{t('No sibling analytes resolved for this panel yet.')}</p>
       {/if}
 
       <p class="text-[11px] text-fg3">
-        Section headers exist in the ontology so the parser can recognise the
-        line on the PDF and skip it. They're informational only.
+        {t('Section headers exist in the Library so the parser can recognise the line on the PDF and skip it. They are informational only.')}
       </p>
     </section>
 
@@ -475,48 +474,48 @@
     <section class="grid grid-cols-1 lg:grid-cols-2 gap-3">
       {#if info?.description}
         <div class="card p-4 lg:col-span-2">
-          <h2 class="text-xs font-semibold text-fg2 uppercase tracking-wide mb-1">What it measures</h2>
-          <p class="text-sm leading-relaxed">{info.description}</p>
+          <h2 class="text-xs font-semibold text-fg2 uppercase tracking-wide mb-1">{t('What it measures')}</h2>
+          <p class="text-sm leading-relaxed">{localizeAnalyteText(info.id, 'description', info.description)}</p>
         </div>
       {/if}
       {#if info?.high_means}
         <div class="card p-4 border-l-4 border-crit">
-          <h2 class="text-xs font-semibold text-crit uppercase tracking-wide mb-1">When elevated</h2>
-          <p class="text-sm leading-relaxed">{info.high_means}</p>
+          <h2 class="text-xs font-semibold text-crit uppercase tracking-wide mb-1">{t('When elevated')}</h2>
+          <p class="text-sm leading-relaxed">{localizeAnalyteText(info.id, 'high_means', info.high_means)}</p>
         </div>
       {/if}
       {#if info?.low_means}
         <div class="card p-4 border-l-4 border-warn">
-          <h2 class="text-xs font-semibold text-warn uppercase tracking-wide mb-1">When reduced</h2>
-          <p class="text-sm leading-relaxed">{info.low_means}</p>
+          <h2 class="text-xs font-semibold text-warn uppercase tracking-wide mb-1">{t('When reduced')}</h2>
+          <p class="text-sm leading-relaxed">{localizeAnalyteText(info.id, 'low_means', info.low_means)}</p>
         </div>
       {/if}
       {#if info?.unit_notes}
         <div class="card p-4 lg:col-span-2 border-l-4 border-accent">
-          <h2 class="text-xs font-semibold text-accent uppercase tracking-wide mb-1">Reference range & units</h2>
-          <p class="text-sm leading-relaxed">{info.unit_notes}</p>
+          <h2 class="text-xs font-semibold text-accent uppercase tracking-wide mb-1">{t('Reference range & units')}</h2>
+          <p class="text-sm leading-relaxed">{localizeAnalyteText(info.id, 'unit_notes', info.unit_notes)}</p>
         </div>
       {/if}
     </section>
   {:else if info}
-    <!-- Analyte resolved but ontology fields are empty: prompt a reload. -->
+    <!-- Analyte resolved but Library fields are empty: prompt a reload. -->
     <section class="card p-4 border-l-4 border-warn space-y-2">
       <div class="flex items-baseline justify-between gap-3">
-        <h2 class="text-sm font-semibold text-warn">No clinical context populated</h2>
+        <h2 class="text-sm font-semibold text-warn">{t('No clinical context populated')}</h2>
         <button class="btn" disabled={reloadingOntology} onclick={reloadOntology}>
-          {reloadingOntology ? 'Reloading…' : 'Reload ontology'}
+          {t(reloadingOntology ? 'Reloading…' : 'Reload Library')}
         </button>
       </div>
       <p class="text-xs text-fg2">
-        The analyte resolved (<span class="font-mono">{info.id}</span>) but its description, high/low meanings and unit notes are empty in the database.
-        This usually means the seed file was updated after this DB was first set up. Click <em>Reload ontology</em> to re-install.
-        If still empty after reloading, this analyte may not yet have descriptions in the bundled seed.
+        {t('The analyte resolved ({id}) but its description, high/low meanings and unit notes are empty in the database.', { id: info.id })}
+        {t('This usually means the seed file was updated after this DB was first set up. Click')} <em>{t('Reload Library')}</em> {t('to re-install.')}
+        {t('If still empty after reloading, this analyte may not yet have descriptions in the bundled seed.')}
       </p>
     </section>
   {:else if !err}
     <section class="card p-4 border-l-4 border-fg3 space-y-2">
       <p class="text-sm text-fg2">
-        Analyte <span class="font-mono">{analyteId}</span> isn't in the ontology. The values still display from your reports, but no clinical context is available.
+        {t('Analyte {id} is not in the Library. The values still display from your reports, but no clinical context is available.', { id: analyteId })}
       </p>
     </section>
   {/if}
@@ -529,23 +528,23 @@
     {#if tiers.length > 0}
       <section class="card p-4 space-y-2">
         <div class="flex items-baseline justify-between">
-          <h2 class="text-sm font-semibold">Reference tiers</h2>
+          <h2 class="text-sm font-semibold">{t('Reference tiers')}</h2>
           {#if latestNumeric != null && activeTier}
             <span class="text-xs text-fg2">
-              Latest <span class="tabular-nums font-medium">{formatNumber(latestNumeric)}</span> →
+              {t('Latest')} <span class="tabular-nums font-medium">{formatNumber(latestNumeric)}</span> →
               <FlagPill flag={tierToFlag(activeTier.label)} />
             </span>
           {/if}
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-          {#each tiers as t}
-            {@const isActive = activeTier?.label === t.label}
+          {#each tiers as tier}
+            {@const isActive = activeTier?.label === tier.label}
             <div class="card-tight bg-bg1 {isActive ? 'border-accent' : ''}">
               <div class="text-xs font-medium {isActive ? 'text-accent' : ''}">
-                {t.label}
-                {#if isActive}<span class="text-[10px] ml-1">(current)</span>{/if}
+                {tier.label}
+                {#if isActive}<span class="text-[10px] ml-1">{t('(current)')}</span>{/if}
               </div>
-              <div class="text-sm tabular-nums">{formatTierRange(t)}</div>
+              <div class="text-sm tabular-nums">{formatTierRange(tier)}</div>
             </div>
           {/each}
         </div>
@@ -558,7 +557,7 @@
          above with the sibling-analyte cards. Skip the empty-state +
          chart + table entirely. -->
   {:else if readings.length === 0 && !err}
-    <div class="card p-6 text-sm text-fg2">No readings yet for this analyte.</div>
+    <div class="card p-6 text-sm text-fg2">{t('No readings yet for this analyte.')}</div>
   {:else}
     <!-- Snapshot stats — Latest / First / Min / Max / Mean / Reference.
          The reference card shares this row instead of taking a full-width
@@ -574,27 +573,27 @@
           />
         {/if}
         <div class="card p-3">
-          <div class="text-xs text-fg2">Latest</div>
+          <div class="text-xs text-fg2">{t('Latest')}</div>
           <div class="text-2xl font-semibold tabular-nums">{formatNumber(stats.latest)}</div>
           <div class="text-[10px] text-fg3">{formatDate(stats.latestDate)}</div>
         </div>
         <div class="card p-3">
-          <div class="text-xs text-fg2">First</div>
+          <div class="text-xs text-fg2">{t('First')}</div>
           <div class="text-xl font-semibold tabular-nums">{formatNumber(stats.first)}</div>
           <div class="text-[10px] text-fg3">{formatDate(stats.firstDate)}</div>
         </div>
         <div class="card p-3">
-          <div class="text-xs text-fg2">Min</div>
+          <div class="text-xs text-fg2">{t('Min')}</div>
           <div class="text-xl font-semibold tabular-nums text-warn">{formatNumber(stats.min)}</div>
         </div>
         <div class="card p-3">
-          <div class="text-xs text-fg2">Max</div>
+          <div class="text-xs text-fg2">{t('Max')}</div>
           <div class="text-xl font-semibold tabular-nums text-warn">{formatNumber(stats.max)}</div>
         </div>
         <div class="card p-3">
-          <div class="text-xs text-fg2">Mean</div>
+          <div class="text-xs text-fg2">{t('Mean')}</div>
           <div class="text-xl font-semibold tabular-nums">{formatNumber(stats.mean)}</div>
-          <div class="text-[10px] text-fg3">across {stats.n} readings</div>
+          <div class="text-[10px] text-fg3">{t('across {count} readings', { count: stats.n })}</div>
         </div>
       </section>
     {/if}
@@ -603,12 +602,12 @@
          exposed inline so the user can flip it while reviewing readings.
          Updates the global preference, so the change applies everywhere. -->
     <div class="ref-source-bar">
-      <span class="ref-source-bar__label">Reference source</span>
+      <span class="ref-source-bar__label">{t('Reference source')}</span>
       <div class="seg seg--inline">
         {#each [
-          { id: 'auto',    label: 'Auto',       icon: 'scale'   as IconName, hint: 'Library when usable, fall back to printed' },
-          { id: 'library', label: 'Library',    icon: 'library' as IconName, hint: 'Always use the analyte ontology' },
-          { id: 'printed', label: 'Per-report', icon: 'receipt' as IconName, hint: 'Always use the lab\'s printed range' }
+          { id: 'auto',    label: t('Auto'),       icon: 'scale'   as IconName, hint: t('Library when usable, fall back to printed') },
+          { id: 'library', label: t('Library'),    icon: 'library' as IconName, hint: t('Always use the analyte Library') },
+          { id: 'printed', label: t('Per-report'), icon: 'receipt' as IconName, hint: t("Always use the lab's printed range") }
         ] as opt}
           <button type="button"
                   class="seg__opt {chartPrefs.referenceSource === opt.id ? 'seg__opt--on' : ''}"
@@ -633,12 +632,12 @@
     <section>
       <div class="flex items-center justify-between mb-2 gap-3 flex-wrap">
         <h2 class="text-sm font-semibold">
-          Readings ({visibleReadings.length}{visibleReadings.length !== readings.length ? ` of ${readings.length}` : ''})
+          {t('Readings')} ({visibleReadings.length}{visibleReadings.length !== readings.length ? ` ${t('of')} ${readings.length}` : ''})
         </h2>
         {#if priorCount > 0}
           <label class="text-xs text-fg2 flex items-center gap-1.5 cursor-pointer">
             <input type="checkbox" bind:checked={showPriors} />
-            <span>Include {priorCount} value{priorCount === 1 ? '' : 's'} from inline-prior columns of newer reports</span>
+            <span>{t(priorCount === 1 ? 'Include {count} value from inline-prior columns of newer reports' : 'Include {count} values from inline-prior columns of newer reports', { count: priorCount })}</span>
           </label>
         {/if}
       </div>
@@ -646,18 +645,18 @@
         <table class="w-full text-sm">
           <thead class="text-fg2 text-xs uppercase tracking-wide">
             <tr class="border-b border-line">
-              <th class="text-left px-3 py-2">Date</th>
+              <th class="text-left px-3 py-2">{t('Date')}</th>
               <th class="text-left px-3 py-2"
-                  title="Time elapsed since the previous reading for this patient. d = days, w = weeks, mo = months, y = years.">
+                  title={t('Time elapsed since the previous reading for this patient. d = days, w = weeks, mo = months, y = years.')}>
                 Δt <Icon name="info" size={12} />
               </th>
-              <th class="text-left px-3 py-2">Patient</th>
-              <th class="text-right px-3 py-2">Value</th>
-              <th class="text-left px-3 py-2">Unit</th>
+              <th class="text-left px-3 py-2">{t('Patient')}</th>
+              <th class="text-right px-3 py-2">{t('Value')}</th>
+              <th class="text-left px-3 py-2">{t('Unit')}</th>
               <th class="text-right px-3 py-2">Δ</th>
-              <th class="text-left px-3 py-2">Flag</th>
-              <th class="text-left px-3 py-2">Method</th>
-              <th class="text-left px-3 py-2">Source</th>
+              <th class="text-left px-3 py-2">{t('Flag')}</th>
+              <th class="text-left px-3 py-2">{t('Method')}</th>
+              <th class="text-left px-3 py-2">{t('Source')}</th>
             </tr>
           </thead>
           <tbody>
@@ -712,7 +711,7 @@
                 <td class="px-3 py-2 text-fg3 truncate" title={r.method ?? ''}>{r.method ?? '—'}</td>
                 <td class="px-3 py-2">
                   <a class="text-accent hover:underline" href={`/report/${r.source_report_id}`}>{r.source_report_id}</a>
-                  {#if r.inline_prior}<span class="ml-1 text-[10px] text-fg3">prior</span>{/if}
+                  {#if r.inline_prior}<span class="ml-1 text-[10px] text-fg3">{t('prior')}</span>{/if}
                 </td>
               </tr>
             {/each}

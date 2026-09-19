@@ -9,6 +9,7 @@
   } from '$api/audit';
   import { toasts } from '../../lib/toasts/store.svelte';
   import { format, parseISO } from 'date-fns';
+  import { t } from '$lib/i18n/index.svelte';
 
   let entries = $state<AuditEntry[]>([]);
   let total = $state(0);
@@ -110,13 +111,13 @@
 
   async function onClearLog() {
     const ok = await ask(
-      `Wipe ALL audit entries?\n\nThis erases the entire audit trail. The wipe itself will be recorded as a single tombstone entry. This cannot be undone.`,
-      { title: 'Clear audit log', kind: 'warning' }
+      t('Wipe ALL audit entries?\n\nThis erases the entire audit trail. The wipe itself will be recorded as a single tombstone entry. This cannot be undone.'),
+      { title: t('Clear audit log'), kind: 'warning' }
     );
     if (!ok) return;
     try {
       const r = await clearAuditLog();
-      toasts.success(`Cleared ${r.deleted} audit ${r.deleted === 1 ? 'entry' : 'entries'}`);
+      toasts.success(t(r.deleted === 1 ? 'Cleared {count} audit entry' : 'Cleared {count} audit entries', { count: r.deleted }));
       page = 0;
       await refresh();
     } catch (e) {
@@ -166,20 +167,20 @@
 <div class="space-y-3">
   <header class="flex items-baseline justify-between gap-3 flex-wrap">
     <div>
-      <h1 class="text-xl font-semibold">Audit log</h1>
+      <h1 class="text-xl font-semibold">{t('Audit log')}</h1>
       <p class="text-xs text-fg3">
-        Append-only trail of every mutation. {total} {total === 1 ? 'entry' : 'entries'}
+        {t('Append-only trail of every mutation.')} {total} {t(total === 1 ? 'entry' : 'entries')}
         {#if (actionFilter || entityTypeFilter || entityIdFilter || textFilter || sinceDate || untilDate)}
-          (filtered)
+          {t('(filtered)')}
         {/if}.
       </p>
     </div>
     <div class="flex items-center gap-2">
       <button class="btn" onclick={refresh} disabled={loading}>
-        {loading ? 'Loading…' : 'Refresh'}
+          {loading ? t('Loading…') : t('Refresh')}
       </button>
       <button class="btn text-crit border-crit/40 hover:bg-crit/10" onclick={onClearLog}>
-        Clear log
+        {t('Clear log')}
       </button>
     </div>
   </header>
@@ -187,38 +188,38 @@
   <!-- Filter bar — single line on wide screens, wraps gracefully. -->
   <div class="card p-3 flex flex-wrap items-end gap-3">
     <label class="flex flex-col gap-1 text-xs text-fg2">
-      <span>Action</span>
+       <span>{t('Action')}</span>
       <select class="select" bind:value={actionFilter}>
-        <option value="">All actions</option>
+         <option value="">{t('All actions')}</option>
         {#each distinctActions as a}<option value={a}>{a}</option>{/each}
       </select>
     </label>
     <label class="flex flex-col gap-1 text-xs text-fg2">
-      <span>Entity type</span>
+       <span>{t('Entity type')}</span>
       <select class="select" bind:value={entityTypeFilter}>
-        <option value="">All types</option>
+         <option value="">{t('All types')}</option>
         {#each distinctEntityTypes as t}<option value={t}>{t}</option>{/each}
       </select>
     </label>
     <label class="flex flex-col gap-1 text-xs text-fg2">
-      <span>Entity ID</span>
-      <input class="input" type="text" placeholder="exact match" bind:value={entityIdFilter} />
+       <span>{t('Entity ID')}</span>
+       <input class="input" type="text" placeholder={t('exact match')} bind:value={entityIdFilter} />
     </label>
     <label class="flex flex-col gap-1 text-xs text-fg2 flex-1 min-w-[180px]">
-      <span>Search</span>
-      <input class="input" type="text" placeholder="summary or details…" bind:value={textFilter} />
+       <span>{t('Search')}</span>
+       <input class="input" type="text" placeholder={t('summary or details…')} bind:value={textFilter} />
     </label>
     <label class="flex flex-col gap-1 text-xs text-fg2">
-      <span>Since</span>
+       <span>{t('Since')}</span>
       <input class="input" type="date" bind:value={sinceDate} />
     </label>
     <label class="flex flex-col gap-1 text-xs text-fg2">
-      <span>Until</span>
+       <span>{t('Until')}</span>
       <input class="input" type="date" bind:value={untilDate} />
     </label>
     <button class="btn" onclick={clearFilters}
             disabled={!actionFilter && !entityTypeFilter && !entityIdFilter && !textFilter && !sinceDate && !untilDate}>
-      Clear filters
+       {t('Clear filters')}
     </button>
   </div>
 
@@ -226,10 +227,10 @@
     <table class="w-full text-sm">
       <thead>
         <tr class="text-left text-xs text-fg2 border-b border-line">
-          <th class="px-3 py-2 font-medium w-44">When</th>
-          <th class="px-3 py-2 font-medium w-28">Action</th>
-          <th class="px-3 py-2 font-medium w-32">Entity</th>
-          <th class="px-3 py-2 font-medium">Summary</th>
+           <th class="px-3 py-2 font-medium w-44">{t('When')}</th>
+           <th class="px-3 py-2 font-medium w-28">{t('Action')}</th>
+           <th class="px-3 py-2 font-medium w-32">{t('Entity')}</th>
+           <th class="px-3 py-2 font-medium">{t('Summary')}</th>
           <th class="px-3 py-2 font-medium w-12"></th>
         </tr>
       </thead>
@@ -258,7 +259,7 @@
             <td class="px-3 py-2 align-top text-right">
               {#if hasDetails}
                 <button class="text-xs text-accent hover:underline" onclick={() => toggleExpanded(e.id)}>
-                  {isOpen ? 'Hide' : 'Details'}
+                   {isOpen ? t('Hide') : t('Details')}
                 </button>
               {/if}
             </td>
@@ -272,7 +273,7 @@
           {/if}
         {:else}
           <tr><td colspan="5" class="px-3 py-6 text-center text-fg3 text-sm">
-            {loading ? 'Loading…' : 'No audit entries match your filters.'}
+             {loading ? t('Loading…') : t('No audit entries match your filters.')}
           </td></tr>
         {/each}
       </tbody>
@@ -281,12 +282,12 @@
 
   {#if total > PAGE_SIZE}
     <div class="flex items-center justify-between text-xs text-fg2">
-      <span>Page {page + 1} of {lastPage + 1}</span>
+       <span>{t('Page {page} of {pages}', { page: page + 1, pages: lastPage + 1 })}</span>
       <div class="flex items-center gap-1">
-        <button class="btn" onclick={() => (page = 0)}             disabled={page === 0}>« First</button>
-        <button class="btn" onclick={() => (page = page - 1)}      disabled={page === 0}>‹ Prev</button>
-        <button class="btn" onclick={() => (page = page + 1)}      disabled={page >= lastPage}>Next ›</button>
-        <button class="btn" onclick={() => (page = lastPage)}      disabled={page >= lastPage}>Last »</button>
+         <button class="btn" onclick={() => (page = 0)}             disabled={page === 0}>{t('« First')}</button>
+         <button class="btn" onclick={() => (page = page - 1)}      disabled={page === 0}>{t('‹ Prev')}</button>
+         <button class="btn" onclick={() => (page = page + 1)}      disabled={page >= lastPage}>{t('Next ›')}</button>
+         <button class="btn" onclick={() => (page = lastPage)}      disabled={page >= lastPage}>{t('Last »')}</button>
       </div>
     </div>
   {/if}

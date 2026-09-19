@@ -5,6 +5,7 @@
 // labelling baseline labs see "Day −7 (baseline)".
 
 import { differenceInDays, parseISO } from "date-fns";
+import { t } from "$lib/i18n/index.svelte";
 
 export interface HrtMilestone {
   /** Whole-day distance from start (negative if collection precedes start). */
@@ -47,26 +48,38 @@ export function hrtMilestoneFor(
 
   let label: string;
   if (isPre) {
-    label = `Day −${absDays} (baseline)`;
+    label = t("Day −{value} (baseline)", { value: absDays });
   } else if (days <= 7) {
-    label = `Day ${days}`;
+    label = t("Day {value}", { value: days });
   } else if (days <= 56) {
     const weeks = Math.round(days / 7);
-    label = `Week ${weeks}`;
+    label = t("Week {value}", { value: weeks });
   } else if (months < 12) {
-    label = `Month ${months}`;
+    label = t("Month {value}", { value: months });
   } else {
     const wholeYears = Math.floor(months / 12);
     const remainder = months % 12;
     label =
-      remainder === 0 ? `Year ${wholeYears}` : `${wholeYears}y ${remainder}m`;
+      remainder === 0
+        ? t("Year {value}", { value: wholeYears })
+        : t("{value}y {months}m", { value: wholeYears, months: remainder });
   }
 
   // Long label always shows all three units so the tooltip / sub-label
   // tells the same story regardless of which scale the user is reading.
-  const yearText = absYears > 0 ? ` · ${absYears} y` : "";
+  const yearText = absYears > 0 ? t(" · {value} y", { value: absYears }) : "";
   const long = isPre
-    ? `${absDays} day${absDays === 1 ? "" : "s"} before HRT start (${absMonths} mo${yearText})`
-    : `${days} day${days === 1 ? "" : "s"} · ${absMonths} mo${yearText} since HRT start`;
+    ? t(
+        absDays === 1
+          ? "{days} day before HRT start ({months} mo{years})"
+          : "{days} days before HRT start ({months} mo{years})",
+        { days: absDays, months: absMonths, years: yearText },
+      )
+    : t(
+        days === 1
+          ? "{days} day · {months} mo{years} since HRT start"
+          : "{days} days · {months} mo{years} since HRT start",
+        { days, months: absMonths, years: yearText },
+      );
   return { days, months, years, isPre, label, long };
 }

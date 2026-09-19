@@ -15,6 +15,7 @@ const KEYS = {
   fontScale: "appearance.font_scale",
   reduceMotion: "appearance.reduce_motion",
   fontFamily: "appearance.font_family",
+  locale: "appearance.locale",
 } as const;
 
 export type AccentName =
@@ -22,6 +23,54 @@ export type AccentName =
 export type Density = "comfortable" | "compact";
 export type FontScale = "tiny" | "sm" | "md" | "lg" | "gigantic";
 export type FontFamily = "sans" | "serif" | "mono";
+export type AppLocale = "en-US" | "pt-PT";
+export type LocalePreference = "auto" | AppLocale;
+
+const SUPPORTED_LOCALES: AppLocale[] = ["en-US", "pt-PT"];
+
+function browserLocaleCandidates(): string[] {
+  if (typeof navigator === "undefined") return [];
+  return [...(navigator.languages ?? []), navigator.language].filter(
+    (value): value is string => typeof value === "string" && value.length > 0,
+  );
+}
+
+/** Resolve a browser/OS locale to one of the locales the app ships. */
+export function detectLocale(): AppLocale {
+  const candidates = browserLocaleCandidates().map((value) =>
+    value.toLowerCase(),
+  );
+  if (candidates.some((value) => value === "pt" || value.startsWith("pt-"))) {
+    return "pt-PT";
+  }
+  return "en-US";
+}
+
+export function resolveLocale(preference: LocalePreference): AppLocale {
+  return preference === "auto" ? detectLocale() : preference;
+}
+
+export function isLocalePreference(value: unknown): value is LocalePreference {
+  return value === "auto" || SUPPORTED_LOCALES.includes(value as AppLocale);
+}
+
+export const LOCALE_OPTIONS: {
+  id: LocalePreference;
+  label: string;
+  description: string;
+}[] = [
+  { id: "auto", label: "Automatic", description: "Use your device language" },
+  {
+    id: "en-US",
+    label: "English (US)",
+    description: "English regional formatting",
+  },
+  {
+    id: "pt-PT",
+    label: "Português (Portugal)",
+    description: "Portuguese regional formatting",
+  },
+];
 
 export const ACCENT_PRESETS: {
   id: AccentName;
@@ -43,26 +92,32 @@ class AppearanceStore {
   fontScale = $state<FontScale>("md");
   reduceMotion = $state(false);
   fontFamily = $state<FontFamily>("sans");
+  locale = $state<LocalePreference>("auto");
+  resolvedLocale = $derived(resolveLocale(this.locale));
   loaded = $state(false);
 
   /** Hydrate from the settings table. Idempotent. */
   async load() {
     if (this.loaded) return;
+    let loadedFromVault = false;
     try {
       const a = await settings.get<AccentName>(KEYS.accent);
       const d = await settings.get<Density>(KEYS.density);
       const f = await settings.get<FontScale>(KEYS.fontScale);
       const r = await settings.get<boolean>(KEYS.reduceMotion);
       const ff = await settings.get<FontFamily>(KEYS.fontFamily);
+      const l = await settings.get<LocalePreference>(KEYS.locale);
       if (a) this.accent = a;
       if (d) this.density = d;
       if (f) this.fontScale = f;
       if (typeof r === "boolean") this.reduceMotion = r;
       if (ff) this.fontFamily = ff;
+      if (isLocalePreference(l)) this.locale = l;
+      loadedFromVault = true;
     } catch {
-      /* stay on defaults */
+      /* Keep browser-detected defaults and retry once the vault is unlocked. */
     }
-    this.loaded = true;
+    this.loaded = loadedFromVault;
     this.apply();
   }
 
@@ -74,6 +129,8 @@ class AppearanceStore {
     root.setAttribute("data-density", this.density);
     root.setAttribute("data-font-scale", this.fontScale);
     root.setAttribute("data-font-family", this.fontFamily);
+    root.setAttribute("data-locale", this.resolvedLocale);
+    root.setAttribute("lang", this.resolvedLocale);
     root.setAttribute(
       "data-reduce-motion",
       this.reduceMotion ? "true" : "false",
@@ -113,6 +170,11 @@ class AppearanceStore {
     this.apply();
     setDebounced(KEYS.fontFamily, v);
   }
+  setLocale(v: LocalePreference) {
+    this.locale = v;
+    this.apply();
+    setDebounced(KEYS.locale, v);
+  }
 
   reset() {
     void this.setAccent("violet");
@@ -120,6 +182,7 @@ class AppearanceStore {
     void this.setFontScale("md");
     void this.setReduceMotion(false);
     void this.setFontFamily("sans");
+    void this.setLocale("auto");
   }
 }
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '$lib/i18n/index.svelte';
   // Branded splash overlay shown during initial app boot. Fades out smoothly
   // once the parent flips `visible = false`, so the main layout's first paint
   // doesn't snap into view.
@@ -41,7 +42,7 @@
     <div class="splash__bar" aria-hidden="true">
       <div class="splash__bar-fill"></div>
     </div>
-    <div class="splash__msg">{message}</div>
+  <div class="splash__msg">{t(message)}</div>
   </div>
 </div>
 

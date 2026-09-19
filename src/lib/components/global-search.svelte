@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { globalSearch, type SearchResults } from '$api/search';
+  import { t } from '$lib/i18n/index.svelte';
 
   let query = $state('');
   let results = $state<SearchResults | null>(null);
@@ -69,7 +70,7 @@
 <div class="relative">
   <input
     type="search"
-    placeholder="Search… (patients · analytes · reports)"
+    placeholder={t('Search… (patients · analytes · reports)')}
     class="search w-72"
     bind:value={query}
     onfocus={() => { if (results) open = true; }}
@@ -79,7 +80,7 @@
   {#if open && results}
     <div class="absolute right-0 mt-1 w-96 max-h-[70vh] overflow-y-auto card shadow-lg z-30">
       {#if results.patients.length === 0 && results.analytes.length === 0 && results.reports.length === 0}
-        <div class="p-3 text-xs text-fg3">No matches{loading ? '…' : ''}</div>
+        <div class="p-3 text-xs text-fg3">{t('No matches')}{loading ? '…' : ''}</div>
       {/if}
       {#snippet section(title: string, hits: typeof flatHits, baseIdx: number)}
         {#if hits.length > 0}
@@ -97,9 +98,9 @@
           {/each}
         {/if}
       {/snippet}
-      {@render section('Patients', results.patients, 0)}
-      {@render section('Analytes', results.analytes, results.patients.length)}
-      {@render section('Reports', results.reports, results.patients.length + results.analytes.length)}
+      {@render section(t('Patients'), results.patients, 0)}
+      {@render section(t('Analytes'), results.analytes, results.patients.length)}
+      {@render section(t('Reports'), results.reports, results.patients.length + results.analytes.length)}
     </div>
   {/if}
 </div>

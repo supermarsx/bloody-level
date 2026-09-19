@@ -10,6 +10,8 @@
   import { toasts } from '../toasts/store.svelte';
   import { chartPrefs, type ChartPrefsLike } from './prefs.svelte';
   import Icon from '$components/icon.svelte';
+  import { t } from '$lib/i18n/index.svelte';
+  import { appearance } from '$theme/appearance.svelte';
 
   type Point = {
     date: string;
@@ -86,8 +88,8 @@
   // Tooltip suffix indicating where toolbar mutations are saved.
   const persistHint      = $derived(
     prefs === chartPrefs
-      ? 'Saved as the global default.'
-      : 'Local to this chart only.'
+      ? t('Saved as the global default.')
+      : t('Local to this chart only.')
   );
 
   let host = $state<HTMLDivElement | null>(null);
@@ -211,12 +213,16 @@
     const mm   = String(d.getUTCMonth() + 1).padStart(2, '0');
     const dd   = String(d.getUTCDate()).padStart(2, '0');
     const yy   = String(yyyy).slice(2);
-    const monNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const mon  = monNames[d.getUTCMonth()];
+    const mon = new Intl.DateTimeFormat(appearance.resolvedLocale, {
+      month: 'short',
+      timeZone: 'UTC',
+    }).format(d);
     switch (fmt) {
       case 'short':     return `${mon} ${dd}`;
       case 'monthYear': return `${mon} '${yy}`;
-      case 'numeric':   return `${mm}/${dd}/${yy}`;
+      case 'numeric':   return appearance.resolvedLocale === 'pt-PT'
+        ? `${dd}/${mm}/${yy}`
+        : `${mm}/${dd}/${yy}`;
       case 'iso':
       default:          return `${yyyy}-${mm}-${dd}`;
     }
@@ -361,13 +367,13 @@
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const markLineEntries: any[] = [];
     if (showTodayLine) {
-      markLineEntries.push({ xAxis: new Date().toISOString(), name: 'today' });
+      markLineEntries.push({ xAxis: new Date().toISOString(), name: t('today') });
     }
     if (showMeanLine && yVals.length > 0) {
       const mean = yVals.reduce((s, v) => s + v, 0) / yVals.length;
       markLineEntries.push({
         yAxis: mean,
-        name: 'mean',
+        name: t('mean'),
         lineStyle: { color: themeVar('--fg-3', 'rgb(107 114 128)') }
       });
     }
@@ -434,10 +440,10 @@
         itemSize: 14,
         itemGap: 8,
         feature: {
-          dataZoom: { yAxisIndex: 'none', title: { zoom: 'Zoom', back: 'Reset zoom' } },
-          restore:  { title: 'Restore' },
+          dataZoom: { yAxisIndex: 'none', title: { zoom: t('Zoom'), back: t('Reset zoom') } },
+          restore:  { title: t('Restore') },
           saveAsImage: {
-            title: 'Save PNG',
+            title: t('Save PNG'),
             name: exportName,
             pixelRatio: 2,
             backgroundColor: 'transparent'
@@ -591,8 +597,8 @@
                 symbolSize: 28,
                 label: { fontSize: 10, color: '#fff' },
                 data: [
-                  { type: 'max', name: 'Max', itemStyle: { color: themeVar('--crit', 'rgb(220 38 38)') } },
-                  { type: 'min', name: 'Min', itemStyle: { color: themeVar('--ok',   'rgb(22 163 74)') } },
+                  { type: 'max', name: t('Max'), itemStyle: { color: themeVar('--crit', 'rgb(220 38 38)') } },
+                  { type: 'min', name: t('Min'), itemStyle: { color: themeVar('--ok',   'rgb(22 163 74)') } },
                 ],
               }
             : undefined,
@@ -749,10 +755,10 @@
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ClipboardItemCtor = (window as any).ClipboardItem;
       if (!ClipboardItemCtor || !navigator.clipboard?.write) {
-        throw new Error('Clipboard image API not available — use Save PNG instead.');
+        throw new Error(t('Clipboard image API not available — use Save PNG instead.'));
       }
       await navigator.clipboard.write([new ClipboardItemCtor({ 'image/png': blob })]);
-      toasts.success('Chart copied', 'PNG is on your clipboard.');
+      toasts.success(t('Chart copied'), t('PNG is on your clipboard.'));
     } catch (e) {
       toasts.error(e);
     }
@@ -828,9 +834,9 @@
 
 <div class="ts-shell">
   <div class="ts-toolbar">
-    <button type="button" class="ts-btn" onclick={zoomIn}     title="Zoom in"  aria-label="Zoom in">＋</button>
-    <button type="button" class="ts-btn" onclick={zoomOut}    title="Zoom out" aria-label="Zoom out">−</button>
-    <button type="button" class="ts-btn" onclick={resetZoom}  title="Reset zoom" aria-label="Reset zoom">↺</button>
+    <button type="button" class="ts-btn" onclick={zoomIn}     title={t('Zoom in')}  aria-label={t('Zoom in')}>＋</button>
+    <button type="button" class="ts-btn" onclick={zoomOut}    title={t('Zoom out')} aria-label={t('Zoom out')}>−</button>
+    <button type="button" class="ts-btn" onclick={resetZoom}  title={t('Reset zoom')} aria-label={t('Reset zoom')}>↺</button>
 
     <span class="ts-sep" aria-hidden="true"></span>
 
@@ -844,73 +850,73 @@
     <button type="button"
             class="ts-btn {showValues ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setShowValues(!showValues)}
-            title="Toggle value labels on each point. {persistHint}">
+            title={t('Toggle value labels on each point. {persistHint}', { persistHint })}>
       123
     </button>
     <button type="button"
             class="ts-btn {smooth ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setSmooth(!smooth)}
-            title="Toggle smoothed line. {persistHint}">
+            title={t('Toggle smoothed line. {persistHint}', { persistHint })}>
       ∿
     </button>
     <button type="button"
             class="ts-btn {showSymbols ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setShowSymbols(!showSymbols)}
-            title="Toggle the dot at each reading. {persistHint}">
+            title={t('Toggle the dot at each reading. {persistHint}', { persistHint })}>
       <Icon name="dot" size={14} />
     </button>
     <button type="button"
             class="ts-btn {showBands ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setShowBands(!showBands)}
-            title="Toggle reference band(s). {persistHint}">
+            title={t('Toggle reference band(s). {persistHint}', { persistHint })}>
       <Icon name="layers" size={14} />
     </button>
     <button type="button"
             class="ts-btn {scale === 'log' ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setScale(scale === 'linear' ? 'log' : 'linear')}
-            title="Toggle linear / logarithmic Y-axis (log requires all values > 0). {persistHint}">
-      log
+            title={t('Toggle linear / logarithmic Y-axis (log requires all values > 0). {persistHint}', { persistHint })}>
+      {t('log')}
     </button>
     <button type="button"
             class="ts-btn {showTrendLine ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setShowTrendLine(!showTrendLine)}
-            title="Overlay a linear-regression trend line. {persistHint}">
+            title={t('Overlay a linear-regression trend line. {persistHint}', { persistHint })}>
       <Icon name="trend-up" size={14} />
     </button>
     <button type="button"
             class="ts-btn {showTodayLine ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setShowTodayLine(!showTodayLine)}
-            title="Show a vertical reference line at today's date. {persistHint}">
+            title={t("Show a vertical reference line at today's date. {persistHint}", { persistHint })}>
       <Icon name="pin" size={14} />
     </button>
     <button type="button"
             class="ts-btn {showMeanLine ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setShowMeanLine(!showMeanLine)}
-            title="Show a horizontal line at the mean of visible readings. {persistHint}">
-      Mean
+            title={t('Show a horizontal line at the mean of visible readings. {persistHint}', { persistHint })}>
+      {t('mean')}
     </button>
     <button type="button"
             class="ts-btn {showMinMaxMarkers ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setShowMinMaxMarkers(!showMinMaxMarkers)}
-            title="Pin the highest and lowest readings. {persistHint}">
+            title={t('Pin the highest and lowest readings. {persistHint}', { persistHint })}>
       <Icon name="minmax" size={14} />
     </button>
     <button type="button"
             class="ts-btn {colorByFlag ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setColorByFlag(!colorByFlag)}
-            title="Tint each point by its flag (low / normal / high / critical). {persistHint}">
+            title={t('Tint each point by its flag (low / normal / high / critical). {persistHint}', { persistHint })}>
       <Icon name="target" size={14} />
     </button>
     <button type="button"
             class="ts-btn {useNicknames ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setUseNicknames(!useNicknames)}
-            title="Show report nicknames on the X axis (when set on the source report). Falls back to the date for unlabelled reports. {persistHint}">
+            title={t('Show report nicknames on the X axis (when set on the source report). Falls back to the date for unlabelled reports. {persistHint}', { persistHint })}>
       <Icon name="tag" size={14} />
     </button>
     <button type="button"
             class="ts-btn {prefs.scrollZoom ? 'ts-btn--on' : ''}"
             onclick={() => prefs.setScrollZoom(!prefs.scrollZoom)}
-            title="Toggle mouse-wheel zoom inside the chart (off by default — wheel scrolls the page). {persistHint}">
+            title={t('Toggle mouse-wheel zoom inside the chart (off by default — wheel scrolls the page). {persistHint}', { persistHint })}>
       <Icon name="mouse" size={14} />
     </button>
     <!-- Cycle X-axis label mode: auto → rotate → hide → auto. The icon
@@ -924,19 +930,19 @@
             )}
             title={
               xLabelMode === 'auto'
-                ? 'X-axis labels: auto-hide overlaps. Click to tilt (rotate).'
+                ? t('X-axis labels: auto-hide overlaps. Click to tilt (rotate).')
                 : xLabelMode === 'rotate'
-                  ? 'X-axis labels: rotated 35°. Click to hide entirely (date still on hover).'
-                  : 'X-axis labels: hidden — hover the line for the exact date. Click to restore auto.'
+                  ? t('X-axis labels: rotated 35°. Click to hide entirely (date still on hover).')
+                  : t('X-axis labels: hidden — hover the line for the exact date. Click to restore auto.')
             }>
       {#if xLabelMode === 'auto'}<Icon name="arrow-right" size={14} />{:else if xLabelMode === 'rotate'}<Icon name="arrow-up" size={14} />{:else}<Icon name="x" size={14} />{/if}
     </button>
 
     <span class="ts-sep" aria-hidden="true"></span>
 
-    <button type="button" class="ts-btn" onclick={copyPng}    title="Copy chart to clipboard as PNG"><Icon name="copy" size={13} /> Copy</button>
-    <button type="button" class="ts-btn" onclick={downloadPng} title="Save chart as PNG"><Icon name="download" size={13} /> PNG</button>
-    <button type="button" class="ts-btn" onclick={exportCsvFromChart} title="Export plotted points as CSV"><Icon name="download" size={13} /> CSV</button>
+    <button type="button" class="ts-btn" onclick={copyPng}    title={t('Copy chart to clipboard as PNG')}><Icon name="copy" size={13} /> {t('Copy')}</button>
+    <button type="button" class="ts-btn" onclick={downloadPng} title={t('Save chart as PNG')}><Icon name="download" size={13} /> {t('PNG')}</button>
+    <button type="button" class="ts-btn" onclick={exportCsvFromChart} title={t('Export plotted points as CSV')}><Icon name="download" size={13} /> {t('CSV')}</button>
   </div>
 
   <div class="ts-host" style="height: {height}px;" bind:this={host}></div>

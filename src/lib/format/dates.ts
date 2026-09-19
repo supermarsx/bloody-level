@@ -4,6 +4,8 @@ import {
   differenceInDays,
   differenceInYears,
 } from "date-fns";
+import { appearance } from "$theme/appearance.svelte";
+import { t } from "$lib/i18n/index.svelte";
 
 /**
  * Whole-year age between a YYYY-MM-DD date of birth and today. Honours
@@ -28,25 +30,35 @@ export function formatRelativeSpan(
   toIso: string | null | undefined,
 ): string {
   if (!fromIso || !toIso) return "—";
-  let f: Date, t: Date;
+  let f: Date, toDate: Date;
   try {
     f = parseISO(fromIso);
-    t = parseISO(toIso);
+    toDate = parseISO(toIso);
   } catch {
     return "—";
   }
-  const days = differenceInDays(t, f);
+  const days = differenceInDays(toDate, f);
   if (!Number.isFinite(days)) return "—";
-  if (days === 0) return "same day";
+  if (days === 0) return t("same day");
   const sign = days > 0 ? "+" : "−";
   const abs = Math.abs(days);
-  if (abs < 14) return `${sign}${abs}d`;
-  if (abs < 56) return `${sign}${Math.round(abs / 7)}w`;
+  if (abs < 14) return `${sign}${abs}${t("d")}`;
+  if (abs < 56)
+    return `${sign}${Math.round(abs / 7)}${
+      appearance.resolvedLocale === "pt-PT" ? t("w") : "w"
+    }`;
   const months = Math.round(abs / 30.4375);
-  if (months < 12) return `${sign}${months}mo`;
+  if (months < 12)
+    return `${sign}${months}${
+      appearance.resolvedLocale === "pt-PT" ? t("mo") : "mo"
+    }`;
   const years = Math.floor(months / 12);
   const remMo = months % 12;
-  return remMo === 0 ? `${sign}${years}y` : `${sign}${years}y ${remMo}mo`;
+  const year = appearance.resolvedLocale === "pt-PT" ? t("y") : "y";
+  const month = appearance.resolvedLocale === "pt-PT" ? t("mo") : "mo";
+  return remMo === 0
+    ? `${sign}${years}${year}`
+    : `${sign}${years}${year} ${remMo}${month}`;
 }
 
 export function ageFromDob(iso: string | null | undefined): number | null {
@@ -72,7 +84,11 @@ export function formatDate(iso: string | null | undefined): string {
 export function formatDateLong(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
-    return format(parseISO(iso), "MMM d, yyyy");
+    return new Intl.DateTimeFormat(appearance.resolvedLocale, {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }).format(parseISO(iso));
   } catch {
     return iso;
   }

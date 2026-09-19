@@ -10,6 +10,7 @@
   import { formatDate } from '$format/dates';
   import { hrtMilestoneFor } from '$format/hrt-milestone';
   import type { ReportSummary } from '$api/reports';
+  import { t } from '$lib/i18n/index.svelte';
 
   let {
     patientId,
@@ -42,7 +43,7 @@
     try {
       const next = draft.trim() || null;
       await admin.setPatientHrtStart(patientId, next);
-      toasts.success('HRT start updated', next ?? 'cleared');
+      toasts.success(t('HRT start updated'), next ?? t('Cleared'));
       editing = false;
       onChanged?.(next);
     } catch (e) { toasts.error(e); }
@@ -52,7 +53,7 @@
     busy = true;
     try {
       await admin.setPatientHrtStart(patientId, null);
-      toasts.success('HRT start cleared');
+      toasts.success(t('HRT start cleared'));
       editing = false;
       onChanged?.(null);
     } catch (e) { toasts.error(e); }
@@ -87,55 +88,55 @@
   <header class="hrt-card__header">
     <span class="hrt-card__title">
       <span class="hrt-card__pill" aria-hidden="true">HRT</span>
-      Hormone-replacement timeline
+      {t('Hormone-replacement timeline')}
     </span>
     {#if !readOnly && hrtStartIso && !editing}
-      <button class="text-xs text-accent hover:underline" onclick={startEdit}>Edit</button>
+      <button class="text-xs text-accent hover:underline" onclick={startEdit}>{t('Edit')}</button>
     {:else if !readOnly && !hrtStartIso && !editing}
-      <button class="text-xs text-accent hover:underline" onclick={startEdit}>Set start date</button>
+      <button class="text-xs text-accent hover:underline" onclick={startEdit}>{t('Set start date')}</button>
     {:else if readOnly}
-      <span class="text-[11px] text-fg3 italic">Edit in patient form</span>
+      <span class="text-[11px] text-fg3 italic">{t('Edit in patient form')}</span>
     {/if}
   </header>
 
   {#if editing}
     <div class="hrt-card__edit">
       <label class="edit-field">
-        <span class="edit-field__label">HRT start date</span>
+        <span class="edit-field__label">{t('HRT start date')}</span>
         <input type="date" class="input max-w-[11rem]"
                bind:value={draft}
                onkeydown={(e) => { if (e.key === 'Enter') save(); else if (e.key === 'Escape') editing = false; }} />
         <span class="edit-field__hint">
-          Used as the anchor for every report's "Day N / Month N HRT" milestone.
-          Leave blank and Save (or click Clear) to remove the anchor.
+          {t('Used as the anchor for every report\'s "Day N / Month N HRT" milestone.')}
+          {t('Leave blank and Save (or click Clear) to remove the anchor.')}
         </span>
       </label>
       <div class="flex gap-2 justify-end">
         {#if hrtStartIso}
-          <button class="btn text-crit hover:bg-crit/10" disabled={busy} onclick={clear}>Clear</button>
+          <button class="btn text-crit hover:bg-crit/10" disabled={busy} onclick={clear}>{t('Clear')}</button>
         {/if}
-        <button class="btn" disabled={busy} onclick={() => (editing = false)}>Cancel</button>
+        <button class="btn" disabled={busy} onclick={() => (editing = false)}>{t('Cancel')}</button>
         <button class="btn-accent" disabled={busy} onclick={save}>
-          {busy ? 'Saving…' : 'Save'}
+          {busy ? t('Saving…') : t('Save')}
         </button>
       </div>
     </div>
   {:else if hrtStartIso}
     <div class="hrt-card__since">
       <div class="hrt-card__since-row">
-        <span class="hrt-card__since-label">Started</span>
+        <span class="hrt-card__since-label">{t('Started')}</span>
         <span class="hrt-card__since-value">{formatDate(hrtStartIso)}</span>
       </div>
       {#if sinceStart}
         <div class="hrt-card__since-row">
-          <span class="hrt-card__since-label">Today</span>
+          <span class="hrt-card__since-label">{t('Today')}</span>
           <span class="hrt-card__since-value">
-            <strong>{sinceStart.days}</strong> days
+            {t(sinceStart.days === 1 ? '{count} day' : '{count} days', { count: sinceStart.days })}
             <span class="text-fg3">·</span>
-            <strong>{sinceStart.months}</strong> months
+            {t(sinceStart.months === 1 ? '{count} month' : '{count} months', { count: sinceStart.months })}
             {#if sinceStart.years > 0}
               <span class="text-fg3">·</span>
-              <strong>{sinceStart.years}</strong> years
+              {t(sinceStart.years === 1 ? '{count} year' : '{count} years', { count: sinceStart.years })}
             {/if}
           </span>
         </div>
@@ -144,7 +145,7 @@
 
     {#if milestoneBuckets.length > 0}
       <div class="hrt-card__timeline">
-        <div class="hrt-card__timeline-label">Reports by milestone</div>
+        <div class="hrt-card__timeline-label">{t('Reports by milestone')}</div>
         <div class="hrt-card__rail">
           {#each milestoneBuckets as { r, m } (r.id)}
             <a href={`/report/${r.id}`}
@@ -161,12 +162,12 @@
         </div>
       </div>
     {:else}
-      <p class="text-xs text-fg3 italic">No reports yet to plot on the timeline.</p>
+      <p class="text-xs text-fg3 italic">{t('No reports yet to plot on the timeline.')}</p>
     {/if}
   {:else}
     <p class="text-xs text-fg2">
-      Add an HRT start date to track how many days / months each report sits from baseline,
-      and to see all reports laid out on a milestone timeline (Baseline · Week 1–8 · Month N · Year N).
+      {t('Add an HRT start date to track how many days / months each report sits from baseline,')}
+      {t('and to see all reports laid out on a milestone timeline (Baseline · Week 1–8 · Month N · Year N).')}
     </p>
   {/if}
 </section>
@@ -240,10 +241,6 @@
     font-size: 0.85rem;
     color: rgb(var(--fg-1));
     font-variant-numeric: tabular-nums;
-  }
-  .hrt-card__since-value strong {
-    font-weight: 600;
-    color: rgb(var(--accent));
   }
   .hrt-card__timeline {
     padding-top: 0.3rem;

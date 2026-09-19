@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en-US" data-locale="en-US" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%sveltekit.assets%/favicon.svg" />
@@ -13,6 +13,19 @@
       // Apply persisted theme before first paint to prevent flash.
       (function () {
         try {
+          // Locale preference is stored in the encrypted settings table, so
+          // the browser/OS language is the safe default before unlock.
+          const languages = [...(navigator.languages || []), navigator.language]
+            .filter(Boolean)
+            .map((value) => value.toLowerCase());
+          const locale = languages.some(
+            (value) => value === "pt" || value.startsWith("pt-"),
+          )
+            ? "pt-PT"
+            : "en-US";
+          document.documentElement.setAttribute("lang", locale);
+          document.documentElement.setAttribute("data-locale", locale);
+
           const stored =
             localStorage.getItem("bloody-level.theme") ??
             localStorage.getItem("blevel.theme");

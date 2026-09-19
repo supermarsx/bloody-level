@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { listPatients, type PatientSummary } from '$api/reports';
   import { toasts } from '../toasts/store.svelte';
+  import { t } from '$lib/i18n/index.svelte';
 
   let {
     excludeId,
@@ -44,15 +45,15 @@
     <button
       type="button"
       class="absolute inset-0 bg-black/40"
-      aria-label="Close"
+      aria-label={t('Close')}
       onclick={() => (open = false)}
     ></button>
     <div class="relative card w-full max-w-md p-4 space-y-3 bg-bg2" role="dialog" aria-modal="true">
-      <h2 class="text-sm font-semibold">{title}</h2>
+      <h2 class="text-sm font-semibold">{t(title)}</h2>
 
       <input
         type="text"
-        placeholder="Search…"
+        placeholder={t('Search…')}
         class="block w-full bg-bg1 border border-line rounded-md px-3 py-2 text-sm"
         bind:value={query}
       />
@@ -69,22 +70,22 @@
               <span class="text-[10px] font-mono text-fg3">{p.sex}</span>
             </div>
             <div class="text-[11px] text-fg3">
-              {p.report_count} report{p.report_count === 1 ? '' : 's'} · <span class="font-mono">{p.id}</span>
+              {t(p.report_count === 1 ? '{count} report' : '{count} reports', { count: p.report_count })} · <span class="font-mono">{p.id}</span>
             </div>
           </button>
         {/each}
         {#if filtered.length === 0}
-          <div class="px-3 py-3 text-xs text-fg3 text-center">No matches.</div>
+          <div class="px-3 py-3 text-xs text-fg3 text-center">{t('No matches.')}</div>
         {/if}
       </div>
 
       <div class="flex items-center justify-end gap-2">
-        <button class="btn" onclick={() => (open = false)}>Cancel</button>
+        <button class="btn" onclick={() => (open = false)}>{t('Cancel')}</button>
         <button
           class="btn-accent"
           disabled={!selected}
           onclick={() => { if (selected) { onPick(selected); open = false; } }}
-        >{confirmLabel}</button>
+        >{t(confirmLabel)}</button>
       </div>
     </div>
   </div>

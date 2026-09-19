@@ -14,6 +14,7 @@
   import { AppError, type AppErrorPayload, ERROR_TITLES } from '$api/errors';
   import { toasts } from '../../lib/toasts/store.svelte';
   import { windowTitle } from '$lib/title.svelte';
+  import { t } from '$lib/i18n/index.svelte';
 
   type FileState = {
     path: string;
@@ -42,11 +43,15 @@
 
   const baseName = (p: string) => p.split(/[\\/]/).pop() ?? p;
 
+  function errorTitle(kind: string): string {
+    return t(ERROR_TITLES[kind as keyof typeof ERROR_TITLES] ?? kind);
+  }
+
   // Surface batch progress in the OS window title — taskbar tooltip becomes
   // "[ingest: 3 of 12]" so users can monitor without keeping the window open.
   $effect(() => {
     if (batch && batch.total > 0 && batch.completed + batch.failed < batch.total) {
-      windowTitle.set('ingest', `${batch.completed + batch.failed} of ${batch.total}`);
+      windowTitle.set(t('ingest'), t('{completed} of {total}', { completed: batch.completed + batch.failed, total: batch.total }));
     } else {
       windowTitle.clear('ingest');
     }
@@ -127,8 +132,8 @@
       f.ingestTier = result.ingest_tier;
       f.alreadyIngested = result.already_ingested;
       f.message = result.already_ingested
-        ? `already ingested as ${result.report_id}`
-        : `ingested as ${result.report_id}`;
+        ? t('Already ingested as {reportId}', { reportId: result.report_id })
+        : t('Ingested as {reportId}', { reportId: result.report_id });
     }
   }
 
@@ -148,8 +153,8 @@
       if (!f) continue;
       f.stage = 'error';
       f.progress = 1;
-      f.error = toErrorPayload(new Error('Ingestion returned no final result for this file'));
-      f.message = 'No final result returned by the ingestion service';
+      f.error = toErrorPayload(new Error(t('Ingestion returned no final result for this file')));
+      f.message = t('No final result returned by the ingestion service');
     }
     files = next;
   }
@@ -196,7 +201,7 @@
         f.stage = 'hashing';
         f.progress = 0.05;
         f.elapsedMs = 0;
-        f.message = 'Preparing PDF…';
+        f.message = t('Preparing PDF…');
         f.error = null;
         files = new Map(files);
         batch = {
@@ -241,7 +246,7 @@
     try {
       const s = await samples.list();
       if (s.length === 0) {
-        toasts.warn('No sample PDFs found', 'Expected `<repo>/data test/*.pdf` in dev mode.');
+        toasts.warn(t('No sample PDFs found'), t('Expected `<repo>/data test/*.pdf` in dev mode.'));
         return;
       }
       await runIngest(s.map((x) => x.path));
@@ -329,21 +334,21 @@
 <div class="space-y-4">
   <div class="flex items-end justify-between gap-2">
     <div>
-      <h1 class="text-xl font-semibold">Ingest</h1>
-      <p class="text-sm text-fg2">Drag-drop PDFs anywhere in the window, or pick files.</p>
+      <h1 class="text-xl font-semibold">{t('Ingest')}</h1>
+      <p class="text-sm text-fg2">{t('Drag-drop PDFs anywhere in the window, or pick files.')}</p>
     </div>
     <div class="flex items-center gap-2">
       {#if sampleCount && sampleCount > 0}
         <button class="btn" onclick={loadSamples} disabled={busy}>
-          Load {sampleCount} sample{sampleCount === 1 ? '' : 's'}
+          {t(sampleCount === 1 ? 'Load {count} sample' : 'Load {count} samples', { count: sampleCount })}
         </button>
       {/if}
       {#if order.length > 0}
-        <button class="btn" onclick={clearCompleted} disabled={busy}>Clear done</button>
-        <button class="btn" onclick={clearAll} disabled={busy}>Clear all</button>
+        <button class="btn" onclick={clearCompleted} disabled={busy}>{t('Clear done')}</button>
+        <button class="btn" onclick={clearAll} disabled={busy}>{t('Clear all')}</button>
       {/if}
       <button class="btn-accent" disabled={busy} onclick={onPick}>
-        {busy ? 'Ingesting…' : 'Pick PDFs…'}
+        {busy ? t('Ingesting…') : t('Pick PDFs…')}
       </button>
     </div>
   </div>
@@ -352,8 +357,8 @@
     <section class="card p-3 space-y-2">
       <div class="flex items-center justify-between text-xs text-fg2">
         <span>
-          Batch: <span class="text-fg1 font-medium">{batch.completed}</span> done
-          {#if batch.failed > 0}, <span class="text-crit font-medium">{batch.failed}</span> failed{/if}
+          {t('Batch')} <span class="text-fg1 font-medium">{batch.completed}</span> {t('done')}
+          {#if batch.failed > 0}, <span class="text-crit font-medium">{batch.failed}</span> {t('failed')}{/if}
           / {batch.total}
         </span>
         <span class="tabular-nums">{fmtElapsed(batch.elapsed_ms)}</span>
@@ -371,17 +376,17 @@
       {#if failedFiles.length > 0}
         <details open class="mt-2 border-t border-line pt-2">
           <summary class="text-xs font-medium text-crit cursor-pointer select-none">
-            {failedFiles.length} failure{failedFiles.length === 1 ? '' : 's'} — expand to see why
+            {t(failedFiles.length === 1 ? '{count} failure — expand to see why' : '{count} failures — expand to see why', { count: failedFiles.length })}
           </summary>
           <ul class="mt-2 space-y-2">
             {#each failedFiles as f}
               <li class="border-l-2 border-crit pl-2 text-xs">
                 <div class="font-medium text-fg1 truncate" title={f.path}>{f.fileName}</div>
                 {#if f.error}
-                  <div class="text-crit">{ERROR_TITLES[f.error.kind] ?? f.error.kind}: {f.error.message}</div>
+                  <div class="text-crit">{errorTitle(f.error.kind)}: {f.error.message}</div>
                   <div class="text-fg3 font-mono text-[10px]">{f.error.code}</div>
                   {#if f.error.context?.stage}
-                    <div class="text-fg3 text-[10px]">stage: <span class="font-mono">{f.error.context.stage}</span></div>
+                    <div class="text-fg3 text-[10px]">{t('stage:')} <span class="font-mono">{f.error.context.stage}</span></div>
                   {/if}
                   {#if f.error.context?.hints && f.error.context.hints.length > 0}
                     <ul class="mt-1 list-disc list-inside text-fg2 text-[11px] space-y-0.5">
@@ -403,8 +408,8 @@
     class="card border-2 border-dashed p-8 text-center transition-colors
            {dragging ? 'bg-bg3 border-accent' : ''}"
   >
-    <p class="text-sm text-fg2">{dragging ? 'Release to ingest' : 'Drop PDFs here'}</p>
-    <p class="text-xs text-fg3 mt-1">Tier 1 baseline: PDFium extraction → parser → encrypted SQLite</p>
+    <p class="text-sm text-fg2">{dragging ? t('Release to ingest') : t('Drop PDFs here')}</p>
+    <p class="text-xs text-fg3 mt-1">{t('Tier 1 baseline: PDFium extraction → parser → encrypted SQLite')}</p>
   </div>
 
   {#if order.length > 0}
@@ -416,7 +421,7 @@
             <div class="flex items-center gap-3">
               <span class="text-sm font-medium truncate flex-1" title={f.path}>{f.fileName}</span>
               <span class={stageColor(f.stage)}>
-                {f.alreadyIngested ? 'Duplicate' : STAGE_LABEL[f.stage]}
+                {f.alreadyIngested ? t('Duplicate') : t(STAGE_LABEL[f.stage])}
               </span>
               <span class="text-xs text-fg3 tabular-nums w-12 text-right">{fmtElapsed(f.elapsedMs)}</span>
             </div>
@@ -434,30 +439,30 @@
               {#if f.message}
                 <span class="text-fg2 truncate max-w-md" title={f.message}>{f.message}</span>
               {/if}
-              {#if f.pages != null}<span>{f.pages} pages</span>{/if}
+               {#if f.pages != null}<span>{f.pages} {t('pages')}</span>{/if}
               {#if f.rowsParsed != null}
                 <span>
-                  {f.rowsParsed} rows
+                   {f.rowsParsed} {t('rows')}
                   {#if f.rowsUnmatched != null && f.rowsUnmatched > 0}
-                    <span class="text-warn">({f.rowsUnmatched} unmatched)</span>
+                     <span class="text-warn">({f.rowsUnmatched} {t('unmatched')})</span>
                   {/if}
                 </span>
               {/if}
               {#if f.inlinePriors != null && f.inlinePriors > 0}
-                <span>{f.inlinePriors} priors</span>
+                 <span>{f.inlinePriors} {t('priors')}</span>
               {/if}
               {#if f.docConfidence != null}
-                <span>conf {(f.docConfidence * 100).toFixed(0)}%</span>
+                 <span>{t('conf {confidence}%', { confidence: (f.docConfidence * 100).toFixed(0) })}</span>
               {/if}
               {#if f.ingestTier != null}
-                <span class="pill-muted">Tier {f.ingestTier}</span>
+                 <span class="pill-muted">{t('Tier {tier}', { tier: f.ingestTier })}</span>
               {/if}
             </div>
 
             {#if f.error}
               <div class="border-l-2 border-crit pl-2 mt-1 space-y-1">
                 <div class="text-xs text-crit">
-                  <span class="font-semibold">{ERROR_TITLES[f.error.kind] ?? f.error.kind}:</span>
+                   <span class="font-semibold">{errorTitle(f.error.kind)}:</span>
                   {f.error.message}
                 </div>
                 <div class="text-[10px] text-fg3 font-mono">
@@ -472,7 +477,7 @@
                 {/if}
                 {#if f.error.detail}
                   <details>
-                    <summary class="text-[10px] text-fg3 cursor-pointer select-none">Technical detail</summary>
+                     <summary class="text-[10px] text-fg3 cursor-pointer select-none">{t('Technical detail')}</summary>
                     <pre class="text-[10px] text-fg3 mt-1 whitespace-pre-wrap font-mono">{f.error.detail}</pre>
                   </details>
                 {/if}

@@ -17,6 +17,7 @@
 
 import * as settings from "$api/settings";
 import { setDebounced } from "$api/debounced-settings";
+import { t } from "$lib/i18n/index.svelte";
 
 export type HrtFilter = "all" | "pre" | "post";
 
@@ -272,11 +273,17 @@ class ComparePresets {
   get presets(): ComparePreset[] {
     const merged: ComparePreset[] = BUNDLED_PRESETS.map((b) => {
       const ov = this.bundledOverrides[b.id];
-      if (!ov) return b;
+      if (!ov) {
+        return {
+          ...b,
+          name: t(b.name),
+          ...(b.kind === "dynamic" ? { hint: t(b.hint) } : {}),
+        };
+      }
       if (b.kind === "static") {
         return {
           ...b,
-          name: ov.name ?? b.name,
+          name: ov.name ?? t(b.name),
           ids: Array.isArray(ov.ids) ? ov.ids : b.ids,
           filters: ov.filters !== undefined ? ov.filters : b.filters,
         };
@@ -285,7 +292,8 @@ class ComparePresets {
       // analyte list stay derived at runtime.
       return {
         ...b,
-        name: ov.name ?? b.name,
+        name: ov.name ?? t(b.name),
+        hint: t(b.hint),
         filters: ov.filters !== undefined ? ov.filters : b.filters,
       };
     });
@@ -337,7 +345,7 @@ class ComparePresets {
     const created: StaticPreset = {
       kind: "static",
       id,
-      name: p.name.trim() || "Untitled",
+      name: p.name.trim() || t("Untitled"),
       ids: p.ids.filter((x) => typeof x === "string"),
       filters: p.filters,
       source: "user",

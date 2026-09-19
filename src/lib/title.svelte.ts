@@ -7,6 +7,7 @@
 // `state` surfaces transient signals: locked, ingest in flight, etc.
 
 import { isTauri } from "$api/index";
+import { t } from "$lib/i18n/index.svelte";
 import { untrack } from "svelte";
 
 const APP = "bloody-level";
@@ -59,7 +60,7 @@ class TitleStore {
     if (stateBits.length > 0) {
       title += `  [${stateBits.join(" · ")}]`;
     }
-    if (this.locked) title = `Locked · ${title}`;
+    if (this.locked) title = `${t("Locked")} · ${title}`;
     return title;
   }
 

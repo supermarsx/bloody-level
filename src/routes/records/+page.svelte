@@ -9,6 +9,8 @@
   import Icon from '$components/icon.svelte';
   import { formatDate } from '$format/dates';
   import PatientPickerDialog from '$components/patient-picker-dialog.svelte';
+  import { t } from '$lib/i18n/index.svelte';
+  import '$lib/i18n/data-routes';
 
   type ReportGroup = {
     key: string;
@@ -36,15 +38,15 @@
   async function onMergeInto(target: PatientSummary) {
     if (!mergeSource) return;
     const ok = await ask(
-      `Merge "${mergeSource.display_name}" INTO "${target.display_name}"?\n\nAll ${mergeSource.report_count} report${mergeSource.report_count === 1 ? '' : 's'} will be reassigned to ${target.display_name}, then ${mergeSource.display_name} will be deleted. Useful for name changes (marriage / legal). This cannot be undone.`,
-      { title: 'Merge patients', kind: 'warning' }
+      t('Merge "{source}" INTO "{target}"?\n\nAll {count} report(s) will be reassigned to {target}, then {source} will be deleted. Useful for name changes (marriage / legal). This cannot be undone.', { source: mergeSource.display_name, target: target.display_name, count: mergeSource.report_count }),
+      { title: t('Merge patients'), kind: 'warning' }
     );
     if (!ok) return;
     try {
       const r = await admin.mergePatients({ source_id: mergeSource.id, target_id: target.id });
       toasts.success(
-        'Patients merged',
-        `${r.reports_moved} report${r.reports_moved === 1 ? '' : 's'} reassigned to ${target.display_name}.`
+        t('Patients merged'),
+        t('{count} report(s) reassigned to {target}.', { count: r.reports_moved, target: target.display_name })
       );
       mergeSource = null;
       await refresh();
@@ -82,13 +84,13 @@
   // ───────── Patient actions ─────────
   async function onDeletePatient(p: PatientSummary) {
     const ok = await ask(
-      `Delete patient "${p.display_name}" and ALL ${p.report_count} report${p.report_count === 1 ? '' : 's'}?\n\nThis cannot be undone.`,
-      { title: 'Delete patient', kind: 'warning' }
+      t('Delete patient "{name}" and ALL {count} report(s)?\n\nThis cannot be undone.', { name: p.display_name, count: p.report_count }),
+      { title: t('Delete patient'), kind: 'warning' }
     );
     if (!ok) return;
     try {
       await admin.deletePatient(p.id);
-      toasts.success(`Deleted patient ${p.display_name}`);
+      toasts.success(t('Deleted patient {name}', { name: p.display_name }));
       await refresh();
     } catch (e) { toasts.error(e); }
   }
@@ -110,7 +112,7 @@
         sex: editPatient.sex,
         dob_iso: editPatient.dob_iso.trim() || null
       });
-      toasts.success('Patient updated');
+      toasts.success(t('Patient updated'));
       editingPatient = null;
       await refresh();
     } catch (e) { toasts.error(e); }
@@ -192,18 +194,18 @@
     if (selected.size === 0) return;
     const n = selected.size;
     const ok = await ask(
-      `Delete ${n} report${n === 1 ? '' : 's'}?\n\nAll parsed rows and cached PDFs will be removed. This cannot be undone.`,
-      { title: 'Bulk delete', kind: 'warning' }
+      t('Delete {count} report(s)?\n\nAll parsed rows and cached PDFs will be removed. This cannot be undone.', { count: n }),
+      { title: t('Bulk delete'), kind: 'warning' }
     );
     if (!ok) return;
     try {
       const res = await admin.bulkDeleteReports([...selected]);
       if (res.failed.length === 0) {
-        toasts.success(`Deleted ${res.deleted} report${res.deleted === 1 ? '' : 's'}`);
+        toasts.success(t('Deleted {count} report(s)', { count: res.deleted }));
       } else {
         toasts.warn(
-          `Deleted ${res.deleted}, failed ${res.failed.length}`,
-          `Failed IDs: ${res.failed.join(', ')}`
+          t('Deleted {deleted}, failed {failed}', { deleted: res.deleted, failed: res.failed.length }),
+          t('Failed IDs: {ids}', { ids: res.failed.join(', ') })
         );
       }
       clearSelection();
@@ -215,8 +217,8 @@
   async function onReparseAll() {
     if (reports.length === 0) return;
     const ok = await ask(
-      `Re-parse all ${reports.length} reports with the current parser?\n\nDoesn't touch the source PDFs — just re-runs the parser against each report's stored raw text and replaces the parsed rows.`,
-      { title: 'Re-parse all', kind: 'info' }
+      t("Re-parse all {count} reports with the current parser?\n\nDoesn't touch the source PDFs — just re-runs the parser against each report's stored raw text and replaces the parsed rows.", { count: reports.length }),
+      { title: t('Re-parse all'), kind: 'info' }
     );
     if (!ok) return;
     reparsingAll = true;
@@ -224,13 +226,13 @@
       const r = await reparse.reparseAll();
       if (r.failed.length === 0) {
         toasts.success(
-          'Re-parse complete',
-          `${r.succeeded}/${r.total} reports · ${r.total_rows_after} total rows · ${r.total_parse_audit_entries} diagnostics`
+          t('Re-parse complete'),
+          t('{succeeded}/{total} reports · {rows} total rows · {diagnostics} diagnostics', { succeeded: r.succeeded, total: r.total, rows: r.total_rows_after, diagnostics: r.total_parse_audit_entries })
         );
       } else {
         toasts.warn(
-          `Re-parse done with ${r.failed.length} failure${r.failed.length === 1 ? '' : 's'}`,
-          `${r.succeeded}/${r.total} succeeded. First failure: ${r.failed[0][0]} — ${r.failed[0][1]}`
+          t('Re-parse done with {count} failures', { count: r.failed.length }),
+          t('{succeeded}/{total} succeeded. First failure: {id} — {error}', { succeeded: r.succeeded, total: r.total, id: r.failed[0][0], error: r.failed[0][1] })
         );
       }
       await refresh();
@@ -244,8 +246,8 @@
     try {
       const r = await admin.backfillPatientSex();
       toasts.success(
-        'Patient sex re-inferred',
-        `${r.patients_updated}/${r.patients_scanned} updated · ${r.patients_still_unknown} still unknown`
+        t('Patient sex re-inferred'),
+        t('{updated}/{scanned} updated · {unknown} still unknown', { updated: r.patients_updated, scanned: r.patients_scanned, unknown: r.patients_still_unknown })
       );
       await refresh();
     } catch (e) { toasts.error(e); }
@@ -254,13 +256,13 @@
 
   async function onDeleteReport(r: ReportSummary) {
     const ok = await ask(
-      `Delete report ${formatDate(r.collection_date_iso)} for ${r.patient_name}?`,
-      { title: 'Delete report', kind: 'warning' }
+      t('Delete report {date} for {name}?', { date: formatDate(r.collection_date_iso), name: r.patient_name }),
+      { title: t('Delete report'), kind: 'warning' }
     );
     if (!ok) return;
     try {
       await admin.deleteReport(r.id);
-      toasts.success('Report deleted');
+      toasts.success(t('Report deleted'));
       await refresh();
     } catch (e) { toasts.error(e); }
   }
@@ -275,35 +277,35 @@
 
 <div class="space-y-6">
   <div>
-    <h1 class="text-xl font-semibold">Records</h1>
+    <h1 class="text-xl font-semibold">{t('Records')}</h1>
     <p class="text-sm text-fg2 mt-1">
-      Manage patients, reports, and parsed data. Reports sharing the same date for the same patient are grouped — expand to see individual sources.
+      {t('Manage patients, reports, and parsed data. Reports sharing the same date for the same patient are grouped — expand to see individual sources.')}
     </p>
   </div>
 
   {#if loading}
-    <div class="card p-6 text-sm text-fg2">Loading…</div>
+    <div class="card p-6 text-sm text-fg2">{t('Loading…')}</div>
   {:else}
     <!-- ───────────────────── Patients ───────────────────── -->
     <section class="space-y-2">
       <div class="flex items-baseline justify-between">
-        <h2 class="text-sm font-semibold">Patients ({patients.length})</h2>
+        <h2 class="text-sm font-semibold">{t('Patients')} ({patients.length})</h2>
         <div class="flex items-center gap-2">
           {#if reports.length > 0}
-            <button class="btn" disabled={reparsingAll} onclick={onReparseAll} title="Re-run the current parser against every stored report">
-              {reparsingAll ? 'Re-parsing…' : `Re-parse all (${reports.length})`}
+            <button class="btn" disabled={reparsingAll} onclick={onReparseAll} title={t('Re-run the current parser against every stored report')}>
+              {reparsingAll ? t('Re-parsing…') : t('Re-parse all ({count})', { count: reports.length })}
             </button>
           {/if}
           <button class="btn" disabled={backfillingSex} onclick={onBackfillSex}
-            title="Re-infer patient sex from each patient's stored raw_text — fixes legacy data ingested before the sex field was kept up to date.">
-            {backfillingSex ? 'Re-inferring…' : 'Re-infer sex'}
+            title={t("Re-infer patient sex from each patient's stored raw_text — fixes legacy data ingested before the sex field was kept up to date.")}>
+            {backfillingSex ? t('Re-inferring…') : t('Re-infer sex')}
           </button>
-          <button class="btn" onclick={refresh}>Refresh</button>
+          <button class="btn" onclick={refresh}>{t('Refresh')}</button>
         </div>
       </div>
 
       {#if patients.length === 0}
-        <div class="card p-6 text-sm text-fg2">No patients yet.</div>
+        <div class="card p-6 text-sm text-fg2">{t('No patients yet.')}</div>
       {:else}
         <div class="card divide-y divide-line">
           {#each patients as p}
@@ -314,7 +316,7 @@
                     type="text"
                     class="input flex-1 min-w-[200px]"
                     bind:value={editPatient.display_name}
-                    placeholder="Display name"
+                    placeholder={t('Display name')}
                   />
                   <select
                     class="select"
@@ -330,8 +332,8 @@
                     class="input"
                     bind:value={editPatient.dob_iso}
                   />
-                  <button class="btn-accent" onclick={() => savePatient(p)}>Save</button>
-                  <button class="btn" onclick={() => (editingPatient = null)}>Cancel</button>
+                  <button class="btn-accent" onclick={() => savePatient(p)}>{t('Save')}</button>
+                  <button class="btn" onclick={() => (editingPatient = null)}>{t('Cancel')}</button>
                 </div>
               {:else}
                 <div class="flex items-center justify-between gap-3">
@@ -342,10 +344,10 @@
                     <div class="text-xs text-fg3 flex items-center gap-2">
                       <span class="uppercase">{p.sex}</span>
                       <span>·</span>
-                      <span>{p.report_count} report{p.report_count === 1 ? '' : 's'}</span>
+                      <span>{t('{count} report(s)', { count: p.report_count })}</span>
                       {#if p.latest_collection_date_iso}
                         <span>·</span>
-                        <span>latest {formatDate(p.latest_collection_date_iso)}</span>
+                        <span>{t('latest')} {formatDate(p.latest_collection_date_iso)}</span>
                       {/if}
                     </div>
                   </div>
@@ -353,16 +355,16 @@
                     <button
                       class="btn"
                       onclick={() => (filterPatient = filterPatient === p.id ? null : p.id)}
-                      title="Filter reports below"
-                    >{#if filterPatient === p.id}<Icon name="check" size={13} /> Filtered{:else}<Icon name="filter" size={13} /> Filter{/if}</button>
-                    <button class="btn" onclick={() => startEditPatient(p)}>Edit</button>
+                      title={t('Filter reports below')}
+                    >{#if filterPatient === p.id}<Icon name="check" size={13} /> {t('Filtered')}{:else}<Icon name="filter" size={13} /> {t('Filter')}{/if}</button>
+                    <button class="btn" onclick={() => startEditPatient(p)}>{t('Edit')}</button>
                     {#if patients.length > 1}
-                      <button class="btn" onclick={() => openMergeFor(p)} title="Merge this patient into another (e.g. name change)">
-                        Merge…
+                      <button class="btn" onclick={() => openMergeFor(p)} title={t('Merge this patient into another (e.g. name change)')}>
+                        {t('Merge')}…
                       </button>
                     {/if}
                     <button class="btn text-crit hover:bg-crit/10" onclick={() => onDeletePatient(p)}>
-                      Delete
+                      {t('Delete')}
                     </button>
                   </div>
                 </div>
@@ -377,20 +379,20 @@
     <section class="space-y-2">
       <div class="flex items-baseline justify-between gap-3 flex-wrap">
         <h2 class="text-sm font-semibold">
-          Reports — {groups.length} group{groups.length === 1 ? '' : 's'},
-          {filteredReports.length} source{filteredReports.length === 1 ? '' : 's'}
-          {#if filteredReports.length !== reports.length}<span class="text-fg3"> of {reports.length}</span>{/if}
+          {t('Reports')} — {groups.length} {t('group(s)')},
+          {filteredReports.length} {t('source(s)')}
+          {#if filteredReports.length !== reports.length}<span class="text-fg3"> {t('of')} {reports.length}</span>{/if}
         </h2>
         <div class="flex items-center gap-2 flex-wrap">
           {#if filterPatient}
             <button class="btn text-xs" onclick={() => (filterPatient = null)}>
-              Clear patient filter
+              {t('Clear patient filter')}
             </button>
           {/if}
           <input
             type="search"
             class="search w-48"
-            placeholder="Search…"
+            placeholder={t('Search…')}
             bind:value={filterText}
           />
         </div>
@@ -400,19 +402,19 @@
       {#if selected.size > 0}
         <div class="card-tight bg-accent/10 border-accent flex items-center justify-between gap-3">
           <span class="text-sm">
-            <span class="font-medium">{selected.size}</span> selected
+            <span class="font-medium">{selected.size}</span> {t('selected')}
           </span>
           <div class="flex items-center gap-2">
-            <button class="btn text-xs" onclick={clearSelection}>Clear</button>
+            <button class="btn text-xs" onclick={clearSelection}>{t('Clear')}</button>
             <button class="btn text-crit hover:bg-crit/10" onclick={deleteSelected}>
-              Delete {selected.size} selected
+              {t('Delete {count} selected', { count: selected.size })}
             </button>
           </div>
         </div>
       {/if}
 
       {#if groups.length === 0}
-        <div class="card p-6 text-sm text-fg2">No reports match.</div>
+        <div class="card p-6 text-sm text-fg2">{t('No reports match.')}</div>
       {:else}
         <div class="card overflow-hidden">
           <table class="w-full text-sm">
@@ -421,18 +423,18 @@
                 <th class="text-left px-3 py-2 w-8">
                   <input
                     type="checkbox"
-                    title="Select all visible"
+                    title={t('Select all visible')}
                     onchange={(e) => (e.currentTarget.checked ? selectAllVisible() : clearSelection())}
                     checked={filteredReports.length > 0 && filteredReports.every((r) => selected.has(r.id))}
                   />
                 </th>
                 <th class="text-left px-3 py-2 w-6"></th>
-                <th class="text-left px-3 py-2">Date</th>
-                <th class="text-left px-3 py-2">Patient</th>
-                <th class="text-right px-3 py-2">Sources</th>
-                <th class="text-right px-3 py-2">Rows</th>
-                <th class="text-right px-3 py-2">Conf</th>
-                <th class="text-left px-3 py-2 w-24">Actions</th>
+                <th class="text-left px-3 py-2">{t('Date')}</th>
+                <th class="text-left px-3 py-2">{t('Patient')}</th>
+                <th class="text-right px-3 py-2">{t('Sources')}</th>
+                <th class="text-right px-3 py-2">{t('Rows')}</th>
+                <th class="text-right px-3 py-2">{t('Conf')}</th>
+                <th class="text-left px-3 py-2 w-24">{t('Actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -453,7 +455,7 @@
                       <button
                         class="text-fg3 hover:text-fg1 font-mono text-xs"
                         onclick={() => toggleExpand(g.key)}
-                        title={exp ? 'Collapse' : 'Expand'}
+                        title={t(exp ? 'Collapse' : 'Expand')}
                       >{exp ? '▾' : '▸'}</button>
                     {/if}
                   </td>
@@ -479,20 +481,20 @@
                   <td class="px-3 py-2 text-right tabular-nums {g.min_confidence < 0.7 ? 'text-warn' : ''}">
                     {(g.avg_confidence * 100).toFixed(0)}%
                     {#if g.sources.length > 1 && g.min_confidence !== g.avg_confidence}
-                      <span class="text-[10px] text-fg3">/ min {(g.min_confidence * 100).toFixed(0)}%</span>
+                      <span class="text-[10px] text-fg3">/ {t('min')} {(g.min_confidence * 100).toFixed(0)}%</span>
                     {/if}
                   </td>
                   <td class="px-3 py-2">
                     {#if g.sources.length === 1}
                       <div class="flex items-center gap-1">
-                        <a class="btn text-xs" href={`/report/${g.sources[0].id}`}>Open</a>
+                        <a class="btn text-xs" href={`/report/${g.sources[0].id}`}>{t('Open')}</a>
                         <button class="btn text-xs text-crit hover:bg-crit/10" onclick={() => onDeleteReport(g.sources[0])}>
-                          Delete
+                          {t('Delete')}
                         </button>
                       </div>
                     {:else}
                       <button class="btn text-xs" onclick={() => toggleExpand(g.key)}>
-                        {exp ? 'Collapse' : 'Expand'}
+                        {t(exp ? 'Collapse' : 'Expand')}
                       </button>
                     {/if}
                   </td>
@@ -514,7 +516,7 @@
                           <span class="text-fg2 italic ml-1">— {r.nickname}</span>
                         {/if}
                       </td>
-                      <td class="px-3 py-1.5 text-xs text-fg3">tier {r.ingest_tier}</td>
+                      <td class="px-3 py-1.5 text-xs text-fg3">{t('tier')} {r.ingest_tier}</td>
                       <td colspan="1" class="px-3 py-1.5"></td>
                       <td class="px-3 py-1.5 text-right tabular-nums text-xs">{r.row_count}</td>
                       <td class="px-3 py-1.5 text-right tabular-nums text-xs {r.doc_confidence < 0.7 ? 'text-warn' : 'text-fg3'}">
@@ -522,9 +524,9 @@
                       </td>
                       <td class="px-3 py-1.5">
                         <div class="flex items-center gap-1">
-                          <a class="btn text-xs" href={`/report/${r.id}`}>Open</a>
+                          <a class="btn text-xs" href={`/report/${r.id}`}>{t('Open')}</a>
                           <button class="btn text-xs text-crit hover:bg-crit/10" onclick={() => onDeleteReport(r)}>
-                            Delete
+                            {t('Delete')}
                           </button>
                         </div>
                       </td>
@@ -542,8 +544,8 @@
   <PatientPickerDialog
     bind:open={mergeDialogOpen}
     excludeId={mergeSource?.id}
-    title={mergeSource ? `Merge "${mergeSource.display_name}" into…` : 'Pick a patient'}
-    confirmLabel="Merge"
+    title={mergeSource ? t('Merge "{name}" into…', { name: mergeSource.display_name }) : t('Pick a patient')}
+    confirmLabel={t('Merge')}
     onPick={onMergeInto}
   />
 </div>

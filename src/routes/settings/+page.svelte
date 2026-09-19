@@ -9,12 +9,13 @@
   import { chartPrefs } from '$charts/prefs.svelte';
   import { comparePresets, EMPTY_FILTERS, type ComparePreset, type ComparePresetFilters, type EditablePreset } from '$charts/compare-presets.svelte';
   import * as analyteApi from '$api/analyte-info';
-  import { appearance, ACCENT_PRESETS, type AccentName, type Density, type FontScale, type FontFamily } from '$theme/appearance.svelte';
+  import { appearance, ACCENT_PRESETS, LOCALE_OPTIONS, type AccentName, type Density, type FontScale, type FontFamily, type LocalePreference } from '$theme/appearance.svelte';
   import { openFileExternal, openUrl } from '$api/shell';
   import Icon, { type IconName } from '$components/icon.svelte';
   import { dashboardPrefs, DASHBOARD_SECTIONS } from '$lib/dashboard/prefs.svelte';
   import { discardPending } from '$api/debounced-settings';
   import { AppError } from '$api/errors';
+  import { t } from '$lib/i18n/index.svelte';
 
   // ── Library credits — typed once so each row is a real link ───────────
   type Credit = { name: string; note: string; url: string };
@@ -166,7 +167,7 @@
   function downloadResourceLabel(resource: string): string {
     if (resource === 'llm') return 'Phi-4-mini-reasoning';
     if (resource === 'olmocr') return 'olmOCR-2';
-    return 'Tesseract language data';
+    return t('Tesseract language data');
   }
 
   async function cancelTierDownload() {
@@ -196,15 +197,15 @@
 
   async function deleteManagedModel(key: 'tesseract' | ModelTierKey) {
     if (tierDelete || tierDownload || tierAction) return;
-    const label = key === 'llm' ? 'Phi-4' : key === 'olmocr' ? 'olmOCR-2' : 'Tesseract language data';
+    const label = key === 'llm' ? 'Phi-4' : key === 'olmocr' ? 'olmOCR-2' : t('Tesseract language data');
     const details = key === 'tesseract'
-      ? 'Delete downloaded Tesseract language data from the app data folder? Native binaries are not affected.'
-      : `Delete the managed ${label} model files from the app data folder? This cannot be undone.`;
-    if (!await ask(details, { title: `Delete ${label}`, kind: 'warning' })) return;
+      ? t('Delete downloaded Tesseract language data from the app data folder? Native binaries are not affected.')
+      : t('Delete the managed {label} model files from the app data folder? This cannot be undone.', { label });
+    if (!await ask(details, { title: t('Delete {label}', { label }), kind: 'warning' })) return;
     tierDelete = key;
     try {
       await tiers.deleteModel(key);
-      toasts.success(`${label} deleted`, 'The managed files were removed. You can download them again from this page.');
+      toasts.success(t('{label} deleted', { label }), t('The managed files were removed. You can download them again from this page.'));
       await refresh();
     } catch (e) {
       toasts.error(e);
@@ -227,7 +228,7 @@
     const configured = configuredModelPath(key, status);
     if (configured) return configured;
     if (status.loaded_model_path) return status.loaded_model_path;
-    return info?.models_dir ? `${info.models_dir} (set model_path in this tier)` : 'No model_path configured';
+    return info?.models_dir ? `${info.models_dir} (${t('set model_path in this tier')})` : t('No model_path configured');
   }
 
   async function runTierAction(key: ModelTierKey, action: 'load' | 'unload', modelPath = '') {
@@ -253,19 +254,20 @@
   async function downloadModel(key: ModelTierKey) {
     if (tierDownload) return;
     const details = key === 'llm'
-      ? 'Download the recommended Phi-4 Q4_K_M model (about 2.5 GB) into the encrypted app data folder?'
-      : 'Download the complete olmOCR-2 7B model snapshot (about 16 GB) into the app data folder?';
-    if (!await ask(details, { title: `Download ${key === 'llm' ? 'Phi-4' : 'olmOCR-2'} model`, kind: 'warning' })) return;
+      ? t('Download the recommended Phi-4 Q4_K_M model (about 2.5 GB) into the encrypted app data folder?')
+      : t('Download the complete olmOCR-2 7B model snapshot (about 16 GB) into the app data folder?');
+    const modelLabel = key === 'llm' ? 'Phi-4' : 'olmOCR-2';
+    if (!await ask(details, { title: t('Download {label} model', { label: modelLabel }), kind: 'warning' })) return;
     tierDownload = key;
     downloadProgress = null;
     downloadCanceling = false;
     try {
       if (key === 'llm') await tiers.downloadLlm();
       else await tiers.downloadOlmocr();
-      toasts.success('Model download complete', `${key === 'llm' ? 'Phi-4' : 'olmOCR-2'} is configured for this instance.`);
+      toasts.success(t('Model download complete'), t('{label} is configured for this instance.', { label: modelLabel }));
       await refresh();
     } catch (e) {
-      if (isCancelled(e)) toasts.info('Download cancelled', `${key === 'llm' ? 'Phi-4' : 'olmOCR-2'} was not installed.`);
+      if (isCancelled(e)) toasts.info(t('Download cancelled'), t('{label} was not installed.', { label: modelLabel }));
       else toasts.error(e);
       await refresh();
     } finally { tierDownload = null; downloadCanceling = false; }
@@ -278,10 +280,10 @@
     downloadCanceling = false;
     try {
       await tiers.downloadTesseractLanguage(language);
-      toasts.success('Language data downloaded', `Tesseract ${language} data is ready in the managed models folder.`);
+      toasts.success(t('Language data downloaded'), t('Tesseract {language} data is ready in the managed models folder.', { language }));
       await refresh();
     } catch (e) {
-      if (isCancelled(e)) toasts.info('Download cancelled', `Tesseract ${language} data was not installed.`);
+      if (isCancelled(e)) toasts.info(t('Download cancelled'), t('Tesseract {language} data was not installed.', { language }));
       else toasts.error(e);
       await refresh();
     } finally { tierDownload = null; downloadCanceling = false; }
@@ -291,7 +293,7 @@
     const selected = await openDialog({
       directory: false,
       multiple: false,
-      title: key === 'llm' ? 'Choose Phi-4 model file' : 'Choose olmOCR model file'
+      title: key === 'llm' ? t('Choose Phi-4 model file') : t('Choose olmOCR model file')
     }) as string | null;
     if (!selected) return;
     const current = (raw[key] as Record<string, unknown> | undefined) ?? {};
@@ -303,7 +305,7 @@
     try {
       securityStatus = await security.enableOsVault();
       broadcastSecurityStatus();
-      toasts.success('OS vault enabled', `The vault DMK is now protected by ${securityStatus.os_vault_platform}.`);
+      toasts.success(t('OS vault enabled'), t('The vault DMK is now protected by {platform}.', { platform: securityStatus.os_vault_platform }));
     } catch (e) { toasts.error(e); }
   }
 
@@ -311,15 +313,15 @@
     const hasPassword = authStatus?.has_password === true;
     const confirmed = await ask(
       hasPassword
-        ? 'Disable native OS vault unlock? The encrypted database and PDF cache will remain protected, but this device will no longer offer OS-vault unlock. Your vault password is important: keep it strong and recoverable because it protects access to the data on this device.'
-        : 'Disable native OS vault unlock? The encrypted database and PDF cache will remain protected, but this device will no longer offer OS-vault unlock. No vault password is configured, so you will need your registered passkey to unlock. Set a password first if you want password recovery.',
-      { title: 'Disable OS vault', kind: 'warning' }
+        ? t('Disable native OS vault unlock? The encrypted database and PDF cache will remain protected, but this device will no longer offer OS-vault unlock. Your vault password is important: keep it strong and recoverable because it protects access to the data on this device.')
+        : t('Disable native OS vault unlock? The encrypted database and PDF cache will remain protected, but this device will no longer offer OS-vault unlock. No vault password is configured, so you will need your registered passkey to unlock. Set a password first if you want password recovery.'),
+      { title: t('Disable OS vault'), kind: 'warning' }
     );
     if (!confirmed) return;
     try {
       securityStatus = await security.disableOsVault();
       broadcastSecurityStatus();
-      toasts.success('OS vault disabled', 'Password and passkey unlock remain available.');
+      toasts.success(t('OS vault disabled'), t('Password and passkey unlock remain available.'));
     } catch (e) { toasts.error(e); }
   }
 
@@ -346,7 +348,7 @@
   async function saveVaultPassword() {
     if (vaultPasswordBusy) return;
     if (vaultPasswordNew !== vaultPasswordConfirm) {
-      toasts.error(new Error('The new vault passwords do not match.'));
+      toasts.error(new Error(t('The new vault passwords do not match.')));
       return;
     }
     vaultPasswordBusy = true;
@@ -361,8 +363,8 @@
       vaultPasswordConfirm = '';
       authStatus = await auth.status();
       toasts.success(
-        authStatus.has_password ? 'Vault password changed' : 'Vault password added',
-        'Use the new password the next time this vault is locked.'
+        authStatus.has_password ? t('Vault password changed') : t('Vault password added'),
+        t('Use the new password the next time this vault is locked.')
       );
     } catch (e) {
       toasts.error(e);
@@ -374,12 +376,12 @@
   async function removeVaultPassword() {
     if (vaultPasswordBusy || !authStatus?.has_password) return;
     if (!authStatus.has_passkey && !authStatus.os_vault_configured) {
-      toasts.error(new Error('Add a passkey or enable the native OS vault before removing the password.'));
+      toasts.error(new Error(t('Add a passkey or enable the native OS vault before removing the password.')));
       return;
     }
     if (!await ask(
-      'Remove the vault password? You will use your configured passkey or native OS vault to unlock this instance. Keep a recovery method available before continuing.',
-      { title: 'Remove vault password', kind: 'warning' }
+      t('Remove the vault password? You will use your configured passkey or native OS vault to unlock this instance. Keep a recovery method available before continuing.'),
+      { title: t('Remove vault password'), kind: 'warning' }
     )) return;
     vaultPasswordBusy = true;
     try {
@@ -388,7 +390,7 @@
       vaultPasswordNew = '';
       vaultPasswordConfirm = '';
       authStatus = await auth.status();
-      toasts.success('Vault password removed', 'The remaining configured recovery method is still available.');
+      toasts.success(t('Vault password removed'), t('The remaining configured recovery method is still available.'));
     } catch (e) {
       toasts.error(e);
     } finally {
@@ -399,15 +401,15 @@
   async function registerPasskey() {
     if (passkeyBusy) return;
     if (!auth.isWebAuthnAvailable()) {
-      toasts.error(new Error('WebAuthn is not available in this WebView.'));
+      toasts.error(new Error(t('WebAuthn is not available in this WebView.')));
       return;
     }
     passkeyBusy = true;
     try {
-      const label = passkeyLabel.trim() || `Passkey ${new Date().toLocaleDateString()}`;
+      const label = passkeyLabel.trim() || `Passkey ${new Date().toLocaleDateString(appearance.resolvedLocale)}`;
       const registration = await auth.webauthnRegister(label);
       if (!registration.prfOutput) {
-        throw new Error('This authenticator did not provide the required PRF capability.');
+        throw new Error(t('This authenticator did not provide the required PRF capability.'));
       }
       await auth.registerPasskey({
         label,
@@ -416,18 +418,18 @@
         prf_output_b64: auth.b64.encode(registration.prfOutput),
       });
       passkeyLabel = '';
-      toasts.success('Passkey added', `${label} can now unlock this vault.`);
+      toasts.success(t('Passkey added'), t('{label} can now unlock this vault.', { label }));
       authStatus = await auth.status();
     } catch (e) { toasts.error(e); }
     finally { passkeyBusy = false; }
   }
 
   async function removePasskey(passkey: auth.PasskeySummary) {
-    const label = passkey.label || 'this passkey';
-    if (!await ask(`Remove ${label} from this vault? You will not be able to use it to unlock again.`, { title: 'Remove passkey', kind: 'warning' })) return;
+    const label = passkey.label || t('this passkey');
+    if (!await ask(t('Remove {label} from this vault? You will not be able to use it to unlock again.', { label }), { title: t('Remove passkey'), kind: 'warning' })) return;
     try {
       await auth.removePasskey(passkey.credential_id_b64);
-      toasts.success('Passkey removed', `${label} is no longer registered.`);
+      toasts.success(t('Passkey removed'), t('{label} is no longer registered.', { label }));
       authStatus = await auth.status();
     } catch (e) { toasts.error(e); }
   }
@@ -435,8 +437,8 @@
   async function rotateMasterKey() {
     if (rotationBusy) return;
     if (!await ask(
-      'Rotate the data master key now? The encrypted database and managed PDFs will be re-keyed, and every passkey will need a fresh authenticator assertion. Keep a current backup before continuing.',
-      { title: 'Rotate master key', kind: 'warning' }
+      t('Rotate the data master key now? The encrypted database and managed PDFs will be re-keyed, and every passkey will need a fresh authenticator assertion. Keep a current backup before continuing.'),
+      { title: t('Rotate master key'), kind: 'warning' }
     )) return;
     const passkeys = authStatus?.passkeys ?? [];
     rotationBusy = true;
@@ -452,7 +454,7 @@
       await auth.rotateMasterKey({
         passkeys: rewraps,
       });
-      toasts.success('Master key rotated', 'The encrypted database, managed PDFs, and configured unlock methods remain synchronized.');
+      toasts.success(t('Master key rotated'), t('The encrypted database, managed PDFs, and configured unlock methods remain synchronized.'));
       await refresh();
     } catch (e) { toasts.error(e); }
     finally { rotationBusy = false; }
@@ -474,7 +476,7 @@
       dest = await openDialog({
         directory: true,
         multiple: false,
-        title: 'Choose a destination folder for the vault ZIP export'
+        title: t('Choose a destination folder for the vault ZIP export')
       }) as string | null;
     } catch (e) {
       toasts.error(e);
@@ -486,8 +488,8 @@
       const r = await appInfo.exportVault(dest);
       lastExport = r;
       toasts.success(
-        'Vault exported',
-        `${r.files_copied} files · ${appInfo.formatBytes(r.bytes_copied)} written to ${r.destination}`
+        t('Vault exported'),
+        t('{count} files · {size} written to {destination}', { count: r.files_copied, size: appInfo.formatBytes(r.bytes_copied), destination: r.destination })
       );
       await refresh();
     } catch (e) {
@@ -511,12 +513,8 @@
     // Hard confirm + walk the user through the lock requirement. We do the
     // ask FIRST so we don't lock the vault if they cancel the picker.
     const proceed = await ask(
-      'Replace the current vault with a previous ZIP export?\n\n' +
-      '• The current vault will be renamed to data.backup-<timestamp> alongside the data dir.\n' +
-      '• The vault will be locked first; you will need the password from the source export to unlock it.\n' +
-      '• Restart the app after import for the new vault to take effect cleanly.\n\n' +
-      'This cannot be undone via the UI — manual rollback only.',
-      { title: 'Import vault', kind: 'warning' }
+      t('Replace the current vault with a previous ZIP export?\n\n• The current vault will be renamed to data.backup-<timestamp> alongside the data dir.\n• The vault will be locked first; you will need the password from the source export to unlock it.\n• Restart the app after import for the new vault to take effect cleanly.\n\nThis cannot be undone via the UI — manual rollback only.'),
+      { title: t('Import vault'), kind: 'warning' }
     );
     if (!proceed) return;
     let src: string | null = null;
@@ -524,8 +522,8 @@
       src = await openDialog({
         directory: false,
         multiple: false,
-        title: 'Select the exported vault ZIP to restore',
-        filters: [{ name: 'bloody-level vault ZIP', extensions: ['zip'] }]
+        title: t('Select the exported vault ZIP to restore'),
+        filters: [{ name: t('bloody-level vault ZIP'), extensions: ['zip'] }]
       }) as string | null;
     } catch (e) {
       toasts.error(e);
@@ -540,8 +538,8 @@
       const r = await appInfo.importVault(src);
       lastImport = r;
       toasts.success(
-        'Vault imported',
-        `${r.files_copied} files · ${appInfo.formatBytes(r.bytes_copied)} restored. Restart the app to continue.`
+        t('Vault imported'),
+        t('{count} files · {size} restored. Restart the app to continue.', { count: r.files_copied, size: appInfo.formatBytes(r.bytes_copied) })
       );
     } catch (e) {
       toasts.error(e);
@@ -620,7 +618,7 @@
     if (presetEditingId == null) return;
     const filters = editorForm.useFilters ? diffFilters(editorForm.filters) : null;
     const editable: EditablePreset = {
-      name: editorForm.name.trim() || 'Untitled',
+      name: editorForm.name.trim() || t('Untitled'),
       ids: editorForm.ids,
       filters,
     };
@@ -630,7 +628,7 @@
         ids: editable.ids,
         filters: editable.filters,
       });
-      toasts.success('Preset created', `“${created.name}” will appear in Compare's preset bar.`);
+      toasts.success(t('Preset created'), t('“{name}” will appear in Compare\'s preset bar.', { name: created.name }));
     } else {
       // For bundled presets we write to bundledOverrides so reset-defaults
       // works; for user presets we update the user list directly.
@@ -640,7 +638,7 @@
       } else {
         comparePresets.setBundledOverride(presetEditingId, editable);
       }
-      toasts.success('Preset saved', `“${editable.name}” updated.`);
+      toasts.success(t('Preset saved'), t('“{name}” updated.', { name: editable.name }));
     }
     cancelEditPreset();
   }
@@ -648,38 +646,36 @@
   async function deletePreset(p: ComparePreset) {
     if (p.source !== 'user') return;
     const ok = await ask(
-      `Delete preset “${p.name}”? This cannot be undone.`,
-      { title: 'Delete preset', kind: 'warning' }
+      t('Delete preset “{name}”? This cannot be undone.', { name: p.name }),
+      { title: t('Delete preset'), kind: 'warning' }
     );
     if (!ok) return;
     comparePresets.removeUserPreset(p.id);
     if (presetEditingId === p.id) cancelEditPreset();
-    toasts.success('Preset deleted', `“${p.name}” removed.`);
+    toasts.success(t('Preset deleted'), t('“{name}” removed.', { name: p.name }));
   }
 
   async function resetPreset(p: ComparePreset) {
     if (!comparePresets.isBundledOverridden(p.id)) return;
     const ok = await ask(
-      `Reset “${p.name}” to its bundled defaults? Your customisations will be lost.`,
-      { title: 'Reset preset', kind: 'warning' }
+      t('Reset “{name}” to its bundled defaults? Your customisations will be lost.', { name: p.name }),
+      { title: t('Reset preset'), kind: 'warning' }
     );
     if (!ok) return;
     comparePresets.clearBundledOverride(p.id);
     if (presetEditingId === p.id) cancelEditPreset();
-    toasts.success('Preset reset', `“${p.name}” restored to bundled defaults.`);
+    toasts.success(t('Preset reset'), t('“{name}” restored to bundled defaults.', { name: p.name }));
   }
 
   async function resetAllPresets() {
     const ok = await ask(
-      'Restore every bundled preset to its bundled defaults?\n\n' +
-      '• Your edits to bundled presets (Iron panel, Lipids, Hematology, Abnormal, Subclinical, etc.) will be discarded.\n' +
-      '• User-created presets are preserved.',
-      { title: 'Reset bundled presets', kind: 'warning' }
+      t('Restore every bundled preset to its bundled defaults?\n\n• Your edits to bundled presets (Iron panel, Lipids, Hematology, Abnormal, Subclinical, etc.) will be discarded.\n• User-created presets are preserved.'),
+      { title: t('Reset bundled presets'), kind: 'warning' }
     );
     if (!ok) return;
     comparePresets.resetAllBundled();
     cancelEditPreset();
-    toasts.success('Bundled presets reset');
+    toasts.success(t('Bundled presets reset'));
   }
 
   function toggleEditorAnalyte(id: string) {
@@ -704,17 +700,14 @@
     // and user-source aliases are left untouched. Worth a confirm so a
     // misclick on a populated vault doesn't surprise anyone.
     const ok = await ask(
-      'Reload analyte ontology from the bundled seed?\n\n' +
-      '• Re-installs every seed-bundled analyte\'s descriptions, reference ranges, categorical tiers, and aliases — your edits to seed entries will be lost.\n' +
-      '• User-created analytes (source=user) and user-added aliases are preserved.\n' +
-      '• Existing parsed results are not touched. Run "Re-parse all" on Records afterwards if you want stored rows to pick up new ontology fields.',
-      { title: 'Reload ontology', kind: 'warning' }
+      t('Reload the analyte Library from the bundled seed?\n\n• Re-installs every seed-bundled analyte\'s descriptions, reference ranges, categorical tiers, and aliases — your edits to seed entries will be lost.\n• User-created analytes (source=user) and user-added aliases are preserved.\n• Existing parsed results are not touched. Run "Re-parse all" on Records afterwards if you want stored rows to pick up new Library fields.'),
+      { title: t('Reload Library'), kind: 'warning' }
     );
     if (!ok) return;
     reloading = true;
     try {
       const r = await admin.reloadOntology();
-      toasts.success('Ontology reloaded', `${r.analytes_installed} analytes installed.`);
+      toasts.success(t('Library reloaded'), t('{count} analytes installed.', { count: r.analytes_installed }));
       await refresh();
     } catch (e) { toasts.error(e); }
     finally { reloading = false; }
@@ -727,7 +720,7 @@
   function onRestartFrontend() {
     if (lifecycleAction) return;
     lifecycleAction = 'frontend';
-    toasts.info('Restarting frontend', 'Reloading the current window…', 1500);
+    toasts.info(t('Restarting frontend'), t('Reloading the current window…'), 1500);
     // Let the toast paint before replacing the webview document.
     setTimeout(() => lifecycle.restartFrontend(), 80);
   }
@@ -735,9 +728,8 @@
   async function onRestartApp() {
     if (lifecycleAction) return;
     const ok = await ask(
-      'Restart bloody-level now?\n\n' +
-      'Any unsaved changes in the current view will be discarded. The local vault will remain intact.',
-      { title: 'Restart app', kind: 'warning' }
+      t('Restart bloody-level now?\n\nAny unsaved changes in the current view will be discarded. The local vault will remain intact.'),
+      { title: t('Restart app'), kind: 'warning' }
     );
     if (!ok) return;
     lifecycleAction = 'app';
@@ -752,9 +744,8 @@
   async function onResetApp() {
     if (lifecycleAction) return;
     const ok = await ask(
-      'Reset this local bloody-level instance?\n\n' +
-      'This permanently removes the encrypted vault, password, passkeys, imported reports, PDFs, models, and settings from this device. It cannot be undone. Export a backup first if you may need this data later.',
-      { title: 'Reset local app', kind: 'warning' }
+      t('Reset this local bloody-level instance?\n\nThis permanently removes the encrypted vault, password, passkeys, imported reports, PDFs, models, and settings from this device. It cannot be undone. Export a backup first if you may need this data later.'),
+      { title: t('Reset local app'), kind: 'warning' }
     );
     if (!ok) return;
     lifecycleAction = 'reset';
@@ -763,7 +754,7 @@
       // releases the SQLite handle on Windows before deleting its directory.
       await auth.lock();
       await auth.resetInstance();
-      toasts.success('Local app reset', 'Starting the welcome screen…', 2500);
+      toasts.success(t('Local app reset'), t('Starting the welcome screen…'), 2500);
       setTimeout(() => {
         if (typeof window !== 'undefined') window.location.assign('/');
       }, 80);
@@ -776,16 +767,15 @@
   async function onResetDefaults() {
     if (lifecycleAction) return;
     const ok = await ask(
-      'Reset all bloody-level preferences to their bundled defaults?\n\n' +
-      'This clears appearance, dashboard, chart, compare, OCR, and other settings. Your vault, reports, PDFs, models, and authentication remain untouched.',
-      { title: 'Reset all preferences', kind: 'warning' }
+      t('Reset all bloody-level preferences to their bundled defaults?\n\nThis clears appearance, dashboard, chart, compare, OCR, and other settings. Your vault, reports, PDFs, models, and authentication remain untouched.'),
+      { title: t('Reset all preferences'), kind: 'warning' }
     );
     if (!ok) return;
     lifecycleAction = 'defaults';
     try {
       discardPending();
       await settings.resetAll();
-      toasts.success('Preferences reset', 'Reloading bloody-level with the bundled defaults…');
+      toasts.success(t('Preferences reset'), t('Reloading bloody-level with the bundled defaults…'));
       setTimeout(() => lifecycle.restartFrontend(), 80);
     } catch (e) {
       lifecycleAction = null;
@@ -800,7 +790,7 @@
   // Tab id is reflected in the URL hash so deep-linking works (e.g.
   // `/settings#charts` opens directly to the chart pane). Falls back to
   // the first tab when the hash is unknown / missing.
-  type TabId = 'appearance' | 'dashboard' | 'charts' | 'comparison' | 'security' | 'ingestion' | 'ontology' | 'storage' | 'about' | 'advanced';
+  type TabId = 'appearance' | 'dashboard' | 'charts' | 'comparison' | 'security' | 'ingestion' | 'library' | 'storage' | 'about' | 'advanced';
   const tabs: { id: TabId; label: string; hint: string; icon: IconName }[] = [
     { id: 'appearance', label: 'Appearance', hint: 'Theme & visual',          icon: 'palette' },
     { id: 'dashboard',  label: 'Dashboard',  hint: 'Home layout',              icon: 'dashboard' },
@@ -808,7 +798,7 @@
     { id: 'comparison', label: 'Comparison', hint: 'Presets & filter sets',   icon: 'flask' },
     { id: 'security',   label: 'Security',   hint: 'OS vault & unlock',        icon: 'shield' },
     { id: 'ingestion',  label: 'Ingestion',  hint: 'PDF / OCR / LLM tiers',   icon: 'download' },
-    { id: 'ontology',   label: 'Ontology',   hint: 'Analyte registry',        icon: 'book' },
+    { id: 'library',    label: 'Library',    hint: 'Analyte library',         icon: 'library' },
     { id: 'storage',    label: 'Storage',    hint: 'Paths & sizes',           icon: 'database' },
     { id: 'about',      label: 'About',      hint: 'Build & environment',     icon: 'info' },
     { id: 'advanced',   label: 'Advanced',   hint: 'Raw settings JSON',       icon: 'settings' }
@@ -817,10 +807,12 @@
   let activeTab = $state<TabId>('appearance');
   onMount(() => {
     if (typeof window !== 'undefined') {
-      const fromHash = window.location.hash.replace('#', '') as TabId;
+      const rawHash = window.location.hash.replace('#', '');
+      const fromHash = (rawHash === 'ontology' ? 'library' : rawHash) as TabId;
       if (tabs.some((t) => t.id === fromHash)) activeTab = fromHash;
       window.addEventListener('hashchange', () => {
-        const next = window.location.hash.replace('#', '') as TabId;
+        const rawHash = window.location.hash.replace('#', '');
+        const next = (rawHash === 'ontology' ? 'library' : rawHash) as TabId;
         if (tabs.some((t) => t.id === next)) activeTab = next;
       });
     }
@@ -835,23 +827,23 @@
 
 <div class="settings">
   <header class="settings__head">
-    <h1 class="text-xl font-semibold">Settings</h1>
-    <p class="text-xs text-fg2">Local-only preferences. Nothing leaves this device.</p>
+    <h1 class="text-xl font-semibold">{t('Settings')}</h1>
+    <p class="text-xs text-fg2">{t('Local-only preferences. Nothing leaves this device.')}</p>
   </header>
 
   {#if err}<div class="card p-3 text-sm text-crit">{err}</div>{/if}
 
   <div class="settings__shell">
     <!-- ─── Tab nav ────────────────────────────────────────────────── -->
-    <nav class="settings__nav" aria-label="Settings sections">
-      {#each tabs as t}
+    <nav class="settings__nav" aria-label={t('Settings sections')}>
+      {#each tabs as tab}
         <button type="button"
-                class="settings__tab {activeTab === t.id ? 'settings__tab--active' : ''}"
-                onclick={() => selectTab(t.id)}>
-            <span class="settings__tab-icon"><Icon name={t.icon} size={16} /></span>
+                class="settings__tab {activeTab === tab.id ? 'settings__tab--active' : ''}"
+                onclick={() => selectTab(tab.id)}>
+            <span class="settings__tab-icon"><Icon name={tab.icon} size={16} /></span>
           <span class="settings__tab-body">
-            <span class="settings__tab-label">{t.label}</span>
-            <span class="settings__tab-hint">{t.hint}</span>
+            <span class="settings__tab-label">{t(tab.label)}</span>
+            <span class="settings__tab-hint">{t(tab.hint)}</span>
           </span>
         </button>
       {/each}
@@ -863,28 +855,54 @@
         <!-- ─── Theme mode ─── -->
         <section class="card p-5 space-y-3">
           <div>
-            <h2 class="text-sm font-semibold">Theme</h2>
-            <p class="text-xs text-fg2">Light, dark, or follow your OS preference.</p>
+            <h2 class="text-sm font-semibold">{t('Theme')}</h2>
+            <p class="text-xs text-fg2">{t('Light, dark, or follow your OS preference.')}</p>
           </div>
           <div class="seg">
             {#each ['system', 'light', 'dark'] as m}
               <button type="button"
                       class="seg__opt {theme.mode === m ? 'seg__opt--on' : ''}"
                       onclick={() => theme.set(m as 'system' | 'light' | 'dark')}>
-                {#if m === 'system'}<Icon name="monitor" size={14} /> System{:else if m === 'light'}<Icon name="sun" size={14} /> Light{:else}<Icon name="moon" size={14} /> Dark{/if}
+                {#if m === 'system'}<Icon name="monitor" size={14} /> {t('System')}{:else if m === 'light'}<Icon name="sun" size={14} /> {t('Light')}{:else}<Icon name="moon" size={14} /> {t('Dark')}{/if}
               </button>
             {/each}
           </div>
-          <p class="text-xs text-fg3">Resolved: <strong>{theme.resolved}</strong></p>
+          <p class="text-xs text-fg3">{t('Resolved')}: <strong>{t(theme.resolved[0].toUpperCase() + theme.resolved.slice(1))}</strong></p>
+        </section>
+
+        <!-- ─── Language / regional format ─── -->
+        <section class="card p-5 space-y-3">
+          <div>
+            <h2 class="text-sm font-semibold">{t('Language & regional format')}</h2>
+            <p class="text-xs text-fg2">
+              {t('Choose the app locale for dates, numbers, percentages, and browser language metadata. Automatic detection follows your device language and is the default.')}
+            </p>
+          </div>
+          <label class="flex items-center justify-between gap-4">
+            <span class="text-xs text-fg2">{t('Locale')}</span>
+            <select
+              class="settings-number locale-select"
+              value={appearance.locale}
+              aria-label={t('Application locale')}
+              onchange={(e) => appearance.setLocale((e.currentTarget as HTMLSelectElement).value as LocalePreference)}
+            >
+              {#each LOCALE_OPTIONS as option}
+                <option value={option.id}>{t(option.label)} — {t(option.description)}</option>
+              {/each}
+            </select>
+          </label>
+          <p class="text-xs text-fg3">
+            {t('Active locale')}: <strong>{appearance.resolvedLocale}</strong>
+            {#if appearance.locale === 'auto'} · {t('detected automatically')}{/if}
+          </p>
         </section>
 
         <!-- ─── Accent color ─── -->
         <section class="card p-5 space-y-3">
           <div>
-            <h2 class="text-sm font-semibold">Accent color</h2>
+            <h2 class="text-sm font-semibold">{t('Accent color')}</h2>
             <p class="text-xs text-fg2">
-              Drives every interactive surface — buttons, links, focus rings, the primary chart series, the splash mark.
-              Picks light + dark variants of the same hue automatically.
+              {t('Drives every interactive surface — buttons, links, focus rings, the primary chart series, the splash mark. Picks light + dark variants of the same hue automatically.')}
             </p>
           </div>
           <div class="swatches">
@@ -893,11 +911,11 @@
                       class="swatch {appearance.accent === preset.id ? 'swatch--on' : ''}"
                       style="--swatch-color: {preset.swatch};"
                       onclick={() => appearance.setAccent(preset.id as AccentName)}
-                      title={preset.label}
-                      aria-label="Accent: {preset.label}"
+                      title={t(preset.label)}
+                      aria-label={t('Accent: {label}', { label: t(preset.label) })}
                       aria-pressed={appearance.accent === preset.id}>
                 <span class="swatch__dot"></span>
-                <span class="swatch__name">{preset.label}</span>
+                <span class="swatch__name">{t(preset.label)}</span>
               </button>
             {/each}
           </div>
@@ -906,10 +924,9 @@
         <!-- ─── Density / spacing ─── -->
         <section class="card p-5 space-y-3">
           <div>
-            <h2 class="text-sm font-semibold">Density</h2>
+            <h2 class="text-sm font-semibold">{t('Density')}</h2>
             <p class="text-xs text-fg2">
-              Adjusts global card padding and line-height. Compact suits dense tables; comfortable
-              gives every reading room to breathe.
+              {t('Adjusts global card padding and line-height. Compact suits dense tables; comfortable gives every reading room to breathe.')}
             </p>
           </div>
           <div class="seg">
@@ -920,7 +937,7 @@
               <button type="button"
                       class="seg__opt {appearance.density === opt.id ? 'seg__opt--on' : ''}"
                       onclick={() => appearance.setDensity(opt.id as Density)}>
-                {opt.label}
+                {t(opt.label.replace('↕ ', ''))}
               </button>
             {/each}
           </div>
@@ -929,10 +946,9 @@
         <!-- ─── Font scale ─── -->
         <section class="card p-5 space-y-3">
           <div>
-            <h2 class="text-sm font-semibold">Font size</h2>
+            <h2 class="text-sm font-semibold">{t('Font size')}</h2>
             <p class="text-xs text-fg2">
-              Scales the entire UI by adjusting the root font size. Tailwind text classes derive from
-              this, so cards and tables scale together.
+              {t('Scales the entire UI by adjusting the root font size. Tailwind text classes derive from this, so cards and tables scale together.')}
             </p>
           </div>
           <div class="seg">
@@ -946,7 +962,7 @@
               <button type="button"
                       class="seg__opt {appearance.fontScale === opt.id ? 'seg__opt--on' : ''}"
                       onclick={() => appearance.setFontScale(opt.id as FontScale)}>
-                {opt.label}
+                {opt.id === 'tiny' ? `Aa ${t('Tiny')} · 12 px` : opt.id === 'sm' ? `Aa ${t('Small')} · 14 px` : opt.id === 'md' ? `Aa ${t('Normal')} · 15 px` : opt.id === 'lg' ? `Aa ${t('Large')} · 16 px` : `Aa ${t('Gigantic')} · 20 px`}
               </button>
             {/each}
           </div>
@@ -955,10 +971,9 @@
         <!-- ─── Font family ─── -->
         <section class="card p-5 space-y-3">
           <div>
-            <h2 class="text-sm font-semibold">Body font</h2>
+            <h2 class="text-sm font-semibold">{t('Body font')}</h2>
             <p class="text-xs text-fg2">
-              The typeface for body copy. Numeric columns and chart axes always use a monospace
-              regardless, so this only affects prose.
+              {t('The typeface for body copy. Numeric columns and chart axes always use a monospace regardless, so this only affects prose.')}
             </p>
           </div>
           <div class="seg">
@@ -970,7 +985,7 @@
               <button type="button"
                       class="seg__opt {appearance.fontFamily === opt.id ? 'seg__opt--on' : ''}"
                       onclick={() => appearance.setFontFamily(opt.id as FontFamily)}>
-                {opt.label}
+                {t(opt.label)}
               </button>
             {/each}
           </div>
@@ -979,14 +994,13 @@
         <!-- ─── Motion ─── -->
         <section class="card p-5 space-y-3">
           <div>
-            <h2 class="text-sm font-semibold">Motion</h2>
+            <h2 class="text-sm font-semibold">{t('Motion')}</h2>
           </div>
           <label class="row" style="border-top: 0; padding-top: 0;">
             <div class="row__body">
-              <div class="row__title">Reduce motion</div>
+              <div class="row__title">{t('Reduce motion')}</div>
               <div class="row__hint">
-                Disables splash animations, gradient blobs, and chart transitions. Honoured in addition
-                to the system <code class="font-mono text-[10px]">prefers-reduced-motion</code> hint.
+                {t('Disables splash animations, gradient blobs, and chart transitions. Honoured in addition to the system')} <code class="font-mono text-[10px]">prefers-reduced-motion</code> {t('hint.')}
               </div>
             </div>
             <input type="checkbox" checked={appearance.reduceMotion}
@@ -998,10 +1012,10 @@
         <section class="card p-5 space-y-2">
           <div class="flex items-baseline justify-between gap-3">
             <div>
-              <h2 class="text-sm font-semibold">Reset appearance</h2>
-              <p class="text-xs text-fg2">Restores the violet / comfortable / normal / sans defaults. Theme mode is unchanged.</p>
+              <h2 class="text-sm font-semibold">{t('Reset appearance')}</h2>
+              <p class="text-xs text-fg2">{t('Restores the violet / comfortable / normal / sans / automatic-locale defaults. Theme mode is unchanged.')}</p>
             </div>
-            <button class="btn" onclick={() => appearance.reset()}>Reset</button>
+            <button class="btn" onclick={() => appearance.reset()}>{t('Reset')}</button>
           </div>
         </section>
       {/if}
@@ -1009,11 +1023,8 @@
       {#if activeTab === 'dashboard'}
         <section class="card p-5 space-y-4">
           <div>
-            <h2 class="text-sm font-semibold">Dashboard layout</h2>
-            <p class="text-xs text-fg2">
-              Choose which sections appear on the home dashboard and use the arrows to set their order.
-              Preferences are stored locally with the rest of your encrypted app settings.
-            </p>
+            <h2 class="text-sm font-semibold">{t('Dashboard layout')}</h2>
+            <p class="text-xs text-fg2">{t('Choose which sections appear on the home dashboard and use the arrows to set their order. Preferences are stored locally with the rest of your encrypted app settings.')}</p>
           </div>
 
           <div class="dashboard-sections">
@@ -1023,13 +1034,13 @@
                 <label class="row dashboard-section-row__toggle">
                   <input type="checkbox" checked={dashboardPrefs.visible[section]} onchange={() => dashboardPrefs.toggle(section)} />
                   <span class="row__body">
-                    <span class="row__title">{meta.label}</span>
-                    <span class="row__hint">{meta.hint}</span>
+                    <span class="row__title">{t(meta.label)}</span>
+                    <span class="row__hint">{t(meta.hint)}</span>
                   </span>
                 </label>
-                <div class="dashboard-section-row__actions" aria-label="Reorder {meta.label}">
-                  <button type="button" class="mini-btn" disabled={index === 0} onclick={() => dashboardPrefs.move(section, -1)} title="Move up" aria-label="Move {meta.label} up"><Icon name="chevron-up" size={14} /></button>
-                  <button type="button" class="mini-btn" disabled={index === dashboardPrefs.order.length - 1} onclick={() => dashboardPrefs.move(section, 1)} title="Move down" aria-label="Move {meta.label} down"><Icon name="chevron-down" size={14} /></button>
+                <div class="dashboard-section-row__actions" aria-label={t('Reorder {label}', { label: t(meta.label) })}>
+                  <button type="button" class="mini-btn" disabled={index === 0} onclick={() => dashboardPrefs.move(section, -1)} title={t('Move up')} aria-label={t('Move {label} up', { label: t(meta.label) })}><Icon name="chevron-up" size={14} /></button>
+                  <button type="button" class="mini-btn" disabled={index === dashboardPrefs.order.length - 1} onclick={() => dashboardPrefs.move(section, 1)} title={t('Move down')} aria-label={t('Move {label} down', { label: t(meta.label) })}><Icon name="chevron-down" size={14} /></button>
                 </div>
               </div>
             {/each}
@@ -1038,34 +1049,34 @@
 
         <section class="card p-5 space-y-4">
           <div>
-            <h2 class="text-sm font-semibold">Dashboard item limits</h2>
-            <p class="text-xs text-fg2">These limits only change how many cards or rows are shown; the underlying records stay untouched.</p>
+            <h2 class="text-sm font-semibold">{t('Dashboard item limits')}</h2>
+            <p class="text-xs text-fg2">{t('These limits only change how many cards or rows are shown; the underlying records stay untouched.')}</p>
           </div>
           <label class="row">
-            <span class="row__body"><span class="row__title">Recent abnormal flags</span><span class="row__hint">Maximum patient cards in the spotlight.</span></span>
+            <span class="row__body"><span class="row__title">{t('Recent abnormal flags')}</span><span class="row__hint">{t('Maximum patient cards in the spotlight.')}</span></span>
             <input class="settings-number" type="number" min="1" max="50" value={dashboardPrefs.spotlightLimit} onchange={(e) => dashboardPrefs.setLimit('spotlight', Number((e.currentTarget as HTMLInputElement).value))} />
           </label>
           <label class="row">
-            <span class="row__body"><span class="row__title">Recent reports</span><span class="row__hint">Newest imported reports listed on the dashboard.</span></span>
+            <span class="row__body"><span class="row__title">{t('Recent reports')}</span><span class="row__hint">{t('Newest imported reports listed on the dashboard.')}</span></span>
             <input class="settings-number" type="number" min="1" max="50" value={dashboardPrefs.reportLimit} onchange={(e) => dashboardPrefs.setLimit('reports', Number((e.currentTarget as HTMLInputElement).value))} />
           </label>
           <label class="row">
-            <span class="row__body"><span class="row__title">Recent activity</span><span class="row__hint">Latest audit events requested for the dashboard.</span></span>
+            <span class="row__body"><span class="row__title">{t('Recent activity')}</span><span class="row__hint">{t('Latest audit events requested for the dashboard.')}</span></span>
             <input class="settings-number" type="number" min="1" max="50" value={dashboardPrefs.activityLimit} onchange={(e) => dashboardPrefs.setLimit('activity', Number((e.currentTarget as HTMLInputElement).value))} />
           </label>
           <label class="row">
-            <span class="row__body"><span class="row__title">Patients</span><span class="row__hint">Patient cards shown after sorting by most recent activity.</span></span>
+            <span class="row__body"><span class="row__title">{t('Patients')}</span><span class="row__hint">{t('Patient cards shown after sorting by most recent activity.')}</span></span>
             <select class="settings-number" value={dashboardPrefs.patientLimit} onchange={(e) => dashboardPrefs.setLimit('patients', Number((e.currentTarget as HTMLSelectElement).value))}>
-              <option value="0">All patients</option>
-              <option value="6">6 patients</option>
-              <option value="12">12 patients</option>
-              <option value="24">24 patients</option>
-              <option value="50">50 patients</option>
-              <option value="100">100 patients</option>
+              <option value="0">{t('All patients')}</option>
+              <option value="6">6 {t('patients')}</option>
+              <option value="12">12 {t('patients')}</option>
+              <option value="24">24 {t('patients')}</option>
+              <option value="50">50 {t('patients')}</option>
+              <option value="100">100 {t('patients')}</option>
             </select>
           </label>
           <div class="flex justify-end pt-1">
-            <button type="button" class="btn" onclick={() => dashboardPrefs.reset()}>Reset dashboard</button>
+            <button type="button" class="btn" onclick={() => dashboardPrefs.reset()}>{t('Reset dashboard')}</button>
           </div>
         </section>
       {/if}
@@ -1073,18 +1084,14 @@
       {#if activeTab === 'charts'}
         <section class="card p-5 space-y-3">
           <div>
-            <h2 class="text-sm font-semibold">Chart interaction</h2>
-            <p class="text-xs text-fg2">
-              Auxiliary scrollers and wheel-zoom are off by default. Drag-to-pan inside the
-              plot area always works, and the toolbar above each chart exposes the same toggles
-              for one-off use.
-            </p>
+            <h2 class="text-sm font-semibold">{t('Chart interaction')}</h2>
+            <p class="text-xs text-fg2">{t('Auxiliary scrollers and wheel-zoom are off by default. Drag-to-pan inside the plot area always works, and the toolbar above each chart exposes the same toggles for one-off use.')}</p>
           </div>
 
           <label class="row">
             <div class="row__body">
-              <div class="row__title">Timeline range slider</div>
-              <div class="row__hint">Adds a draggable horizontal stretcher under the chart for X-axis windowing.</div>
+              <div class="row__title">{t('Timeline range slider')}</div>
+              <div class="row__hint">{t('Adds a draggable horizontal stretcher under the chart for X-axis windowing.')}</div>
             </div>
             <input type="checkbox" checked={chartPrefs.showXSlider}
                    onchange={(e) => chartPrefs.setX((e.target as HTMLInputElement).checked)} />
@@ -1092,8 +1099,8 @@
 
           <label class="row">
             <div class="row__body">
-              <div class="row__title">Vertical units slider</div>
-              <div class="row__hint">Adds a vertical stretcher on the right edge for Y-axis windowing.</div>
+              <div class="row__title">{t('Vertical units slider')}</div>
+              <div class="row__hint">{t('Adds a vertical stretcher on the right edge for Y-axis windowing.')}</div>
             </div>
             <input type="checkbox" checked={chartPrefs.showYSlider}
                    onchange={(e) => chartPrefs.setY((e.target as HTMLInputElement).checked)} />
@@ -1101,11 +1108,8 @@
 
           <label class="row">
             <div class="row__body">
-              <div class="row__title">Mouse-wheel zoom inside chart</div>
-              <div class="row__hint">
-                Off by default — the wheel scrolls the page. Turn on to zoom the chart with the wheel
-                (and Shift+wheel for the Y axis).
-              </div>
+              <div class="row__title">{t('Mouse-wheel zoom inside chart')}</div>
+              <div class="row__hint">{t('Off by default — the wheel scrolls the page. Turn on to zoom the chart with the wheel (and Shift+wheel for the Y axis).')}</div>
             </div>
             <input type="checkbox" checked={chartPrefs.scrollZoom}
                    onchange={(e) => chartPrefs.setScrollZoom((e.target as HTMLInputElement).checked)} />
@@ -1114,12 +1118,8 @@
 
         <section class="card p-5 space-y-3">
           <div>
-            <h2 class="text-sm font-semibold">Reference range source</h2>
-            <p class="text-xs text-fg2">
-              Which range drives every flag pill, chart band, and reference card.
-              Affects all analytes globally; the parser still captures every printed range
-              regardless so you can switch back at any time without re-ingesting.
-            </p>
+            <h2 class="text-sm font-semibold">{t('Reference range source')}</h2>
+            <p class="text-xs text-fg2">{t('Which range drives every flag pill, chart band, and reference card. Affects all analytes globally; the parser still captures every printed range regardless so you can switch back at any time without re-ingesting.')}</p>
           </div>
           <div class="seg">
             {#each [
@@ -1130,32 +1130,28 @@
               <button type="button"
                       class="seg__opt {chartPrefs.referenceSource === opt.id ? 'seg__opt--on' : ''}"
                       onclick={() => chartPrefs.setReferenceSource(opt.id as 'auto' | 'library' | 'printed')}>
-                <Icon name={opt.icon} size={14} /> {opt.label}
+                <Icon name={opt.icon} size={14} /> {t(opt.label)}
               </button>
             {/each}
           </div>
           <ul class="text-xs text-fg2 space-y-1 pt-1">
-            <li><strong>Auto</strong> (default): library wins when the ontology has any usable reference (sex/cycle/tier/universal); falls back to the lab-printed range otherwise.</li>
-            <li><strong>Library</strong>: always derive from the analyte ontology — sex- and cycle-aware where applicable. Printed ranges from the PDF are ignored for flag computation.</li>
-            <li><strong>Per-report</strong>: trust whatever range the lab printed on each individual report, even when the ontology has a more specific default. Useful when your lab uses non-standard cutoffs you want to honour exactly.</li>
+            <li><strong>{t('Auto')}</strong> ({t('default')}): {t('the Library wins when it has any usable reference (sex/cycle/tier/universal); falls back to the lab-printed range otherwise.')}</li>
+            <li><strong>{t('Library')}</strong>: {t('always derive from the analyte Library — sex- and cycle-aware where applicable. Printed ranges from the PDF are ignored for flag computation.')}</li>
+            <li><strong>{t('Per-report')}</strong>: {t('trust whatever range the lab printed on each individual report, even when the Library has a more specific default. Useful when your lab uses non-standard cutoffs you want to honour exactly.')}</li>
           </ul>
         </section>
 
         <!-- ───── Default chart appearance ───── -->
         <section class="card p-5 space-y-3">
           <div>
-            <h2 class="text-sm font-semibold">Default chart appearance</h2>
-            <p class="text-xs text-fg2">
-              Every toolbar toggle on a chart writes through to the corresponding default
-              here, so what you set per-chart sticks app-wide. Reset to the bundled defaults
-              with the button at the bottom.
-            </p>
+            <h2 class="text-sm font-semibold">{t('Default chart appearance')}</h2>
+            <p class="text-xs text-fg2">{t('Every toolbar toggle on a chart writes through to the corresponding default here, so what you set per-chart sticks app-wide. Reset to the bundled defaults with the button at the bottom.')}</p>
           </div>
 
           <label class="row">
             <div class="row__body">
-              <div class="row__title">Show value labels by default</div>
-              <div class="row__hint">Pinned numeric label at every point. Useful at low cadence; gets noisy with many readings.</div>
+              <div class="row__title">{t('Show value labels by default')}</div>
+              <div class="row__hint">{t('Pinned numeric label at every point. Useful at low cadence; gets noisy with many readings.')}</div>
             </div>
             <input type="checkbox" checked={chartPrefs.showValues}
                    onchange={(e) => chartPrefs.setShowValues((e.target as HTMLInputElement).checked)} />
@@ -1163,8 +1159,8 @@
 
           <label class="row">
             <div class="row__body">
-              <div class="row__title">Smoothed line by default</div>
-              <div class="row__hint">Bezier-interpolated segments. Off by default — straight segments make stepwise changes obvious.</div>
+              <div class="row__title">{t('Smoothed line by default')}</div>
+              <div class="row__hint">{t('Bezier-interpolated segments. Off by default — straight segments make stepwise changes obvious.')}</div>
             </div>
             <input type="checkbox" checked={chartPrefs.smooth}
                    onchange={(e) => chartPrefs.setSmooth((e.target as HTMLInputElement).checked)} />
@@ -1172,8 +1168,8 @@
 
           <label class="row">
             <div class="row__body">
-              <div class="row__title">Reference bands by default</div>
-              <div class="row__hint">Coloured horizontal stripe(s) marking the normal / borderline / critical ranges.</div>
+              <div class="row__title">{t('Reference bands by default')}</div>
+              <div class="row__hint">{t('Coloured horizontal stripe(s) marking the normal / borderline / critical ranges.')}</div>
             </div>
             <input type="checkbox" checked={chartPrefs.showBands}
                    onchange={(e) => chartPrefs.setShowBands((e.target as HTMLInputElement).checked)} />
@@ -1181,8 +1177,8 @@
 
           <label class="row">
             <div class="row__body">
-              <div class="row__title">Symbols at each reading</div>
-              <div class="row__hint">Off → just the line. Useful for very dense series where every-point markers crowd the canvas.</div>
+              <div class="row__title">{t('Symbols at each reading')}</div>
+              <div class="row__hint">{t('Off → just the line. Useful for very dense series where every-point markers crowd the canvas.')}</div>
             </div>
             <input type="checkbox" checked={chartPrefs.showSymbols}
                    onchange={(e) => chartPrefs.setShowSymbols((e.target as HTMLInputElement).checked)} />
@@ -1190,8 +1186,8 @@
 
           <label class="row">
             <div class="row__body">
-              <div class="row__title">Use report nicknames on the X axis</div>
-              <div class="row__hint">When the source report has a nickname, replace the date with it. Falls back to the date for unlabelled reports.</div>
+              <div class="row__title">{t('Use report nicknames on the X axis')}</div>
+              <div class="row__hint">{t('When the source report has a nickname, replace the date with it. Falls back to the date for unlabelled reports.')}</div>
             </div>
             <input type="checkbox" checked={chartPrefs.useNicknames}
                    onchange={(e) => chartPrefs.setUseNicknames((e.target as HTMLInputElement).checked)} />
@@ -1199,8 +1195,8 @@
 
           <label class="row">
             <div class="row__body">
-              <div class="row__title">Trend line</div>
-              <div class="row__hint">Overlay a dashed linear-regression line over the visible points.</div>
+              <div class="row__title">{t('Trend line')}</div>
+              <div class="row__hint">{t('Overlay a dashed linear-regression line over the visible points.')}</div>
             </div>
             <input type="checkbox" checked={chartPrefs.showTrendLine}
                    onchange={(e) => chartPrefs.setShowTrendLine((e.target as HTMLInputElement).checked)} />
@@ -1208,8 +1204,8 @@
 
           <label class="row">
             <div class="row__body">
-              <div class="row__title">Today reference line</div>
-              <div class="row__hint">Vertical dashed marker at today's date.</div>
+              <div class="row__title">{t('Today reference line')}</div>
+              <div class="row__hint">{t("Vertical dashed marker at today's date.")}</div>
             </div>
             <input type="checkbox" checked={chartPrefs.showTodayLine}
                    onchange={(e) => chartPrefs.setShowTodayLine((e.target as HTMLInputElement).checked)} />
@@ -1217,8 +1213,8 @@
 
           <div class="row">
             <div class="row__body">
-              <div class="row__title">Y-axis scale</div>
-              <div class="row__hint">Logarithmic clamps to <code>linear</code> automatically when any value is ≤ 0.</div>
+              <div class="row__title">{t('Y-axis scale')}</div>
+              <div class="row__hint">{t('Logarithmic clamps to')} <code>linear</code> {t('automatically when any value is ≤ 0.')}</div>
             </div>
             <div class="seg">
               {#each [
@@ -1227,15 +1223,15 @@
               ] as opt}
                 <button type="button"
                         class="seg__opt {chartPrefs.scale === opt.id ? 'seg__opt--on' : ''}"
-                        onclick={() => chartPrefs.setScale(opt.id as 'linear' | 'log')}>{opt.label}</button>
+                        onclick={() => chartPrefs.setScale(opt.id as 'linear' | 'log')}>{t(opt.label)}</button>
               {/each}
             </div>
           </div>
 
           <div class="row">
             <div class="row__body">
-              <div class="row__title">Date format</div>
-              <div class="row__hint">How dates appear on the X-axis when nicknames aren't being used.</div>
+              <div class="row__title">{t('Date format')}</div>
+              <div class="row__hint">{t("How dates appear on the X-axis when nicknames aren't being used.")}</div>
             </div>
             <div class="seg seg--nowrap">
               {#each [
@@ -1255,8 +1251,8 @@
 
           <div class="row">
             <div class="row__body">
-              <div class="row__title">Grid density</div>
-              <div class="row__hint">Off hides every gridline. Detailed adds minor ticks for fine-grained reading.</div>
+              <div class="row__title">{t('Grid density')}</div>
+              <div class="row__hint">{t('Off hides every gridline. Detailed adds minor ticks for fine-grained reading.')}</div>
             </div>
             <div class="seg">
               {#each [
@@ -1267,7 +1263,7 @@
                 <button type="button"
                         class="seg__opt {chartPrefs.gridDensity === opt.id ? 'seg__opt--on' : ''}"
                         onclick={() => chartPrefs.setGridDensity(opt.id as 'off' | 'standard' | 'detailed')}>
-                  {opt.label}
+                  {t(opt.label)}
                 </button>
               {/each}
             </div>
@@ -1275,8 +1271,8 @@
 
           <div class="row">
             <div class="row__body">
-              <div class="row__title">Line width</div>
-              <div class="row__hint">Stroke thickness in pixels.</div>
+              <div class="row__title">{t('Line width')}</div>
+              <div class="row__hint">{t('Stroke thickness in pixels.')}</div>
             </div>
             <input class="input w-20 text-right" type="number" min="0.5" max="6" step="0.1"
                    value={chartPrefs.lineWidth}
@@ -1288,8 +1284,8 @@
 
           <div class="row">
             <div class="row__body">
-              <div class="row__title">Symbol size</div>
-              <div class="row__hint">Diameter of the dot at each reading, in pixels.</div>
+              <div class="row__title">{t('Symbol size')}</div>
+              <div class="row__hint">{t('Diameter of the dot at each reading, in pixels.')}</div>
             </div>
             <input class="input w-20 text-right" type="number" min="2" max="20" step="1"
                    value={chartPrefs.symbolSize}
@@ -1303,17 +1299,14 @@
         <!-- ───── Series rendering ───── -->
         <section class="card p-5 space-y-3">
           <div>
-            <h2 class="text-sm font-semibold">Series rendering</h2>
-            <p class="text-xs text-fg2">
-              How the data line is drawn. Bar mode disables smoothing and step interpolation
-              (those only apply to line / area).
-            </p>
+            <h2 class="text-sm font-semibold">{t('Series rendering')}</h2>
+            <p class="text-xs text-fg2">{t('How the data line is drawn. Bar mode disables smoothing and step interpolation (those only apply to line / area).')}</p>
           </div>
 
           <div class="row">
             <div class="row__body">
-              <div class="row__title">Series type</div>
-              <div class="row__hint">Line keeps the chart light; area fills the region beneath the line; bar shows discrete vertical bars.</div>
+              <div class="row__title">{t('Series type')}</div>
+              <div class="row__hint">{t('Line keeps the chart light; area fills the region beneath the line; bar shows discrete vertical bars.')}</div>
             </div>
             <div class="seg">
               {#each [
@@ -1324,7 +1317,7 @@
                 <button type="button"
                         class="seg__opt {chartPrefs.seriesType === opt.id ? 'seg__opt--on' : ''}"
                         onclick={() => chartPrefs.setSeriesType(opt.id as 'line' | 'area' | 'bar')}>
-                  {opt.label}
+                  {t(opt.label)}
                 </button>
               {/each}
             </div>
@@ -1332,11 +1325,9 @@
 
           <div class="row">
             <div class="row__body">
-              <div class="row__title">Step interpolation</div>
+              <div class="row__title">{t('Step interpolation')}</div>
               <div class="row__hint">
-                None = straight (or smoothed) segments. Start / Middle / End render staircase
-                steps anchored at the indicated edge of each interval — useful when readings
-                represent values that hold steady between samples.
+                {t('None = straight (or smoothed) segments. Start / Middle / End render staircase steps anchored at the indicated edge of each interval — useful when readings represent values that hold steady between samples.')}
               </div>
             </div>
             <div class="seg seg--nowrap">
@@ -1349,7 +1340,7 @@
                 <button type="button"
                         class="seg__opt {chartPrefs.step === opt.id ? 'seg__opt--on' : ''}"
                         onclick={() => chartPrefs.setStep(opt.id as 'none' | 'start' | 'middle' | 'end')}>
-                  {opt.label}
+                  {t(opt.label)}
                 </button>
               {/each}
             </div>
@@ -1357,8 +1348,8 @@
 
           <label class="row">
             <div class="row__body">
-              <div class="row__title">Colour points by flag</div>
-              <div class="row__hint">Tints each reading marker by its low / normal / high / critical flag, on top of the line colour.</div>
+              <div class="row__title">{t('Colour points by flag')}</div>
+              <div class="row__hint">{t('Tints each reading marker by its low / normal / high / critical flag, on top of the line colour.')}</div>
             </div>
             <input type="checkbox" checked={chartPrefs.colorByFlag}
                    onchange={(e) => chartPrefs.setColorByFlag((e.target as HTMLInputElement).checked)} />
@@ -1366,8 +1357,8 @@
 
           <label class="row">
             <div class="row__body">
-              <div class="row__title">Connect across gaps</div>
-              <div class="row__hint">When off, missing readings break the line into segments; when on, the line bridges any null/undefined value.</div>
+              <div class="row__title">{t('Connect across gaps')}</div>
+              <div class="row__hint">{t('When off, missing readings break the line into segments; when on, the line bridges any null/undefined value.')}</div>
             </div>
             <input type="checkbox" checked={chartPrefs.connectNulls}
                    onchange={(e) => chartPrefs.setConnectNulls((e.target as HTMLInputElement).checked)} />
@@ -1375,8 +1366,8 @@
 
           <label class="row">
             <div class="row__body">
-              <div class="row__title">Mean line</div>
-              <div class="row__hint">Horizontal dashed line at the mean of the visible readings.</div>
+              <div class="row__title">{t('Mean line')}</div>
+              <div class="row__hint">{t('Horizontal dashed line at the mean of the visible readings.')}</div>
             </div>
             <input type="checkbox" checked={chartPrefs.showMeanLine}
                    onchange={(e) => chartPrefs.setShowMeanLine((e.target as HTMLInputElement).checked)} />
@@ -1384,8 +1375,8 @@
 
           <label class="row">
             <div class="row__body">
-              <div class="row__title">Min &amp; max markers</div>
-              <div class="row__hint">Pin labels at the highest and lowest readings.</div>
+              <div class="row__title">{t('Min & max markers')}</div>
+              <div class="row__hint">{t('Pin labels at the highest and lowest readings.')}</div>
             </div>
             <input type="checkbox" checked={chartPrefs.showMinMaxMarkers}
                    onchange={(e) => chartPrefs.setShowMinMaxMarkers((e.target as HTMLInputElement).checked)} />
@@ -1393,8 +1384,8 @@
 
           <div class="row">
             <div class="row__body">
-              <div class="row__title">Reference band opacity</div>
-              <div class="row__hint">100% = bundled token alpha. 0% hides the fill entirely; 200% doubles its boldness.</div>
+              <div class="row__title">{t('Reference band opacity')}</div>
+              <div class="row__hint">{t('100% = bundled token alpha. 0% hides the fill entirely; 200% doubles its boldness.')}</div>
             </div>
             <div class="flex items-center gap-2">
               <input class="input w-20 text-right" type="number" min="0" max="200" step="10"
@@ -1409,8 +1400,8 @@
 
           <div class="row">
             <div class="row__body">
-              <div class="row__title">Animation speed</div>
-              <div class="row__hint">Off disables every chart transition for instant rendering.</div>
+              <div class="row__title">{t('Animation speed')}</div>
+              <div class="row__hint">{t('Off disables every chart transition for instant rendering.')}</div>
             </div>
             <div class="seg">
               {#each [
@@ -1422,7 +1413,7 @@
                 <button type="button"
                         class="seg__opt {chartPrefs.animation === opt.id ? 'seg__opt--on' : ''}"
                         onclick={() => chartPrefs.setAnimation(opt.id as 'off' | 'fast' | 'normal' | 'slow')}>
-                  {opt.label}
+                  {t(opt.label)}
                 </button>
               {/each}
             </div>
@@ -1432,15 +1423,12 @@
         <!-- ───── Tooltip & chrome ───── -->
         <section class="card p-5 space-y-3">
           <div>
-            <h2 class="text-sm font-semibold">Tooltip &amp; chrome</h2>
+            <h2 class="text-sm font-semibold">{t('Tooltip & chrome')}</h2>
           </div>
           <div class="row">
             <div class="row__body">
-              <div class="row__title">Tooltip mode</div>
-              <div class="row__hint">
-                Axis = crosshair pointer with the nearest reading; Item = hover only the
-                exact point underneath the cursor.
-              </div>
+              <div class="row__title">{t('Tooltip mode')}</div>
+              <div class="row__hint">{t('Axis = crosshair pointer with the nearest reading; Item = hover only the exact point underneath the cursor.')}</div>
             </div>
             <div class="seg">
               {#each [
@@ -1450,7 +1438,7 @@
                 <button type="button"
                         class="seg__opt {chartPrefs.tooltipMode === opt.id ? 'seg__opt--on' : ''}"
                         onclick={() => chartPrefs.setTooltipMode(opt.id as 'axis' | 'item')}>
-                  {opt.label}
+                  {t(opt.label)}
                 </button>
               {/each}
             </div>
@@ -1458,8 +1446,8 @@
 
           <label class="row">
             <div class="row__body">
-              <div class="row__title">Show chart titles</div>
-              <div class="row__hint">When off, the chart's `title` prop is ignored — useful when the page already provides the heading.</div>
+              <div class="row__title">{t('Show chart titles')}</div>
+              <div class="row__hint">{t("When off, the chart's `title` prop is ignored — useful when the page already provides the heading.")}</div>
             </div>
             <input type="checkbox" checked={chartPrefs.showTitle}
                    onchange={(e) => chartPrefs.setShowTitle((e.target as HTMLInputElement).checked)} />
@@ -1467,12 +1455,9 @@
 
           <div class="row">
             <div class="row__body">
-              <div class="row__title">X-axis label overflow</div>
+              <div class="row__title">{t('X-axis label overflow')}</div>
               <div class="row__hint">
-                What to do when too many dates would collide on the time axis.
-                <strong>Auto</strong> hides overlapping labels (date still on hover).
-                <strong>Rotate</strong> tilts each label 35° so more fit before clipping.
-                <strong>Hide</strong> never draws axis labels — cleanest visual; rely on hover for the exact date.
+                {t('What to do when too many dates would collide on the time axis.')} <strong>{t('Auto')}</strong> {t('hides overlapping labels (date still on hover).')} <strong>{t('Rotate')}</strong> {t('tilts each label 35° so more fit before clipping.')} <strong>{t('Hide')}</strong> {t('never draws axis labels — cleanest visual; rely on hover for the exact date.')}
               </div>
             </div>
             <div class="seg seg--nowrap">
@@ -1484,7 +1469,7 @@
                 <button type="button"
                         class="seg__opt {chartPrefs.xLabelMode === opt.id ? 'seg__opt--on' : ''}"
                         onclick={() => chartPrefs.setXLabelMode(opt.id as 'auto' | 'rotate' | 'hide')}>
-                  {opt.label}
+                  {t(opt.label)}
                 </button>
               {/each}
             </div>
@@ -1494,12 +1479,8 @@
         <!-- ───── Default time window ───── -->
         <section class="card p-5 space-y-3">
           <div>
-            <h2 class="text-sm font-semibold">Default time window</h2>
-            <p class="text-xs text-fg2">
-              At chart open, narrow the visible range to the most recent N. Older readings
-              are still on file and reachable via slider/wheel zoom-out — this just controls
-              the first paint.
-            </p>
+            <h2 class="text-sm font-semibold">{t('Default time window')}</h2>
+            <p class="text-xs text-fg2">{t('At chart open, narrow the visible range to the most recent N. Older readings are still on file and reachable via slider/wheel zoom-out — this just controls the first paint.')}</p>
           </div>
           <div class="seg seg--wrap">
             {#each [
@@ -1514,7 +1495,7 @@
               <button type="button"
                       class="seg__opt {chartPrefs.timeWindow === opt.id ? 'seg__opt--on' : ''}"
                       onclick={() => chartPrefs.setTimeWindow(opt.id as 'all' | '30d' | '90d' | '6m' | '1y' | '2y' | '5y')}>
-                {opt.label}
+                {t(opt.label)}
               </button>
             {/each}
           </div>
@@ -1523,19 +1504,14 @@
         <!-- ───── Default zoom & axis padding ───── -->
         <section class="card p-5 space-y-3">
           <div>
-            <h2 class="text-sm font-semibold">Default zoom &amp; axis padding</h2>
-            <p class="text-xs text-fg2">
-              How much breathing room the axes leave around the data. The X axis is single-stage
-              — the chart always opens flush against the data. The Y axis is two-stage: the
-              "axis padding" is the maximum zoom-out, and the "default visible padding" is how
-              snug it opens.
-            </p>
+            <h2 class="text-sm font-semibold">{t('Default zoom & axis padding')}</h2>
+            <p class="text-xs text-fg2">{t('How much breathing room the axes leave around the data. The X axis is single-stage — the chart always opens flush against the data. The Y axis is two-stage: the "axis padding" is the maximum zoom-out, and the "default visible padding" is how snug it opens.')}</p>
           </div>
 
           <div class="row">
             <div class="row__body">
-              <div class="row__title">X-axis padding</div>
-              <div class="row__hint">Tight margin past the first/last point on the time axis. 0% pins the line edge-to-edge.</div>
+              <div class="row__title">{t('X-axis padding')}</div>
+              <div class="row__hint">{t('Tight margin past the first/last point on the time axis. 0% pins the line edge-to-edge.')}</div>
             </div>
             <div class="flex items-center gap-2">
               <input class="input w-20 text-right" type="number" min="0" max="50" step="1"
@@ -1550,8 +1526,8 @@
 
           <div class="row">
             <div class="row__body">
-              <div class="row__title">Y-axis maximum padding</div>
-              <div class="row__hint">How far past the data the user can zoom OUT vertically. Larger = more headroom for reference bands that extend beyond the data.</div>
+              <div class="row__title">{t('Y-axis maximum padding')}</div>
+              <div class="row__hint">{t('How far past the data the user can zoom OUT vertically. Larger = more headroom for reference bands that extend beyond the data.')}</div>
             </div>
             <div class="flex items-center gap-2">
               <input class="input w-20 text-right" type="number" min="0" max="200" step="5"
@@ -1566,8 +1542,8 @@
 
           <div class="row">
             <div class="row__body">
-              <div class="row__title">Y-axis default visible padding</div>
-              <div class="row__hint">How snug the chart opens vertically. Lower = data fills the plot at first paint.</div>
+              <div class="row__title">{t('Y-axis default visible padding')}</div>
+              <div class="row__hint">{t('How snug the chart opens vertically. Lower = data fills the plot at first paint.')}</div>
             </div>
             <div class="flex items-center gap-2">
               <input class="input w-20 text-right" type="number" min="0" max="50" step="1"
@@ -1584,10 +1560,10 @@
         <!-- ───── Reset chart defaults ───── -->
         <section class="card p-4 flex items-center justify-between gap-3">
           <div>
-            <h2 class="text-sm font-semibold">Reset chart defaults</h2>
-            <p class="text-xs text-fg2">Restore every chart preference on this page (and the toolbar toggles) to bundled defaults.</p>
+            <h2 class="text-sm font-semibold">{t('Reset chart defaults')}</h2>
+            <p class="text-xs text-fg2">{t('Restore every chart preference on this page (and the toolbar toggles) to bundled defaults.')}</p>
           </div>
-          <button class="btn" onclick={() => chartPrefs.resetAll()}>Reset</button>
+          <button class="btn" onclick={() => chartPrefs.resetAll()}>{t('Reset')}</button>
         </section>
       {/if}
 
@@ -1596,7 +1572,7 @@
         <section class="card p-5 space-y-3">
           <div class="flex items-baseline justify-between gap-3 flex-wrap">
             <div>
-              <h2 class="text-sm font-semibold">Comparison presets</h2>
+              <h2 class="text-sm font-semibold">{t('Comparison presets')}</h2>
               <p class="text-xs text-fg2">
                 Manage the preset buttons that appear above the analyte picker on the Compare page.
                 Bundled presets can be customised; your edits live as overrides so "reset to defaults"
@@ -1606,12 +1582,12 @@
               </p>
             </div>
             <div class="flex items-center gap-2">
-              <button class="btn text-xs" onclick={startCreatePreset}><Icon name="plus" size={13} /> New preset</button>
+              <button class="btn text-xs" onclick={startCreatePreset}><Icon name="plus" size={13} /> {t('New preset')}</button>
               <button class="btn text-xs"
                       onclick={resetAllPresets}
                       disabled={Object.keys(comparePresets.bundledOverrides).length === 0}
-                      title="Restore every bundled preset to its original definition. User presets are kept.">
-                <Icon name="refresh" size={13} /> Reset bundled
+                      title={t('Restore every bundled preset to its original definition. User presets are kept.') }>
+                <Icon name="refresh" size={13} /> {t('Reset bundled')}
               </button>
             </div>
           </div>
@@ -1628,40 +1604,40 @@
                     <div class="flex items-center gap-2">
                       <span class="font-medium text-fg1">{p.name}</span>
                       {#if p.kind === 'dynamic'}
-                        <span class="pill-muted text-[10px]" title="Patient-aware: analyte list is filled at runtime.">dynamic</span>
+                        <span class="pill-muted text-[10px]" title={t('Patient-aware: analyte list is filled at runtime.')}>{t('dynamic')}</span>
                       {/if}
                       {#if p.source === 'user'}
-                        <span class="pill-warn text-[10px]">user</span>
+                        <span class="pill-warn text-[10px]">{t('user')}</span>
                       {:else if overridden}
-                        <span class="pill-warn text-[10px]">customised</span>
+                        <span class="pill-warn text-[10px]">{t('customised')}</span>
                       {:else}
-                        <span class="pill-muted text-[10px]">bundled</span>
+                        <span class="pill-muted text-[10px]">{t('bundled')}</span>
                       {/if}
                       {#if hasFilters}
-                        <span class="pill-muted text-[10px] text-warn inline-flex items-center gap-1" title="Sets filter overrides on click"><Icon name="filter" size={11} /> filters</span>
+                        <span class="pill-muted text-[10px] text-warn inline-flex items-center gap-1" title={t('Sets filter overrides on click')}><Icon name="filter" size={11} /> {t('filters')}</span>
                       {/if}
                     </div>
                     <div class="text-fg3 text-[11px] mt-0.5">
                       {#if p.kind === 'static'}
-                        {p.ids.length} analyte{p.ids.length === 1 ? '' : 's'}
+                        {p.ids.length} {t(p.ids.length === 1 ? 'analyte' : 'analytes')}
                         {#if p.ids.length > 0}
                           · <span class="font-mono">{p.ids.slice(0, 6).join(', ')}{p.ids.length > 6 ? '…' : ''}</span>
                         {/if}
                       {:else}
-                        Resolved at runtime · <span class="font-mono">{p.dataSource}</span>
+                        {t('Resolved at runtime')} · <span class="font-mono">{p.dataSource}</span>
                       {/if}
                     </div>
                   </div>
                   <div class="flex items-center gap-1">
                     <button class="btn text-[11px] px-2 py-1" onclick={() => editing ? cancelEditPreset() : startEditPreset(p)}>
-                      {editing ? 'Cancel' : 'Edit'}
+                      {editing ? t('Cancel') : t('Edit')}
                     </button>
                     {#if overridden}
-                      <button class="btn text-[11px] px-2 py-1" onclick={() => resetPreset(p)} title="Restore bundled defaults"><Icon name="refresh" size={14} /></button>
+                      <button class="btn text-[11px] px-2 py-1" onclick={() => resetPreset(p)} title={t('Restore bundled defaults')}><Icon name="refresh" size={14} /></button>
                     {/if}
                     {#if p.source === 'user'}
                       <button class="btn text-[11px] px-2 py-1 text-crit border-crit/40 hover:bg-crit/10"
-                              onclick={() => deletePreset(p)} title="Delete this preset"><Icon name="trash" size={14} /></button>
+                              onclick={() => deletePreset(p)} title={t('Delete this preset')}><Icon name="trash" size={14} /></button>
                     {/if}
                   </div>
                 </div>
@@ -1670,13 +1646,13 @@
                 {#if editing}
                   <div class="mt-3 pt-3 border-t border-line space-y-3">
                     <label class="block">
-                      <span class="text-[11px] text-fg3 block mb-1">Display name</span>
-                      <input class="input w-full" type="text" bind:value={editorForm.name} placeholder="e.g. Iron panel" />
+                      <span class="text-[11px] text-fg3 block mb-1">{t('Display name')}</span>
+                      <input class="input w-full" type="text" bind:value={editorForm.name} placeholder={t('e.g. Iron panel')} />
                     </label>
 
                     {#if p.kind === 'static'}
                       <div>
-                        <span class="text-[11px] text-fg3 block mb-1">Analytes ({editorForm.ids.length})</span>
+                        <span class="text-[11px] text-fg3 block mb-1">{t('Analytes')} ({editorForm.ids.length})</span>
                         <!-- Picked list with reorder + remove -->
                         {#if editorForm.ids.length > 0}
                           <ul class="border border-line rounded mb-2 divide-y divide-line">
@@ -1688,15 +1664,15 @@
                                   <span class="text-fg3 ml-1 font-mono">{aid}</span>
                                 </span>
                                 <span class="flex items-center gap-1 shrink-0">
-                                  <button class="reorder-btn-mini" onclick={() => moveEditorAnalyte(idx, -1)} disabled={idx === 0} title="Move up"><Icon name="arrow-up" size={12} /></button>
-                                  <button class="reorder-btn-mini" onclick={() => moveEditorAnalyte(idx, +1)} disabled={idx === editorForm.ids.length - 1} title="Move down"><Icon name="arrow-down" size={12} /></button>
-                                  <button class="reorder-btn-mini text-crit" onclick={() => toggleEditorAnalyte(aid)} title="Remove"><Icon name="x" size={12} /></button>
+                                  <button class="reorder-btn-mini" onclick={() => moveEditorAnalyte(idx, -1)} disabled={idx === 0} title={t('Move up')}><Icon name="arrow-up" size={12} /></button>
+                                  <button class="reorder-btn-mini" onclick={() => moveEditorAnalyte(idx, +1)} disabled={idx === editorForm.ids.length - 1} title={t('Move down')}><Icon name="arrow-down" size={12} /></button>
+                                  <button class="reorder-btn-mini text-crit" onclick={() => toggleEditorAnalyte(aid)} title={t('Remove')}><Icon name="x" size={12} /></button>
                                 </span>
                               </li>
                             {/each}
                           </ul>
                         {/if}
-                        <input class="input w-full" type="text" placeholder="Search analytes to add…" bind:value={editorForm.analyteSearch} />
+                        <input class="input w-full" type="text" placeholder={t('Search analytes to add…')} bind:value={editorForm.analyteSearch} />
                         <div class="border border-line rounded mt-1 max-h-40 overflow-y-auto">
                           {#each allAnalytes
                             .filter((a) => !a.is_panel_header)
@@ -1713,17 +1689,16 @@
                                 <span class="font-medium">{a.pt_name}</span>
                                 <span class="text-fg3 ml-1 font-mono">{a.id}</span>
                               </span>
-                              <span class="text-accent text-[10px]">＋ add</span>
+                              <span class="text-accent text-[10px]">＋ {t('add')}</span>
                             </button>
                           {:else}
-                            <div class="px-2 py-2 text-[11px] text-fg3 text-center">No analytes match.</div>
+                            <div class="px-2 py-2 text-[11px] text-fg3 text-center">{t('No analytes match.')}</div>
                           {/each}
                         </div>
                       </div>
                     {:else}
                       <p class="text-[11px] text-fg3 italic">
-                        Dynamic preset — the analyte list is resolved per-patient at runtime
-                        ({p.dataSource}). You can rename it and attach filters here.
+                        {t('Dynamic preset — the analyte list is resolved per-patient at runtime')} ({p.dataSource}). {t('You can rename it and attach filters here.')}
                       </p>
                     {/if}
 
@@ -1732,61 +1707,61 @@
                       <label class="flex items-center gap-2 cursor-pointer text-xs text-fg2 mb-2">
                         <input type="checkbox" bind:checked={editorForm.useFilters} />
                         <span>
-                          Set filters when this preset is applied
-                          <span class="text-fg3 block text-[10px]">When off, applying the preset only changes the picked analytes; current filters stay as-is.</span>
+                          {t('Set filters when this preset is applied')}
+                          <span class="text-fg3 block text-[10px]">{t('When off, applying the preset only changes the picked analytes; current filters stay as-is.')}</span>
                         </span>
                       </label>
                       {#if editorForm.useFilters}
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-2 pl-6">
                           <label class="flex flex-col gap-1 text-[11px] text-fg3">
-                            <span>Date from</span>
+                            <span>{t('Date from')}</span>
                             <input class="input" type="date" bind:value={editorForm.filters.dateFromIso} />
                           </label>
                           <label class="flex flex-col gap-1 text-[11px] text-fg3">
-                            <span>Date until</span>
+                            <span>{t('Date until')}</span>
                             <input class="input" type="date" bind:value={editorForm.filters.dateUntilIso} />
                           </label>
                           <label class="flex flex-col gap-1 text-[11px] text-fg3">
-                            <span>Value min</span>
+                            <span>{t('Value min')}</span>
                             <input class="input" type="number" inputmode="decimal" bind:value={editorForm.filters.valueMin} />
                           </label>
                           <label class="flex flex-col gap-1 text-[11px] text-fg3">
-                            <span>Value max</span>
+                            <span>{t('Value max')}</span>
                             <input class="input" type="number" inputmode="decimal" bind:value={editorForm.filters.valueMax} />
                           </label>
                           <label class="flex flex-col gap-1 text-[11px] text-fg3">
-                            <span>Last N per analyte (0 = all)</span>
+                            <span>{t('Last N per analyte (0 = all)')}</span>
                             <input class="input" type="number" min="0" bind:value={editorForm.filters.lastNPerAnalyte} />
                           </label>
                           <label class="flex flex-col gap-1 text-[11px] text-fg3">
-                            <span>HRT anchor</span>
+                            <span>{t('HRT anchor')}</span>
                             <select class="select" bind:value={editorForm.filters.hrtFilter}>
-                              <option value="all">All readings</option>
-                              <option value="pre">Pre-HRT</option>
-                              <option value="post">Post-HRT</option>
+                              <option value="all">{t('All readings')}</option>
+                              <option value="pre">{t('Pre-HRT')}</option>
+                              <option value="post">{t('Post-HRT')}</option>
                             </select>
                           </label>
                           <label class="md:col-span-2 flex flex-col gap-1 text-[11px] text-fg3">
-                            <span>Exclude report IDs (comma/space-separated)</span>
+                            <span>{t('Exclude report IDs (comma/space-separated)')}</span>
                             <input class="input font-mono" type="text" bind:value={editorForm.filters.excludeReportIds} />
                           </label>
                           <div class="md:col-span-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
-                            <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.includeInlinePriors} /><span>Include inline-prior</span></label>
-                            <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.intersectOnly} /><span>Intersection only</span></label>
-                            <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.onlyNormal} /><span>Normal only</span></label>
-                            <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.onlyAbnormal} /><span class="text-warn">Abnormal</span></label>
-                            <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.onlyCritical} /><span class="text-crit">Critical</span></label>
-                            <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.onlyUnflagged} /><span class="text-fg3">Unflagged</span></label>
+                            <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.includeInlinePriors} /><span>{t('Include inline-prior')}</span></label>
+                            <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.intersectOnly} /><span>{t('Intersection only')}</span></label>
+                            <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.onlyNormal} /><span>{t('Normal only')}</span></label>
+                            <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.onlyAbnormal} /><span class="text-warn">{t('Abnormal')}</span></label>
+                            <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.onlyCritical} /><span class="text-crit">{t('Critical')}</span></label>
+                            <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.onlyUnflagged} /><span class="text-fg3">{t('Unflagged')}</span></label>
                           </div>
                         </div>
                       {/if}
                     </div>
 
                     <div class="flex justify-end gap-2 pt-1">
-                      <button class="btn" onclick={cancelEditPreset}>Cancel</button>
+                      <button class="btn" onclick={cancelEditPreset}>{t('Cancel')}</button>
                       <button class="btn-accent" onclick={savePreset}
                               disabled={!editorForm.name.trim() || (p.kind === 'static' && editorForm.ids.length === 0 && !editorForm.useFilters && creating)}>
-                        {creating ? 'Create preset' : 'Save changes'}
+                        {creating ? t('Create preset') : t('Save changes')}
                       </button>
                     </div>
                   </div>
@@ -1799,22 +1774,22 @@
               <li class="px-3 py-2 text-xs bg-bg2/50">
                 <div class="flex items-center justify-between gap-3 flex-wrap">
                   <div>
-                    <span class="font-medium text-fg1">New preset</span>
-                    <span class="pill-warn text-[10px] ml-2">user · draft</span>
+                    <span class="font-medium text-fg1">{t('New preset')}</span>
+                    <span class="pill-warn text-[10px] ml-2">{t('user')} · {t('draft')}</span>
                   </div>
                   <div class="flex items-center gap-1">
-                    <button class="btn text-[11px] px-2 py-1" onclick={cancelEditPreset}>Cancel</button>
+                    <button class="btn text-[11px] px-2 py-1" onclick={cancelEditPreset}>{t('Cancel')}</button>
                   </div>
                 </div>
                 <div class="mt-3 pt-3 border-t border-line space-y-3">
                   <label class="block">
-                    <span class="text-[11px] text-fg3 block mb-1">Display name</span>
+                    <span class="text-[11px] text-fg3 block mb-1">{t('Display name')}</span>
                     <!-- svelte-ignore a11y_autofocus — landing focus on the
                          Name field is the desired UX for "create preset". -->
-                    <input class="input w-full" type="text" bind:value={editorForm.name} placeholder="e.g. Liver — last year only" autofocus />
+                    <input class="input w-full" type="text" bind:value={editorForm.name} placeholder={t('e.g. Liver — last year only')} autofocus />
                   </label>
                   <div>
-                    <span class="text-[11px] text-fg3 block mb-1">Analytes ({editorForm.ids.length})</span>
+                    <span class="text-[11px] text-fg3 block mb-1">{t('Analytes')} ({editorForm.ids.length})</span>
                     {#if editorForm.ids.length > 0}
                       <ul class="border border-line rounded mb-2 divide-y divide-line">
                         {#each editorForm.ids as aid, idx (aid)}
@@ -1825,15 +1800,15 @@
                               <span class="text-fg3 ml-1 font-mono">{aid}</span>
                             </span>
                             <span class="flex items-center gap-1 shrink-0">
-                              <button class="reorder-btn-mini" onclick={() => moveEditorAnalyte(idx, -1)} disabled={idx === 0}><Icon name="arrow-up" size={12} /></button>
-                              <button class="reorder-btn-mini" onclick={() => moveEditorAnalyte(idx, +1)} disabled={idx === editorForm.ids.length - 1}><Icon name="arrow-down" size={12} /></button>
-                              <button class="reorder-btn-mini text-crit" onclick={() => toggleEditorAnalyte(aid)}><Icon name="x" size={12} /></button>
+                              <button class="reorder-btn-mini" onclick={() => moveEditorAnalyte(idx, -1)} disabled={idx === 0} title={t('Move up')}><Icon name="arrow-up" size={12} /></button>
+                              <button class="reorder-btn-mini" onclick={() => moveEditorAnalyte(idx, +1)} disabled={idx === editorForm.ids.length - 1} title={t('Move down')}><Icon name="arrow-down" size={12} /></button>
+                              <button class="reorder-btn-mini text-crit" onclick={() => toggleEditorAnalyte(aid)} title={t('Remove')}><Icon name="x" size={12} /></button>
                             </span>
                           </li>
                         {/each}
                       </ul>
                     {/if}
-                    <input class="input w-full" type="text" placeholder="Search analytes to add…" bind:value={editorForm.analyteSearch} />
+                    <input class="input w-full" type="text" placeholder={t('Search analytes to add…')} bind:value={editorForm.analyteSearch} />
                     <div class="border border-line rounded mt-1 max-h-40 overflow-y-auto">
                       {#each allAnalytes
                         .filter((a) => !a.is_panel_header)
@@ -1850,10 +1825,10 @@
                             <span class="font-medium">{a.pt_name}</span>
                             <span class="text-fg3 ml-1 font-mono">{a.id}</span>
                           </span>
-                          <span class="text-accent text-[10px]">＋ add</span>
+                            <span class="text-accent text-[10px]">＋ {t('add')}</span>
                         </button>
                       {:else}
-                        <div class="px-2 py-2 text-[11px] text-fg3 text-center">No analytes match.</div>
+                        <div class="px-2 py-2 text-[11px] text-fg3 text-center">{t('No analytes match.')}</div>
                       {/each}
                     </div>
                   </div>
@@ -1862,61 +1837,61 @@
                     <label class="flex items-center gap-2 cursor-pointer text-xs text-fg2 mb-2">
                       <input type="checkbox" bind:checked={editorForm.useFilters} />
                       <span>
-                        Set filters when this preset is applied
-                        <span class="text-fg3 block text-[10px]">When off, applying the preset only changes the picked analytes; current filters stay as-is.</span>
+                        {t('Set filters when this preset is applied')}
+                        <span class="text-fg3 block text-[10px]">{t('When off, applying the preset only changes the picked analytes; current filters stay as-is.')}</span>
                       </span>
                     </label>
                     {#if editorForm.useFilters}
                       <div class="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-2 pl-6">
                         <label class="flex flex-col gap-1 text-[11px] text-fg3">
-                          <span>Date from</span>
+                          <span>{t('Date from')}</span>
                           <input class="input" type="date" bind:value={editorForm.filters.dateFromIso} />
                         </label>
                         <label class="flex flex-col gap-1 text-[11px] text-fg3">
-                          <span>Date until</span>
+                          <span>{t('Date until')}</span>
                           <input class="input" type="date" bind:value={editorForm.filters.dateUntilIso} />
                         </label>
                         <label class="flex flex-col gap-1 text-[11px] text-fg3">
-                          <span>Value min</span>
+                          <span>{t('Value min')}</span>
                           <input class="input" type="number" inputmode="decimal" bind:value={editorForm.filters.valueMin} />
                         </label>
                         <label class="flex flex-col gap-1 text-[11px] text-fg3">
-                          <span>Value max</span>
+                          <span>{t('Value max')}</span>
                           <input class="input" type="number" inputmode="decimal" bind:value={editorForm.filters.valueMax} />
                         </label>
                         <label class="flex flex-col gap-1 text-[11px] text-fg3">
-                          <span>Last N per analyte (0 = all)</span>
+                          <span>{t('Last N per analyte (0 = all)')}</span>
                           <input class="input" type="number" min="0" bind:value={editorForm.filters.lastNPerAnalyte} />
                         </label>
                         <label class="flex flex-col gap-1 text-[11px] text-fg3">
-                          <span>HRT anchor</span>
+                          <span>{t('HRT anchor')}</span>
                           <select class="select" bind:value={editorForm.filters.hrtFilter}>
-                            <option value="all">All readings</option>
-                            <option value="pre">Pre-HRT</option>
-                            <option value="post">Post-HRT</option>
+                            <option value="all">{t('All readings')}</option>
+                            <option value="pre">{t('Pre-HRT')}</option>
+                            <option value="post">{t('Post-HRT')}</option>
                           </select>
                         </label>
                         <label class="md:col-span-2 flex flex-col gap-1 text-[11px] text-fg3">
-                          <span>Exclude report IDs (comma/space-separated)</span>
+                          <span>{t('Exclude report IDs (comma/space-separated)')}</span>
                           <input class="input font-mono" type="text" bind:value={editorForm.filters.excludeReportIds} />
                         </label>
                         <div class="md:col-span-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
-                          <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.includeInlinePriors} /><span>Include inline-prior</span></label>
-                          <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.intersectOnly} /><span>Intersection only</span></label>
-                          <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.onlyNormal} /><span>Normal only</span></label>
-                          <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.onlyAbnormal} /><span class="text-warn">Abnormal</span></label>
-                          <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.onlyCritical} /><span class="text-crit">Critical</span></label>
-                          <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.onlyUnflagged} /><span class="text-fg3">Unflagged</span></label>
+                          <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.includeInlinePriors} /><span>{t('Include inline-prior')}</span></label>
+                          <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.intersectOnly} /><span>{t('Intersection only')}</span></label>
+                          <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.onlyNormal} /><span>{t('Normal only')}</span></label>
+                          <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.onlyAbnormal} /><span class="text-warn">{t('Abnormal')}</span></label>
+                          <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.onlyCritical} /><span class="text-crit">{t('Critical')}</span></label>
+                          <label class="flex items-center gap-2"><input type="checkbox" bind:checked={editorForm.filters.onlyUnflagged} /><span class="text-fg3">{t('Unflagged')}</span></label>
                         </div>
                       </div>
                     {/if}
                   </div>
 
                   <div class="flex justify-end gap-2 pt-1">
-                    <button class="btn" onclick={cancelEditPreset}>Cancel</button>
+                    <button class="btn" onclick={cancelEditPreset}>{t('Cancel')}</button>
                     <button class="btn-accent" onclick={savePreset}
                             disabled={!editorForm.name.trim() || (editorForm.ids.length === 0 && !editorForm.useFilters)}>
-                      Create preset
+                      {t('Create preset')}
                     </button>
                   </div>
                 </div>
@@ -1931,31 +1906,31 @@
           <div class="flex items-start gap-3">
             <span class="section-icon"><Icon name="shield" size={18} /></span>
             <div>
-              <h2 class="text-sm font-semibold">Device security</h2>
-              <p class="text-xs text-fg2 mt-1">Manage the protection layers used by this local instance. The encrypted SQLCipher database and managed PDF cache remain protected whether or not OS-vault unlock is enabled.</p>
+              <h2 class="text-sm font-semibold">{t('Device security')}</h2>
+              <p class="text-xs text-fg2 mt-1">{t('Manage the protection layers used by this local instance. The encrypted SQLCipher database and managed PDF cache remain protected whether or not OS-vault unlock is enabled.')}</p>
             </div>
           </div>
 
           {#if securityStatus}
             <div class="security-status-grid">
               <div class="security-status-card">
-                <span class="text-[11px] text-fg3">Data master key</span>
+                <span class="text-[11px] text-fg3">{t('Data master key')}</span>
                 <strong class={securityStatus.master_key_enabled ? 'text-ok' : 'text-warn'}>
-                  {securityStatus.master_key_enabled ? 'Enabled' : 'Not initialized'}
+                  {securityStatus.master_key_enabled ? t('Enabled') : t('Not initialized')}
                 </strong>
-                <span class="text-[11px] text-fg3">Database and PDF cache encryption key</span>
+                <span class="text-[11px] text-fg3">{t('Database and PDF cache encryption key')}</span>
               </div>
               <div class="security-status-card">
-                <span class="text-[11px] text-fg3">Native OS vault</span>
+                <span class="text-[11px] text-fg3">{t('Native OS vault')}</span>
                 <strong class={securityStatus.os_vault_enabled && securityStatus.os_vault_credential_present ? 'text-ok' : 'text-fg2'}>
-                  {securityStatus.os_vault_enabled && securityStatus.os_vault_credential_present ? 'Enabled' : 'Not enabled'}
+                  {securityStatus.os_vault_enabled && securityStatus.os_vault_credential_present ? t('Enabled') : t('Not enabled')}
                 </strong>
                 <span class="text-[11px] text-fg3">{securityStatus.os_vault_platform}</span>
               </div>
               <div class="security-status-card">
-                <span class="text-[11px] text-fg3">Session</span>
-                <strong class={securityStatus.session_unlocked ? 'text-ok' : 'text-warn'}>{securityStatus.session_unlocked ? 'Unlocked' : 'Locked'}</strong>
-                <span class="text-[11px] text-fg3">DMK held only in native memory</span>
+                <span class="text-[11px] text-fg3">{t('Session')}</span>
+                <strong class={securityStatus.session_unlocked ? 'text-ok' : 'text-warn'}>{securityStatus.session_unlocked ? t('Unlocked') : t('Locked')}</strong>
+                <span class="text-[11px] text-fg3">{t('DMK held only in native memory')}</span>
               </div>
             </div>
 
@@ -1966,103 +1941,103 @@
             <div class="security-actions">
               {#if securityStatus.os_vault_enabled && securityStatus.os_vault_credential_present}
                 <button class="btn" type="button" onclick={disableOsVault}>
-                  <Icon name="lock" size={14} /> Disable OS vault
+                  <Icon name="lock" size={14} /> {t('Disable OS vault')}
                 </button>
                 <label class="security-toggle">
                   <input type="checkbox" checked={securityStatus.os_vault_auto_unlock} onchange={(event) => toggleAutoUnlock((event.currentTarget as HTMLInputElement).checked)} />
-                  <span><strong>Automatic unlock</strong><small>Unlock at launch when the OS credential store permits it.</small></span>
+                  <span><strong>{t('Automatic unlock')}</strong><small>{t('Unlock at launch when the OS credential store permits it.')}</small></span>
                 </label>
               {:else}
                 <button class="btn-accent" type="button" disabled={!securityStatus.os_vault_supported} onclick={enableOsVault}>
-                  <Icon name="shield" size={14} /> Enable native OS vault
+                  <Icon name="shield" size={14} /> {t('Enable native OS vault')}
                 </button>
-                <span class="text-[11px] text-fg3">Enable this while unlocked to place a device-bound DMK copy in {securityStatus.os_vault_platform}.</span>
+                <span class="text-[11px] text-fg3">{t('Enable this while unlocked to place a device-bound DMK copy in {platform}.', { platform: securityStatus.os_vault_platform })}</span>
               {/if}
             </div>
 
             <section class="security-subsection">
               <div>
-                <h3 class="text-xs font-semibold">Vault password</h3>
+                <h3 class="text-xs font-semibold">{t('Vault password')}</h3>
                 <p class="text-[11px] text-fg3">
                   {authStatus?.has_password
-                    ? 'Change the password used to recover this encrypted vault.'
-                    : 'Add a password recovery method to this OS-vault-only instance.'}
+                    ? t('Change the password used to recover this encrypted vault.')
+                    : t('Add a password recovery method to this OS-vault-only instance.')}
                 </p>
               </div>
               <div class="security-password-form">
                 {#if authStatus?.has_password}
-                  <input class="security-input" type="password" bind:value={vaultPasswordCurrent} placeholder="Current vault password" autocomplete="current-password" />
+                  <input class="security-input" type="password" bind:value={vaultPasswordCurrent} placeholder={t('Current vault password')} autocomplete="current-password" />
                 {/if}
-                <input class="security-input" type="password" bind:value={vaultPasswordNew} placeholder={authStatus?.has_password ? 'New vault password' : 'Vault password'} autocomplete="new-password" />
-                <input class="security-input" type="password" bind:value={vaultPasswordConfirm} placeholder="Confirm new password" autocomplete="new-password" />
+                <input class="security-input" type="password" bind:value={vaultPasswordNew} placeholder={authStatus?.has_password ? t('New vault password') : t('Vault password')} autocomplete="new-password" />
+                <input class="security-input" type="password" bind:value={vaultPasswordConfirm} placeholder={t('Confirm new password')} autocomplete="new-password" />
                 <button class="btn-accent security-password-button" type="button" disabled={!authStatus || vaultPasswordBusy || !vaultPasswordNew || !vaultPasswordConfirm || (authStatus?.has_password && !vaultPasswordCurrent)} onclick={saveVaultPassword}>
-                  <Icon name="key" size={14} /> {vaultPasswordBusy ? 'Saving…' : authStatus?.has_password ? 'Change password' : 'Add password'}
+                  <Icon name="key" size={14} /> {vaultPasswordBusy ? t('Saving…') : authStatus?.has_password ? t('Change password') : t('Add password')}
                 </button>
                 {#if authStatus?.has_password}
                   <button class="btn security-password-remove" type="button" disabled={vaultPasswordBusy || (!authStatus.has_passkey && !authStatus.os_vault_configured)} onclick={removeVaultPassword}>
-                    <Icon name="trash" size={14} /> Remove password
+                    <Icon name="trash" size={14} /> {t('Remove password')}
                   </button>
                 {/if}
               </div>
               {#if authStatus?.has_password && !authStatus.has_passkey && !authStatus.os_vault_configured}
-                <p class="text-[11px] text-fg3">Add a passkey or enable the native OS vault before removing the last recovery method.</p>
+                <p class="text-[11px] text-fg3">{t('Add a passkey or enable the native OS vault before removing the last recovery method.')}</p>
               {/if}
             </section>
 
             <section class="security-subsection">
               <div>
-                <h3 class="text-xs font-semibold">Passkeys</h3>
-                <p class="text-[11px] text-fg3">Register WebAuthn authenticators such as Windows Hello, Touch ID, or a hardware key. They unlock locally through the authenticator PRF and never replace the encrypted vault.</p>
+                <h3 class="text-xs font-semibold">{t('Passkeys')}</h3>
+                <p class="text-[11px] text-fg3">{t('Register WebAuthn authenticators such as Windows Hello, Touch ID, or a hardware key. They unlock locally through the authenticator PRF and never replace the encrypted vault.')}</p>
               </div>
               {#if authStatus?.passkeys?.length}
                 <div class="passkey-list">
                   {#each authStatus.passkeys as passkey}
                     <div class="passkey-row">
-                      <span><Icon name="key" size={14} /> {passkey.label || 'Passkey'}</span>
-                      <button class="mini-btn" type="button" onclick={() => removePasskey(passkey)}>Remove</button>
+                      <span><Icon name="key" size={14} /> {passkey.label || t('Passkey')}</span>
+                      <button class="mini-btn" type="button" onclick={() => removePasskey(passkey)}>{t('Remove')}</button>
                     </div>
                   {/each}
                 </div>
               {:else}
-                <p class="text-[11px] text-fg3">No passkeys are configured.</p>
+                <p class="text-[11px] text-fg3">{t('No passkeys are configured.')}</p>
               {/if}
               <div class="security-inline-form">
-                <input class="security-input security-input--passkey" bind:value={passkeyLabel} placeholder="Passkey label (optional)" maxlength="80" />
+                <input class="security-input security-input--passkey" bind:value={passkeyLabel} placeholder={t('Passkey label (optional)')} maxlength="80" />
                 <button class="btn" type="button" disabled={passkeyBusy || !auth.isWebAuthnAvailable()} onclick={registerPasskey}>
-                  <Icon name="plus" size={14} /> {passkeyBusy ? 'Registering…' : 'Add passkey'}
+                  <Icon name="plus" size={14} /> {passkeyBusy ? t('Registering…') : t('Add passkey')}
                 </button>
               </div>
-              {#if !auth.isWebAuthnAvailable()}<p class="text-[11px] text-fg3">WebAuthn is unavailable in this WebView.</p>{/if}
+              {#if !auth.isWebAuthnAvailable()}<p class="text-[11px] text-fg3">{t('WebAuthn is unavailable in this WebView.')}</p>{/if}
             </section>
 
             <section class="security-subsection">
               <div>
-                <h3 class="text-xs font-semibold">Rotate data master key</h3>
-                <p class="text-[11px] text-fg3">Re-key the encrypted database, managed PDFs, native OS-vault copy, password wrapper, and registered passkey wrappers. Each configured passkey will ask for a fresh authenticator assertion.</p>
+                <h3 class="text-xs font-semibold">{t('Rotate data master key')}</h3>
+                <p class="text-[11px] text-fg3">{t('Re-key the encrypted database, managed PDFs, native OS-vault copy, password wrapper, and registered passkey wrappers. Each configured passkey will ask for a fresh authenticator assertion.')}</p>
               </div>
               <div class="security-rotate-form">
-                <p class="text-[11px] text-fg3">Your unlocked session authorizes this rotation; no password entry is required.</p>
+                <p class="text-[11px] text-fg3">{t('Your unlocked session authorizes this rotation; no password entry is required.')}</p>
                 <button class="btn-accent security-rotate-button" type="button" disabled={rotationBusy || !securityStatus.master_key_enabled} onclick={rotateMasterKey}>
-                  <Icon name="refresh" size={14} /> {rotationBusy ? 'Rotating…' : 'Rotate master key'}
+                  <Icon name="refresh" size={14} /> {rotationBusy ? t('Rotating…') : t('Rotate master key')}
                 </button>
               </div>
             </section>
           {:else}
-            <p class="text-xs text-fg3">Loading security status…</p>
+            <p class="text-xs text-fg3">{t('Loading security status…')}</p>
           {/if}
 
           <div class="security-notes">
-            <p><strong>Protection model.</strong> Passwords and passkeys continue to work as recovery methods. The OS vault is an additional device-local wrapper, not a replacement for the encrypted database.</p>
-            <p><strong>Shared-device warning.</strong> Anyone who can unlock this operating-system account may be able to use the optional automatic unlock setting. Keep it off on shared or unattended machines.</p>
+            <p><strong>{t('Protection model.')}</strong> {t('Passwords and passkeys continue to work as recovery methods. The OS vault is an additional device-local wrapper, not a replacement for the encrypted database.')}</p>
+            <p><strong>{t('Shared-device warning.')}</strong> {t('Anyone who can unlock this operating-system account may be able to use the optional automatic unlock setting. Keep it off on shared or unattended machines.')}</p>
           </div>
         </section>
 
         <section class="card p-5 space-y-2">
-          <h2 class="text-sm font-semibold">Security checklist</h2>
+          <h2 class="text-sm font-semibold">{t('Security checklist')}</h2>
           <ul class="text-xs text-fg2 space-y-1 list-disc pl-4">
-            <li>Use a strong vault password and keep at least one recovery method available.</li>
-            <li>Lock the app when stepping away from an unlocked session.</li>
-            <li>Export backups to a separately protected location; exported PDFs and the database remain encrypted.</li>
+            <li>{t('Use a strong vault password and keep at least one recovery method available.')}</li>
+            <li>{t('Lock the app when stepping away from an unlocked session.')}</li>
+            <li>{t('Export backups to a separately protected location; exported PDFs and the database remain encrypted.')}</li>
           </ul>
         </section>
       {/if}
@@ -2070,11 +2045,8 @@
       {#if activeTab === 'ingestion'}
         <section class="card p-5 space-y-4">
           <div>
-            <h2 class="text-sm font-semibold">Ingestion pipeline</h2>
-            <p class="text-xs text-fg2">
-              Choose which extraction stages are allowed when a PDF is imported. Tier 1 is the
-              foundation; higher tiers are opt-in fallbacks for difficult documents.
-            </p>
+            <h2 class="text-sm font-semibold">{t('Ingestion pipeline')}</h2>
+            <p class="text-xs text-fg2">{t('Choose which extraction stages are allowed when a PDF is imported. Tier 1 is the foundation; higher tiers are opt-in fallbacks for difficult documents.')}</p>
           </div>
           <div class="ingestion-tier-grid">
             <label class="ingestion-tier-toggle">
@@ -2082,8 +2054,8 @@
                 checked={ingestionTierEnabled('pdf_extraction')}
                 onchange={(e) => toggleIngestionTier('pdf_extraction', e.currentTarget.checked)} />
               <span>
-                <strong><span class="ingestion-tier-badge">Tier 1</span> PDF extraction</strong>
-                <small>Required foundation for every import.</small>
+                <strong><span class="ingestion-tier-badge">{t('Tier 1')}</span> {t('PDF extraction')}</strong>
+                <small>{t('Required foundation for every import.')}</small>
               </span>
             </label>
             <label class="ingestion-tier-toggle">
@@ -2092,8 +2064,8 @@
                 disabled={!tess?.compiled}
                 onchange={(e) => toggleIngestionTier('ocr', e.currentTarget.checked)} />
               <span>
-                <strong><span class="ingestion-tier-badge">Tier 2</span> OCR</strong>
-                <small>Run Tesseract when embedded PDF text is sparse.</small>
+                <strong><span class="ingestion-tier-badge">{t('Tier 2')}</span> {t('OCR')}</strong>
+                <small>{t('Run Tesseract when embedded PDF text is sparse.')}</small>
               </span>
             </label>
             <label class="ingestion-tier-toggle">
@@ -2101,22 +2073,22 @@
                 checked={ingestionTierEnabled('hybrid_ocr_llm')}
                 onchange={(e) => toggleIngestionTier('hybrid_ocr_llm', e.currentTarget.checked)} />
               <span>
-                <strong><span class="ingestion-tier-badge">Tier 3</span> Hybrid OCR + LLM</strong>
-                <small>Repair low-confidence OCR with Phi-4 when the model is enabled and ready.</small>
+                <strong><span class="ingestion-tier-badge">{t('Tier 3')}</span> {t('Hybrid OCR + LLM')}</strong>
+                <small>{t('Repair low-confidence OCR with Phi-4 when the model is enabled and ready.')}</small>
               </span>
             </label>
           </div>
           {#if !ingestionTierEnabled('pdf_extraction')}
-            <p class="ingestion-tier-warning"><Icon name="warning" size={14} /> Tier 1 is disabled; imports will fail closed until PDF extraction is enabled.</p>
+            <p class="ingestion-tier-warning"><Icon name="warning" size={14} /> {t('Tier 1 is disabled; imports will fail closed until PDF extraction is enabled.')}</p>
           {/if}
         </section>
 
         <section class="card p-5 space-y-4">
           <div class="ingestion-tier-heading">
-            <span class="ingestion-tier-badge">Tier 1</span>
+            <span class="ingestion-tier-badge">{t('Tier 1')}</span>
             <div>
-              <h2 class="text-sm font-semibold">PDF extraction</h2>
-              <p class="text-xs text-fg2">Always-on baseline. Other tiers below are opt-in.</p>
+              <h2 class="text-sm font-semibold">{t('PDF extraction')}</h2>
+              <p class="text-xs text-fg2">{t('Always-on baseline. Other tiers below are opt-in.')}</p>
             </div>
           </div>
           {#if pdfium}
@@ -2124,12 +2096,12 @@
               <div class="row__body">
                 <div class="row__title">pdfium</div>
                 <div class="row__hint">
-                  {pdfium.available ? 'Library bound. Ingestion ready.' : 'Library missing — ingestion will fail.'}
+                  {pdfium.available ? t('Library bound. Ingestion ready.') : t('Library missing — ingestion will fail.')}
                 </div>
-                <div class="tier-size">Estimated {formatDownloadBytes(pdfium.estimated_size_bytes)} · on disk {formatDownloadBytes(pdfium.disk_size_bytes)}</div>
+                <div class="tier-size">{t('Estimated')} {formatDownloadBytes(pdfium.estimated_size_bytes)} · {t('on disk')} {formatDownloadBytes(pdfium.disk_size_bytes)}</div>
                 {#if pdfium.error}<div class="text-[11px] text-warn break-words mt-1">{pdfium.error}</div>{/if}
               </div>
-              <span class={pdfium.available ? 'pill-ok' : 'pill-crit'}>{pdfium.available ? 'OK' : 'Missing'}</span>
+              <span class={pdfium.available ? 'pill-ok' : 'pill-crit'}>{pdfium.available ? t('OK') : t('Missing')}</span>
             </div>
           {/if}
           {#if tierDownload && downloadProgress}
@@ -2140,11 +2112,11 @@
                   <span>{downloadProgress.file}</span>
                 </div>
                 <button class="mini-btn" type="button" disabled={downloadCanceling} onclick={cancelTierDownload}>
-                  {downloadCanceling ? 'Canceling…' : 'Cancel'}
+                  {downloadCanceling ? t('Canceling…') : t('Cancel')}
                 </button>
               </div>
               {#if downloadProgress.resource === 'olmocr'}
-                <div class="download-progress__meta">File {downloadProgress.file_index + 1} of {downloadProgress.file_count}</div>
+                <div class="download-progress__meta">{t('File {current} of {total}', { current: downloadProgress.file_index + 1, total: downloadProgress.file_count })}</div>
               {/if}
               <div class="download-progress__track">
                 <div class:download-progress__fill--indeterminate={downloadProgress.progress === null}
@@ -2161,44 +2133,41 @@
 
         <section class="card p-5 space-y-3">
           <div>
-            <h2 class="text-sm font-semibold">Higher-tier extraction resources</h2>
-            <p class="text-xs text-fg3">
-              These resources support Tier 2 and Tier 3 only. Each loads only when used; compile
-              with the relevant cargo feature to make a resource available.
-            </p>
+            <h2 class="text-sm font-semibold">{t('Higher-tier extraction resources')}</h2>
+            <p class="text-xs text-fg3">{t('These resources support Tier 2 and Tier 3 only. Each loads only when used; compile with the relevant cargo feature to make a resource available.')}</p>
           </div>
 
           <div class="ingestion-tier-heading">
-            <span class="ingestion-tier-badge">Tier 2</span>
+            <span class="ingestion-tier-badge">{t('Tier 2')}</span>
             <div>
-              <h3>OCR</h3>
-              <p>Use Tesseract when a PDF has sparse or unusable embedded text.</p>
+              <h3>{t('OCR')}</h3>
+              <p>{t('Use Tesseract when a PDF has sparse or unusable embedded text.')}</p>
             </div>
           </div>
           {#if tess}
             <label class="row">
               <div class="row__body">
-                <div class="row__title">Tesseract OCR <span class="row__sub">no LLM</span></div>
+              <div class="row__title">{t('Tesseract OCR')} <span class="row__sub">{t('no LLM')}</span></div>
                 <div class="row__hint">
-                  compiled: {tess.compiled ? 'yes' : 'no — rebuild with --features tesseract-ocr'} ·
-                  languages: {tess.model_present ? 'present' : 'missing'} ·
-                  runtime: {tess.loaded ? 'ready' : 'unavailable'}
+                  {t('compiled')}: {tess.compiled ? t('yes') : t('no — rebuild with --features tesseract-ocr')} ·
+                  {t('languages')}: {tess.model_present ? t('present') : t('missing')} ·
+                  {t('runtime')}: {tess.loaded ? t('ready') : t('unavailable')}
                 </div>
-                <div class="tier-size">Estimated {formatDownloadBytes(tess.estimated_size_bytes)} · on disk {formatDownloadBytes(tess.disk_size_bytes)}</div>
+                <div class="tier-size">{t('Estimated')} {formatDownloadBytes(tess.estimated_size_bytes)} · {t('on disk')} {formatDownloadBytes(tess.disk_size_bytes)}</div>
                 {#if tess.last_error}
                   <div class="row__hint row__hint--error">{tess.last_error}</div>
                 {/if}
                 <div class="tier-resource-help">
                   <button class="mini-btn" disabled={tierDownload !== null} onclick={() => downloadTesseractLanguage('eng')}>
-                    {tierDownload === 'tesseract' ? 'Downloading…' : 'Download eng data'}
+                    {tierDownload === 'tesseract' ? t('Downloading…') : t('Download eng data')}
                   </button>
                   <button class="mini-btn" disabled={tierDownload !== null} onclick={() => downloadTesseractLanguage('por')}>
-                    {tierDownload === 'tesseract' ? 'Downloading…' : 'Download por data'}
+                    {tierDownload === 'tesseract' ? t('Downloading…') : t('Download por data')}
                   </button>
                   <button class="mini-btn" disabled={!tess.model_present || tierDownload !== null || tierDelete !== null} onclick={() => deleteManagedModel('tesseract')}>
-                    {tierDelete === 'tesseract' ? 'Deleting…' : 'Delete managed data'}
+                    {tierDelete === 'tesseract' ? t('Deleting…') : t('Delete managed data')}
                   </button>
-                  <button class="mini-btn" onclick={() => visit('https://github.com/tesseract-ocr/tessdoc/blob/main/Downloads.md')}>Native binary guide</button>
+                  <button class="mini-btn" onclick={() => visit('https://github.com/tesseract-ocr/tessdoc/blob/main/Downloads.md')}>{t('Native binary guide')}</button>
                 </div>
               </div>
               <input type="checkbox"
@@ -2209,22 +2178,22 @@
           {/if}
 
           <div class="ingestion-tier-heading">
-            <span class="ingestion-tier-badge">Tier 3</span>
+            <span class="ingestion-tier-badge">{t('Tier 3')}</span>
             <div>
-              <h3>Hybrid OCR + LLM</h3>
-              <p>Use optional repair and vision models for difficult or low-confidence results.</p>
+              <h3>{t('Hybrid OCR + LLM')}</h3>
+              <p>{t('Use optional repair and vision models for difficult or low-confidence results.')}</p>
             </div>
           </div>
           {#if llm}
             <div class="row">
               <div class="row__body">
-                <div class="row__title">Phi-4-mini-reasoning <span class="row__sub">repair tier</span></div>
+                <div class="row__title">Phi-4-mini-reasoning <span class="row__sub">{t('repair tier')}</span></div>
                 <div class="row__hint">
-                  compiled: {llm.compiled ? 'yes' : 'no — rebuild with --features embedded-llm'} ·
-                  model: {llm.model_present ? 'present' : 'missing'} ·
-                  loaded: {llm.loaded ? 'yes' : llm.loading ? 'loading' : 'no'}
+                  {t('compiled')}: {llm.compiled ? t('yes') : t('no — rebuild with --features embedded-llm')} ·
+                  {t('model')}: {llm.model_present ? t('present') : t('missing')} ·
+                  {t('loaded')}: {llm.loaded ? t('yes') : llm.loading ? t('loading') : t('no')}
                 </div>
-                <div class="tier-size">Estimated {formatDownloadBytes(llm.estimated_size_bytes)} · on disk {formatDownloadBytes(llm.disk_size_bytes)}</div>
+                <div class="tier-size">{t('Estimated')} {formatDownloadBytes(llm.estimated_size_bytes)} · {t('on disk')} {formatDownloadBytes(llm.disk_size_bytes)}</div>
                 <div class="model-path" title={modelPathHint('llm', llm)}>
                   model_path: {modelPathHint('llm', llm)}
                 </div>
@@ -2237,24 +2206,24 @@
                 <button class="mini-btn"
                   disabled={!llm.compiled || tierDownload !== null}
                   onclick={() => downloadModel('llm')}>
-                  {tierDownload === 'llm' ? 'Downloading…' : 'Download'}
+                  {tierDownload === 'llm' ? t('Downloading…') : t('Download')}
                 </button>
                 <button class="mini-btn"
                   disabled={!managedModelConfigured('llm', llm) || tierDownload !== null || tierDelete !== null}
                   onclick={() => deleteManagedModel('llm')}>
-                  {tierDelete === 'llm' ? 'Deleting…' : 'Delete'}
+                  {tierDelete === 'llm' ? t('Deleting…') : t('Delete')}
                 </button>
                 <button class="mini-btn"
                   disabled={tierAction !== null}
-                  onclick={() => chooseModelPath('llm')}>Browse</button>
+                  onclick={() => chooseModelPath('llm')}>{t('Browse')}</button>
                 <button class="mini-btn"
                   disabled={!llm.compiled || !configuredModelPath('llm', llm) || llm.loaded || llm.loading || tierAction !== null}
                   onclick={() => runTierAction('llm', 'load', configuredModelPath('llm', llm))}>
-                  {tierAction === 'llm' || llm.loading ? 'Loading' : 'Load'}
+                  {tierAction === 'llm' || llm.loading ? t('Loading') : t('Load')}
                 </button>
                 <button class="mini-btn"
                   disabled={!llm.loaded || llm.loading || tierAction !== null}
-                  onclick={() => runTierAction('llm', 'unload')}>Unload</button>
+                  onclick={() => runTierAction('llm', 'unload')}>{t('Unload')}</button>
                 <input type="checkbox"
                   bind:checked={llm.enabled_in_settings}
                   disabled={!llm.compiled || !llm.model_present}
@@ -2266,13 +2235,13 @@
           {#if olm}
             <div class="row">
               <div class="row__body">
-                <div class="row__title">olmOCR-2 <span class="row__sub">vision OCR</span></div>
+              <div class="row__title">olmOCR-2 <span class="row__sub">{t('vision OCR')}</span></div>
                 <div class="row__hint">
-                  compiled: {olm.compiled ? 'yes' : 'no — rebuild with --features embedded-ocr-vision'} ·
-                  model: {olm.model_present ? 'present' : 'missing'} ·
-                  loaded: {olm.loaded ? 'yes' : olm.loading ? 'loading' : 'no'}
+                  {t('compiled')}: {olm.compiled ? t('yes') : t('no — rebuild with --features embedded-ocr-vision')} ·
+                  {t('model')}: {olm.model_present ? t('present') : t('missing')} ·
+                  {t('loaded')}: {olm.loaded ? t('yes') : olm.loading ? t('loading') : t('no')}
                 </div>
-                <div class="tier-size">Estimated {formatDownloadBytes(olm.estimated_size_bytes)} · on disk {formatDownloadBytes(olm.disk_size_bytes)}</div>
+                <div class="tier-size">{t('Estimated')} {formatDownloadBytes(olm.estimated_size_bytes)} · {t('on disk')} {formatDownloadBytes(olm.disk_size_bytes)}</div>
                 <div class="model-path" title={modelPathHint('olmocr', olm)}>
                   model_path: {modelPathHint('olmocr', olm)}
                 </div>
@@ -2285,24 +2254,24 @@
                 <button class="mini-btn"
                   disabled={!olm.compiled || tierDownload !== null}
                   onclick={() => downloadModel('olmocr')}>
-                  {tierDownload === 'olmocr' ? 'Downloading…' : 'Download'}
+                  {tierDownload === 'olmocr' ? t('Downloading…') : t('Download')}
                 </button>
                 <button class="mini-btn"
                   disabled={!managedModelConfigured('olmocr', olm) || tierDownload !== null || tierDelete !== null}
                   onclick={() => deleteManagedModel('olmocr')}>
-                  {tierDelete === 'olmocr' ? 'Deleting…' : 'Delete'}
+                  {tierDelete === 'olmocr' ? t('Deleting…') : t('Delete')}
                 </button>
                 <button class="mini-btn"
                   disabled={tierAction !== null}
-                  onclick={() => chooseModelPath('olmocr')}>Browse</button>
+                  onclick={() => chooseModelPath('olmocr')}>{t('Browse')}</button>
                 <button class="mini-btn"
                   disabled={!olm.compiled || !configuredModelPath('olmocr', olm) || olm.loaded || olm.loading || tierAction !== null}
                   onclick={() => runTierAction('olmocr', 'load', configuredModelPath('olmocr', olm))}>
-                  {tierAction === 'olmocr' || olm.loading ? 'Loading' : 'Load'}
+                  {tierAction === 'olmocr' || olm.loading ? t('Loading') : t('Load')}
                 </button>
                 <button class="mini-btn"
                   disabled={!olm.loaded || olm.loading || tierAction !== null}
-                  onclick={() => runTierAction('olmocr', 'unload')}>Unload</button>
+                  onclick={() => runTierAction('olmocr', 'unload')}>{t('Unload')}</button>
                 <input type="checkbox"
                   bind:checked={olm.enabled_in_settings}
                   disabled={!olm.compiled || !olm.model_present}
@@ -2313,31 +2282,26 @@
         </section>
       {/if}
 
-      {#if activeTab === 'ontology'}
+      {#if activeTab === 'library'}
         <section class="card p-5 space-y-3">
           <div class="flex items-baseline justify-between gap-3 flex-wrap">
             <div>
-              <h2 class="text-sm font-semibold">Analyte ontology</h2>
-              <p class="text-xs text-fg2">
-                Re-installs analyte definitions (descriptions, categorical tiers, default reference ranges, aliases) from the bundled seed.
-                Use after upgrading the app, then hit <em>Records → Re-parse all</em> to refresh existing rows.
-              </p>
+              <h2 class="text-sm font-semibold">{t('Analyte Library')}</h2>
+              <p class="text-xs text-fg2">{t('Re-installs analyte definitions (descriptions, categorical tiers, default reference ranges, aliases) from the bundled seed. Use after upgrading the app, then hit')} <em>{t('Records → Re-parse all')}</em> {t('to refresh existing rows.')}</p>
             </div>
             <button class="btn-accent" disabled={reloading} onclick={onReloadOntology}>
-              {reloading ? 'Reloading…' : 'Reload from seed'}
+              {reloading ? t('Reloading…') : t('Reload from seed')}
             </button>
           </div>
         </section>
 
         <section class="card p-5 space-y-3">
           <div>
-            <h2 class="text-sm font-semibold">Browse / edit</h2>
-            <p class="text-xs text-fg2">
-              The full Ontology management tab — search, filter, view JSON, create / edit / delete user analytes — lives at <code class="font-mono">/ontology</code>.
-            </p>
+            <h2 class="text-sm font-semibold">{t('Browse / edit')}</h2>
+            <p class="text-xs text-fg2">{t('The full Library management tab — search, filter, view JSON, create / edit / delete user analytes — lives at')} <code class="font-mono">/library</code>.</p>
           </div>
           <div class="flex gap-2">
-            <button class="btn" onclick={() => goto('/ontology')}>Open ontology browser →</button>
+            <button class="btn" onclick={() => goto('/library')}>{t('Open Library browser →')}</button>
           </div>
         </section>
       {/if}
@@ -2348,52 +2312,52 @@
           <section class="card p-5 space-y-3">
             <div class="flex items-baseline justify-between gap-3 flex-wrap">
               <div>
-                <h2 class="text-sm font-semibold">Storage paths &amp; sizes</h2>
-                <p class="text-xs text-fg2">Where data lives on this device. Everything is encrypted at rest.</p>
+                <h2 class="text-sm font-semibold">{t('Storage paths & sizes')}</h2>
+                <p class="text-xs text-fg2">{t('Where data lives on this device. Everything is encrypted at rest.')}</p>
               </div>
                <div class="flex flex-wrap gap-2">
                  <button class="btn text-xs" onclick={onOpenDataFolder}>
-                   <Icon name="external" size={14} /> Open data folder
+                   <Icon name="external" size={14} /> {t('Open data folder')}
                  </button>
                  <button class="btn text-xs" onclick={refresh} disabled={loadingStorage}>
-                   {loadingStorage ? 'Refreshing…' : 'Refresh'}
+                   {loadingStorage ? t('Refreshing…') : t('Refresh')}
                  </button>
                </div>
             </div>
             <dl class="dl">
-              <dt>Data dir</dt>
+              <dt>{t('Data dir')}</dt>
               <dd>
                 <div class="font-mono break-all">{info.data_dir}</div>
-                <div class="text-fg3 text-[11px] mt-0.5">total {appInfo.formatBytes(info.data_dir_size_bytes)}</div>
+                <div class="text-fg3 text-[11px] mt-0.5">{t('total')} {appInfo.formatBytes(info.data_dir_size_bytes)}</div>
               </dd>
-              <dt>Database</dt>
+              <dt>{t('Database')}</dt>
               <dd>
                 <div class="font-mono break-all">{info.db_path}</div>
                 <div class="text-fg3 text-[11px] mt-0.5">
                   {appInfo.formatBytes(info.db_size_bytes)}
                   {#if info.db_sidecar_bytes && info.db_sidecar_bytes > 0}
-                    <span class="text-fg3"> · WAL/journal {appInfo.formatBytes(info.db_sidecar_bytes)}</span>
+                    <span class="text-fg3"> · {t('WAL/journal')} {appInfo.formatBytes(info.db_sidecar_bytes)}</span>
                   {/if}
                 </div>
               </dd>
-              <dt>Keystore</dt>
+              <dt>{t('Keystore')}</dt>
               <dd>
                 <div class="font-mono break-all">{info.keystore_path}</div>
                 <div class="text-fg3 text-[11px] mt-0.5">{appInfo.formatBytes(info.keystore_size_bytes)}</div>
               </dd>
-              <dt>Encrypted PDF cache</dt>
+              <dt>{t('Encrypted PDF cache')}</dt>
               <dd>
                 <div class="font-mono break-all">{info.pdf_dir}</div>
                 <div class="text-fg3 text-[11px] mt-0.5">
-                  {info.pdf_count} file{info.pdf_count === 1 ? '' : 's'}
+                  {info.pdf_count} {t(info.pdf_count === 1 ? 'file' : 'files')}
                   · {appInfo.formatBytes(info.pdf_size_bytes)}
                 </div>
               </dd>
-              <dt>Models dir</dt>
+              <dt>{t('Models dir')}</dt>
               <dd>
                 <div class="font-mono break-all">{info.models_dir}</div>
                 <div class="text-fg3 text-[11px] mt-0.5">
-                  {info.models_count} file{info.models_count === 1 ? '' : 's'}
+                  {info.models_count} {t(info.models_count === 1 ? 'file' : 'files')}
                   · {appInfo.formatBytes(info.models_size_bytes)}
                 </div>
               </dd>
@@ -2406,36 +2370,36 @@
             {@const pageBytes = (stats.page_size ?? 0) * (stats.page_count ?? 0)}
             <section class="card p-5 space-y-3">
               <div>
-                <h2 class="text-sm font-semibold">Database contents</h2>
-                <p class="text-xs text-fg2">A look inside the encrypted SQLite file.</p>
+                <h2 class="text-sm font-semibold">{t('Database contents')}</h2>
+                <p class="text-xs text-fg2">{t('A look inside the encrypted SQLite file.')}</p>
               </div>
               <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                 <div class="kpi-tile">
-                  <div class="kpi-tile__label">Patients</div>
+                  <div class="kpi-tile__label">{t('Patients')}</div>
                   <div class="kpi-tile__value tabular-nums">{stats.patient_count}</div>
                 </div>
                 <div class="kpi-tile">
-                  <div class="kpi-tile__label">Reports</div>
+                  <div class="kpi-tile__label">{t('Reports')}</div>
                   <div class="kpi-tile__value tabular-nums">{stats.report_count}</div>
                 </div>
                 <div class="kpi-tile">
-                  <div class="kpi-tile__label">Results</div>
+                  <div class="kpi-tile__label">{t('Results')}</div>
                   <div class="kpi-tile__value tabular-nums">{stats.result_count}</div>
                   {#if stats.inline_prior_count > 0}
-                    <div class="kpi-tile__sub">+{stats.inline_prior_count} inline-prior</div>
+                    <div class="kpi-tile__sub">+{stats.inline_prior_count} {t('inline-prior')}</div>
                   {/if}
                 </div>
                 <div class="kpi-tile">
-                  <div class="kpi-tile__label">Analytes</div>
+                  <div class="kpi-tile__label">{t('Analytes')}</div>
                   <div class="kpi-tile__value tabular-nums">{stats.analyte_count}</div>
-                  <div class="kpi-tile__sub">{stats.alias_count} aliases</div>
+                  <div class="kpi-tile__sub">{stats.alias_count} {t('aliases')}</div>
                 </div>
                 <div class="kpi-tile">
-                  <div class="kpi-tile__label">Audit entries</div>
+                  <div class="kpi-tile__label">{t('Audit entries')}</div>
                   <div class="kpi-tile__value tabular-nums">{stats.audit_count}</div>
                 </div>
                 <div class="kpi-tile">
-                  <div class="kpi-tile__label">Date span</div>
+                  <div class="kpi-tile__label">{t('Date span')}</div>
                   <div class="kpi-tile__value text-sm">
                     {stats.earliest_collection_date_iso ?? '—'}
                   </div>
@@ -2444,76 +2408,66 @@
               </div>
 
               <dl class="dl pt-2 border-t border-line">
-                <dt>Encryption engine</dt>
+                <dt>{t('Encryption engine')}</dt>
                 <dd class="font-mono">{stats.sqlcipher_version ?? '—'}</dd>
-                <dt>Journal mode</dt>
+                <dt>{t('Journal mode')}</dt>
                 <dd class="font-mono uppercase">{stats.journal_mode ?? '—'}</dd>
-                <dt>Page size</dt>
+                <dt>{t('Page size')}</dt>
                 <dd class="font-mono">{stats.page_size ?? '—'} B</dd>
-                <dt>Page count</dt>
+                <dt>{t('Page count')}</dt>
                 <dd class="font-mono">{stats.page_count ?? '—'}</dd>
-                <dt>On-disk pages</dt>
+                <dt>{t('On-disk pages')}</dt>
                 <dd class="font-mono">{appInfo.formatBytes(pageBytes)}</dd>
               </dl>
             </section>
           {:else}
             <section class="card p-5 space-y-2">
-              <h2 class="text-sm font-semibold text-fg2">Database contents</h2>
-              <p class="text-xs text-fg3">
-                Vault locked. Unlock to see patient / report / result counts and SQLCipher diagnostics.
-              </p>
+              <h2 class="text-sm font-semibold text-fg2">{t('Database contents')}</h2>
+              <p class="text-xs text-fg3">{t('Vault locked. Unlock to see patient / report / result counts and SQLCipher diagnostics.')}</p>
             </section>
           {/if}
 
           <!-- ─── Export / import ─── -->
           <section class="card p-5 space-y-3">
             <div>
-              <h2 class="text-sm font-semibold">Backup &amp; restore</h2>
-              <p class="text-xs text-fg2">
-                Export packages the entire encrypted vault — DB, keystore, PDFs, models — into a ZIP file
-                in a folder of your choice. The files remain encrypted, so the package is safe to keep on
-                a USB stick or sync to an external backup tool. Import restores from a previous ZIP export
-                (the current vault is renamed aside, not deleted, so you can roll back).
-              </p>
+              <h2 class="text-sm font-semibold">{t('Backup & restore')}</h2>
+              <p class="text-xs text-fg2">{t('Export packages the entire encrypted vault — DB, keystore, PDFs, models — into a ZIP file in a folder of your choice. The files remain encrypted, so the package is safe to keep on a USB stick or sync to an external backup tool. Import restores from a previous ZIP export (the current vault is renamed aside, not deleted, so you can roll back).')}</p>
             </div>
 
             <div class="flex flex-wrap gap-2">
               <button class="btn-accent" onclick={onExportVault} disabled={exporting}>
-                <Icon name="download" size={14} /> {exporting ? 'Exporting ZIP…' : 'Export vault ZIP…'}
+                <Icon name="download" size={14} /> {exporting ? t('Exporting ZIP…') : t('Export vault ZIP…')}
               </button>
               <button class="btn" onclick={onImportVault} disabled={importing}>
-                <Icon name="upload" size={14} /> {importing ? 'Importing ZIP…' : 'Import vault ZIP…'}
+                <Icon name="upload" size={14} /> {importing ? t('Importing ZIP…') : t('Import vault ZIP…')}
               </button>
             </div>
 
             {#if lastExport}
               <div class="card-tight bg-ok/10 border-ok/40 text-xs text-fg2 space-y-0.5">
-                <div class="font-medium text-ok">Last export</div>
+                <div class="font-medium text-ok">{t('Last export')}</div>
                 <div class="font-mono break-all">{lastExport.destination}</div>
                 <div class="text-fg3">
-                  {lastExport.files_copied} files · {appInfo.formatBytes(lastExport.bytes_copied)}
+                  {lastExport.files_copied} {t('files')} · {appInfo.formatBytes(lastExport.bytes_copied)}
                 </div>
               </div>
             {/if}
             {#if lastImport}
               <div class="card-tight bg-warn/10 border-warn/40 text-xs text-fg2 space-y-0.5">
-                <div class="font-medium text-warn">Last import — restart the app to use the imported vault.</div>
-                <div>Restored from <span class="font-mono break-all">{lastImport.source}</span></div>
+                <div class="font-medium text-warn">{t('Last import — restart the app to use the imported vault.')}</div>
+                <div>{t('Restored from')} <span class="font-mono break-all">{lastImport.source}</span></div>
                 <div class="text-fg3">
-                  Previous vault preserved at <span class="font-mono break-all">{lastImport.backup_dir}</span>
+                  {t('Previous vault preserved at')} <span class="font-mono break-all">{lastImport.backup_dir}</span>
                 </div>
               </div>
             {/if}
 
             <div class="text-[11px] text-fg3 space-y-1">
               <p>
-                <strong class="text-fg2">Export:</strong> safe at any time. Audit-logged. A ZIP package is created
-                in the selected directory; that directory must not be inside the vault.
+                <strong class="text-fg2">{t('Export:')}</strong> {t('safe at any time. Audit-logged. A ZIP package is created in the selected directory; that directory must not be inside the vault.')}
               </p>
               <p>
-                <strong class="text-fg2">Import:</strong> select a bloody-level ZIP and lock the vault first (the
-                open SQLite handle would otherwise pin the old DB and corrupt the swap on Windows). The current
-                vault is renamed to <span class="font-mono">data.backup-&lt;timestamp&gt;</span> for one-click rollback.
+                <strong class="text-fg2">{t('Import:')}</strong> {t('select a bloody-level ZIP and lock the vault first (the open SQLite handle would otherwise pin the old DB and corrupt the swap on Windows). The current vault is renamed to')} <span class="font-mono">data.backup-&lt;timestamp&gt;</span> {t('for one-click rollback.')}
               </p>
             </div>
           </section>
@@ -2540,7 +2494,7 @@
               </svg>
               <div class="flex-1 min-w-0">
                 <h2 class="text-base font-semibold">bloody-level</h2>
-                <p class="text-xs text-fg2">Local-only clinical lab-PDF tracker with embedded OCR/LLM tiers.</p>
+                <p class="text-xs text-fg2">{t('Local-only clinical lab-PDF tracker with embedded OCR/LLM tiers.')}</p>
               </div>
               <span class="font-mono text-xs text-fg3 self-start">v{info.version}</span>
             </div>
@@ -2548,18 +2502,18 @@
 
           <!-- ─── Build / environment ─── -->
           <section class="card p-5 space-y-3">
-            <h2 class="text-sm font-semibold about-inline-label"><Icon name="info" size={15} /> Build &amp; environment</h2>
+            <h2 class="text-sm font-semibold about-inline-label"><Icon name="info" size={15} /> {t('Build & environment')}</h2>
             <dl class="dl">
-              <dt>Target</dt>
+              <dt>{t('Target')}</dt>
               <dd class="font-mono break-all">{info.target_triple}</dd>
-              <dt><span class="about-inline-label"><Icon name="tag" size={13} /> Version</span></dt>
+              <dt><span class="about-inline-label"><Icon name="tag" size={13} /> {t('Version')}</span></dt>
               <dd class="font-mono">v{info.version}</dd>
-              <dt>Build profile</dt>
+              <dt>{t('Build profile')}</dt>
               <dd>{info.build_profile}{info.features.debug_assertions ? ' · debug-assertions' : ''}</dd>
-              <dt>Frontend</dt>
-              <dd>SvelteKit + Tauri WebView (Edge WebView2 on Windows / WKWebView on macOS / WebKitGTK on Linux)</dd>
-              <dt>License</dt>
-              <dd>Source-available — see repository LICENSE</dd>
+              <dt>{t('Frontend')}</dt>
+              <dd>{t('SvelteKit + Tauri WebView (Edge WebView2 on Windows / WKWebView on macOS / WebKitGTK on Linux)')}</dd>
+              <dt>{t('License')}</dt>
+              <dd>{t('Source-available — see repository LICENSE')}</dd>
             </dl>
             <div class="flex flex-wrap gap-1.5 pt-1">
               <span class={info.pdfium_available ? 'pill-ok' : 'pill-crit'}>pdfium</span>
@@ -2575,40 +2529,37 @@
 
           <!-- ─── Privacy & security stack ─── -->
           <section class="card p-5 space-y-3">
-            <h2 class="text-sm font-semibold about-inline-label"><Icon name="shield" size={15} /> Privacy &amp; security</h2>
-            <p class="text-xs text-fg2">The vault and managed PDF cache stay on this device. There is no telemetry, no cloud sync, no analytics.</p>
+            <h2 class="text-sm font-semibold about-inline-label"><Icon name="shield" size={15} /> {t('Privacy & security')}</h2>
+            <p class="text-xs text-fg2">{t('The vault and managed PDF cache stay on this device. There is no telemetry, no cloud sync, no analytics.')}</p>
             <ul class="privacy-list text-xs text-fg2 space-y-1">
-              <li><span class="privacy-list__icon"><Icon name="lock" size={14} /></span><span><strong>SQLCipher</strong> — full-database encryption with a per-vault key.</span></li>
-              <li><span class="privacy-list__icon"><Icon name="file" size={14} /></span><span><strong>Encrypted PDF cache</strong> — source copies use XChaCha20-Poly1305 with a vault-derived key.</span></li>
-              <li><span class="privacy-list__icon"><Icon name="shield" size={14} /></span><span><strong>Argon2id</strong> KDF derives the data master key from your password.</span></li>
-              <li><span class="privacy-list__icon"><Icon name="shield" size={14} /></span><span><strong>XChaCha20-Poly1305</strong> wraps the DMK, with HKDF-SHA-256 sub-derivation.</span></li>
-              <li><span class="privacy-list__icon"><Icon name="key" size={14} /></span><span><strong>WebAuthn / Passkey</strong> support for password-less unlock (PRF extension).</span></li>
-              <li><span class="privacy-list__icon"><Icon name="ban" size={14} /></span><span><strong>Zero network</strong>: pdfium downloads are build-time only; no runtime egress.</span></li>
+              <li><span class="privacy-list__icon"><Icon name="lock" size={14} /></span><span><strong>SQLCipher</strong> — {t('full-database encryption with a per-vault key.')}</span></li>
+              <li><span class="privacy-list__icon"><Icon name="file" size={14} /></span><span><strong>{t('Encrypted PDF cache')}</strong> — {t('source copies use XChaCha20-Poly1305 with a vault-derived key.')}</span></li>
+              <li><span class="privacy-list__icon"><Icon name="shield" size={14} /></span><span><strong>Argon2id</strong> {t('KDF derives the data master key from your password.')}</span></li>
+              <li><span class="privacy-list__icon"><Icon name="shield" size={14} /></span><span><strong>XChaCha20-Poly1305</strong> {t('wraps the DMK, with HKDF-SHA-256 sub-derivation.')}</span></li>
+              <li><span class="privacy-list__icon"><Icon name="key" size={14} /></span><span><strong>WebAuthn / Passkey</strong> {t('support for password-less unlock (PRF extension).')}</span></li>
+              <li><span class="privacy-list__icon"><Icon name="ban" size={14} /></span><span><strong>{t('Zero network')}</strong>: {t('pdfium downloads are build-time only; no runtime egress.')}</span></li>
             </ul>
           </section>
 
           <!-- ─── Library credits ─── -->
           <section class="card p-5 space-y-4">
-            <h2 class="text-sm font-semibold">Built with</h2>
-            <p class="text-xs text-fg2">
-              The work of these projects is what makes bloody-level possible. Each is bundled or
-              linked under its own license.
-            </p>
+            <h2 class="text-sm font-semibold">{t('Built with')}</h2>
+            <p class="text-xs text-fg2">{t('The work of these projects is what makes bloody-level possible. Each is bundled or linked under its own license.')}</p>
 
             <div class="credits-grid">
               {#each credits as group}
                 <div class="credits-group">
-                  <div class="credits-group__head">{group.head}</div>
+                  <div class="credits-group__head">{t(group.head)}</div>
                   <ul class="credits-list">
                     {#each group.items as item}
                       <li>
                         <button type="button"
                                 class="credits-link"
                                 onclick={() => visit(item.url)}
-                                title="Open {item.url}">
+                                title={t('Open {url}', { url: item.url })}>
                           <span class="credits-link__name">{item.name}</span>
                           <span class="credits-link__icon"><Icon name="external" size={12} /></span>
-                          <span class="credits-link__note">{item.note}</span>
+                          <span class="credits-link__note">{t(item.note)}</span>
                         </button>
                       </li>
                     {/each}
@@ -2616,25 +2567,20 @@
                 </div>
               {/each}
             </div>
-            <p class="text-[11px] text-fg3 italic">
-              Each link opens in your default browser via the OS shell — no embedded webview, no
-              redirects through us.
-            </p>
+            <p class="text-[11px] text-fg3 italic">{t('Each link opens in your default browser via the OS shell — no embedded webview, no redirects through us.')}</p>
           </section>
 
           <!-- ─── Author / attribution ─── -->
           <section class="card p-5 space-y-2">
-            <h2 class="text-sm font-semibold">Author &amp; attribution</h2>
+            <h2 class="text-sm font-semibold">{t('Author & attribution')}</h2>
             <dl class="dl">
-              <dt>Author</dt>
+              <dt>{t('Author')}</dt>
               <dd>supermarsx and maintainers</dd>
-              <dt>Copyright</dt>
+              <dt>{t('Copyright')}</dt>
               <dd>© 2026 supermarsx</dd>
-              <dt>Disclaimer</dt>
+              <dt>{t('Disclaimer')}</dt>
               <dd class="text-fg2">
-                This software is for personal record-keeping and trend visualisation only.
-                It is not a medical device. It does not make clinical decisions.
-                Always interpret values with your physician.
+                {t('This software is for personal record-keeping and trend visualisation only. It is not a medical device. It does not make clinical decisions. Always interpret values with your physician.')}
               </dd>
             </dl>
           </section>
@@ -2644,51 +2590,48 @@
       {#if activeTab === 'advanced'}
         <section class="card p-5 space-y-4">
           <div>
-            <h2 class="text-sm font-semibold">App lifecycle</h2>
-            <p class="text-xs text-fg2">
-              Refresh the interface, relaunch the native app, or start over with a new empty local instance.
-              Your vault is unchanged by the first two actions.
-            </p>
+            <h2 class="text-sm font-semibold">{t('App lifecycle')}</h2>
+            <p class="text-xs text-fg2">{t('Refresh the interface, relaunch the native app, or start over with a new empty local instance. Your vault is unchanged by the first two actions.')}</p>
           </div>
 
           <div class="lifecycle-actions">
             <div class="lifecycle-action">
               <div class="lifecycle-action__copy">
-                <div class="row__title"><Icon name="settings" size={15} /> Reset all preferences</div>
-                <div class="row__hint">Restore appearance, dashboard, charts, compare presets, and tier preferences without deleting vault data.</div>
+                <div class="row__title"><Icon name="settings" size={15} /> {t('Reset all preferences')}</div>
+                <div class="row__hint">{t('Restore appearance, dashboard, charts, compare presets, and tier preferences without deleting vault data.')}</div>
               </div>
               <button class="btn" type="button" disabled={lifecycleAction !== null} onclick={onResetDefaults}>
-                {lifecycleAction === 'defaults' ? 'Resetting…' : 'Reset defaults'}
+                {lifecycleAction === 'defaults' ? t('Resetting…') : t('Reset defaults')}
               </button>
             </div>
 
             <div class="lifecycle-action">
               <div class="lifecycle-action__copy">
-                <div class="row__title"><Icon name="monitor" size={15} /> Restart frontend</div>
-                <div class="row__hint">Reload the current webview and preserve the running native process.</div>
+                <div class="row__title"><Icon name="monitor" size={15} /> {t('Restart frontend')}</div>
+                <div class="row__hint">{t('Reload the current webview and preserve the running native process.')}</div>
               </div>
               <button class="btn" type="button" disabled={lifecycleAction !== null} onclick={onRestartFrontend}>
-                {lifecycleAction === 'frontend' ? 'Reloading…' : 'Restart frontend'}
+                {lifecycleAction === 'frontend' ? t('Reloading…') : t('Restart frontend')}
               </button>
             </div>
 
             <div class="lifecycle-action">
               <div class="lifecycle-action__copy">
-                <div class="row__title"><Icon name="settings" size={15} /> Restart whole app</div>
-                <div class="row__hint">Close and relaunch bloody-level, including its native services.</div>
+                <div class="row__title"><Icon name="settings" size={15} /> {t('Restart whole app')}</div>
+                <div class="row__hint">{t('Close and relaunch bloody-level, including its native services.')}</div>
               </div>
               <button class="btn" type="button" disabled={lifecycleAction !== null} onclick={onRestartApp}>
-                {lifecycleAction === 'app' ? 'Restarting…' : 'Restart app'}
+                {lifecycleAction === 'app' ? t('Restarting…') : t('Restart app')}
               </button>
             </div>
 
             <div class="lifecycle-action lifecycle-action--danger">
               <div class="lifecycle-action__copy">
-                <div class="row__title"><Icon name="trash" size={15} /> Reset local app</div>
-                <div class="row__hint">Permanently delete this local instance and return to the first-run welcome screen.</div>
+                <div class="row__title"><Icon name="trash" size={15} /> {t('Reset local app')}</div>
+                <div class="row__hint">{t('Permanently delete this local instance and return to the first-run welcome screen.')}</div>
               </div>
               <button class="btn btn-danger" type="button" disabled={lifecycleAction !== null} onclick={onResetApp}>
-                {lifecycleAction === 'reset' ? 'Resetting…' : 'Reset app'}
+                {lifecycleAction === 'reset' ? t('Resetting…') : t('Reset app')}
               </button>
             </div>
           </div>
@@ -2696,11 +2639,8 @@
 
         <section class="card p-5 space-y-3">
           <div>
-            <h2 class="text-sm font-semibold">Raw settings</h2>
-            <p class="text-xs text-fg2">
-              Every key in the encrypted settings table. Read-only — power-user inspection only;
-              normal toggles live in the other tabs.
-            </p>
+            <h2 class="text-sm font-semibold">{t('Raw settings')}</h2>
+            <p class="text-xs text-fg2">{t('Every key in the encrypted settings table. Read-only — power-user inspection only; normal toggles live in the other tabs.')}</p>
           </div>
           <pre class="text-xs text-fg2 whitespace-pre-wrap font-mono bg-bg1 p-3 rounded-md border border-line max-h-[60vh] overflow-y-auto">{JSON.stringify(raw, null, 2)}</pre>
         </section>
@@ -3081,10 +3021,11 @@
     padding: 0.4rem 0.55rem;
     border: 1px solid rgb(var(--line));
     border-radius: 0.4rem;
-    background: rgb(var(--bg-1));
+    background-color: rgb(var(--bg-1));
     color: rgb(var(--fg-1));
     font-size: 0.8rem;
   }
+  .locale-select { width: min(100%, 24rem); }
   .settings-number:focus { outline: none; border-color: rgb(var(--accent)); box-shadow: 0 0 0 3px rgb(var(--accent) / 0.18); }
   .tier-actions {
     display: inline-flex;

@@ -6,6 +6,7 @@
   import * as admin from '$api/records-admin';
   import { toasts } from '../toasts/store.svelte';
   import Icon, { type IconName } from './icon.svelte';
+  import { t } from '$lib/i18n/index.svelte';
 
   let {
     patientId,
@@ -40,14 +41,14 @@
         sex: next,
         dob_iso: dobIso
       });
-      toasts.success('Sex updated', `${displayName}: ${next}`);
+      toasts.success(t('Sex updated'), `${displayName}: ${next}`);
       onChanged?.(next);
     } catch (e) { toasts.error(e); }
     finally { busy = false; }
   }
 </script>
 
-<div class="sex-toggle" role="radiogroup" aria-label="Patient sex">
+<div class="sex-toggle" role="radiogroup" aria-label={t('Patient sex')}>
   {#each options as opt}
     {@const active = currentSex === opt.value}
     <button
@@ -57,10 +58,10 @@
       class="sex-toggle__opt {active ? 'sex-toggle__opt--active' : ''}"
       disabled={busy}
       onclick={() => setSex(opt.value)}
-      title="Set sex to {opt.label}"
+      title={t('Set sex to {label}', { label: t(opt.label) })}
     >
       <span class="sex-toggle__icon"><Icon name={opt.icon} size={14} /></span>
-      <span>{opt.label}</span>
+      <span>{t(opt.label)}</span>
     </button>
   {/each}
 </div>

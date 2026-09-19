@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import * as admin from '$api/records-admin';
   import { toasts } from '../toasts/store.svelte';
+  import { t } from '$lib/i18n/index.svelte';
 
   let {
     rawText,
@@ -47,8 +48,11 @@
     try {
       const res = await admin.linkUnmatchedAnalyte({ raw_text: rawText, analyte_id: selectedId });
       toasts.success(
-        'Alias added',
-        `Linked "${rawText}" → ${selectedId}. ${res.rows_relinked} existing row${res.rows_relinked === 1 ? '' : 's'} updated.`
+        t('Alias added'),
+        t(res.rows_relinked === 1
+          ? 'Linked "{raw}" → {id}. {count} existing row updated.'
+          : 'Linked "{raw}" → {id}. {count} existing rows updated.',
+          { raw: rawText, id: selectedId, count: res.rows_relinked })
       );
       onLinked(res.rows_relinked);
       open = false;
@@ -66,7 +70,7 @@
     <button
       type="button"
       class="absolute inset-0 bg-black/40"
-      aria-label="Close dialog"
+      aria-label={t('Close dialog')}
       onclick={() => (open = false)}
     ></button>
     <div
@@ -75,21 +79,21 @@
       aria-modal="true"
     >
       <div>
-        <h2 class="text-sm font-semibold">Link unmatched analyte</h2>
+        <h2 class="text-sm font-semibold">{t('Link unmatched analyte')}</h2>
         <p class="text-xs text-fg2 mt-0.5">
-          Map this raw name to an ontology entry. The mapping persists as a user alias and
-          re-links every existing row that matched the same raw text.
+          {t('Map this raw name to a Library entry. The mapping persists as a user alias and')}
+          {t('re-links every existing row that matched the same raw text.')}
         </p>
       </div>
 
       <div class="card-tight bg-bg1">
-        <div class="text-[10px] uppercase tracking-wide text-fg3">Raw text</div>
+        <div class="text-[10px] uppercase tracking-wide text-fg3">{t('Raw text')}</div>
         <div class="text-sm font-mono break-all">{rawText}</div>
       </div>
 
       <input
         type="text"
-        placeholder="Search analytes (name, id, panel)…"
+        placeholder={t('Search analytes (name, id, panel)…')}
         class="block w-full bg-bg1 border border-line rounded-md px-3 py-2 text-sm"
         bind:value={query}
       />
@@ -111,14 +115,14 @@
           </button>
         {/each}
         {#if filtered.length === 0}
-          <div class="px-3 py-3 text-xs text-fg3 text-center">No matches.</div>
+          <div class="px-3 py-3 text-xs text-fg3 text-center">{t('No matches.')}</div>
         {/if}
       </div>
 
       <div class="flex items-center justify-end gap-2">
-        <button class="btn" onclick={() => (open = false)} disabled={busy}>Cancel</button>
+        <button class="btn" onclick={() => (open = false)} disabled={busy}>{t('Cancel')}</button>
         <button class="btn-accent" onclick={submit} disabled={!selectedId || busy}>
-          {busy ? 'Linking…' : selectedId ? `Link to ${selectedId}` : 'Pick an analyte'}
+          {busy ? t('Linking…') : selectedId ? t('Link to {id}', { id: selectedId }) : t('Pick an analyte')}
         </button>
       </div>
     </div>

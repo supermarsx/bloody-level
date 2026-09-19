@@ -1,9 +1,13 @@
+import { appearance } from "$theme/appearance.svelte";
+
 export function formatNumber(v: number | null | undefined, digits = 2): string {
   if (v == null || Number.isNaN(v)) return "—";
   const abs = Math.abs(v);
-  if (abs >= 100) return v.toFixed(0);
-  if (abs >= 10) return v.toFixed(1);
-  return v.toFixed(digits);
+  const minimumFractionDigits = abs >= 100 ? 0 : abs >= 10 ? 1 : digits;
+  return new Intl.NumberFormat(appearance.resolvedLocale, {
+    minimumFractionDigits,
+    maximumFractionDigits: minimumFractionDigits,
+  }).format(v);
 }
 
 export function formatPercent(
@@ -11,7 +15,10 @@ export function formatPercent(
   digits = 1,
 ): string {
   if (v == null || Number.isNaN(v)) return "—";
-  return `${v.toFixed(digits)}%`;
+  return `${new Intl.NumberFormat(appearance.resolvedLocale, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(v)}%`;
 }
 
 export function formatDelta(

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { t } from '$lib/i18n/index.svelte';
 
   // Reusable browser-style "back" affordance. Walks the navigation history
   // when there's something to walk back to, otherwise falls through to a
@@ -27,15 +28,15 @@
   type="button"
   class="back-btn"
   onclick={go}
-  title="{label} (Alt+←)"
-  aria-label={label}
+  title="{t(label)} (Alt+←)"
+  aria-label={t(label)}
 >
   <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor"
        stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d="M11.5 4.5 L6 10 L11.5 15.5"/>
     <path d="M6 10 H16"/>
   </svg>
-  <span>{label}</span>
+  <span>{t(label)}</span>
 </button>
 
 <style>

@@ -7,6 +7,7 @@
   import { formatDate, formatDateLong, formatRelativeSpan } from '$format/dates';
   import { formatNumber } from '$format/numbers';
   import Icon from '$components/icon.svelte';
+  import { t } from '$lib/i18n/index.svelte';
 
   // This is deliberately explicit and deterministic: the screenshot and the
   // public demo route always show the same fictional patient and values.
@@ -35,7 +36,7 @@
 </script>
 
 <svelte:head>
-  <title>TSH · Alex Silva · Demo | bloody-level</title>
+  <title>{t('Analyte demo')} · Alex Silva | bloody-level</title>
 </svelte:head>
 
 <div class="mx-auto max-w-screen-2xl space-y-4">
@@ -43,28 +44,27 @@
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div class="space-y-2">
         <div class="flex flex-wrap items-center gap-2 text-xs text-fg3">
-          <span class="pill-muted font-semibold tracking-wide">DEMO DATA</span>
-          <span>Analyte review</span>
+          <span class="pill-muted font-semibold tracking-wide">{t('DEMO DATA')}</span>
+          <span>{t('Analyte review')}</span>
           <span>·</span>
-          <span>Five readings · 12 months</span>
+          <span>{t('Five readings · 12 months')}</span>
         </div>
         <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <h1 class="text-2xl font-semibold tracking-tight">Thyroid stimulating hormone</h1>
           <span class="font-mono text-sm text-fg3">TSH</span>
         </div>
         <p class="text-sm text-fg2">
-          A longitudinal view for <span class="font-medium text-fg1">Alex Silva</span>, a fictional demo patient.
-          Every value below is synthetic and exists only to show the review workflow.
+          {t('A longitudinal view for')} <span class="font-medium text-fg1">Alex Silva</span>, {t('a fictional demo patient.')} {t('Every value below is synthetic and exists only to show the review workflow.')}
         </p>
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <div class="select flex items-center gap-2 px-3 py-2 text-sm" aria-label="Demo patient">
-          <span class="text-fg3">Patient</span>
+        <div class="select flex items-center gap-2 px-3 py-2 text-sm" aria-label={t('Demo patient')}>
+          <span class="text-fg3">{t('Patient')}</span>
           <span class="font-medium">Alex Silva</span>
           <Icon name="chevron-down" size={14} />
         </div>
-        <button type="button" class="btn cursor-pointer text-xs" onclick={openLoinc} title="Open LOINC 3016-3 in the default browser">
+        <button type="button" class="btn cursor-pointer text-xs" onclick={openLoinc} title={t('Open LOINC {code} in the default browser', { code: '3016-3' })}>
           LOINC 3016-3 <Icon name="external" size={14} />
         </button>
       </div>
@@ -73,44 +73,44 @@
 
   <section class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
     <div class="card p-3 sm:p-4">
-      <div class="text-xs text-fg2">Latest</div>
+      <div class="text-xs text-fg2">{t('Latest')}</div>
       <div class="mt-1 text-2xl font-semibold tabular-nums">{formatNumber(latest.value)}</div>
       <div class="text-[10px] text-fg3">{formatDate(latest.date)}</div>
     </div>
     <div class="card p-3 sm:p-4">
-      <div class="text-xs text-fg2">Previous</div>
+      <div class="text-xs text-fg2">{t('Previous')}</div>
       <div class="mt-1 text-2xl font-semibold tabular-nums">{formatNumber(demoReadings[1].value)}</div>
       <div class="text-[10px] text-fg3">{formatRelativeSpan(demoReadings[1].date, latest.date)}</div>
     </div>
     <div class="card p-3 sm:p-4">
-      <div class="text-xs text-fg2">First</div>
+      <div class="text-xs text-fg2">{t('First')}</div>
       <div class="mt-1 text-xl font-semibold tabular-nums">{formatNumber(first.value)}</div>
       <div class="text-[10px] text-fg3">{formatDate(first.date)}</div>
     </div>
     <div class="card p-3 sm:p-4">
-      <div class="text-xs text-fg2">Range</div>
+      <div class="text-xs text-fg2">{t('Range')}</div>
       <div class="mt-1 text-xl font-semibold tabular-nums">0.27–4.20</div>
-      <div class="text-[10px] text-fg3">mIU/L · reference</div>
+      <div class="text-[10px] text-fg3">mIU/L · {t('reference')}</div>
     </div>
     <div class="card p-3 sm:p-4">
-      <div class="text-xs text-fg2">Mean</div>
+      <div class="text-xs text-fg2">{t('Mean')}</div>
       <div class="mt-1 text-xl font-semibold tabular-nums">{formatNumber(mean)}</div>
-      <div class="text-[10px] text-fg3">{demoReadings.length} readings</div>
+      <div class="text-[10px] text-fg3">{t('{count} readings', { count: demoReadings.length })}</div>
     </div>
     <div class="card p-3 sm:p-4">
-      <div class="text-xs text-fg2">Latest flag</div>
+      <div class="text-xs text-fg2">{t('Latest flag')}</div>
       <div class="mt-2"><FlagPill flag={latest.flag} /></div>
-      <div class="mt-1 text-[10px] text-fg3">within reference</div>
+      <div class="mt-1 text-[10px] text-fg3">{t('within reference')}</div>
     </div>
   </section>
 
   <section class="card p-3 sm:p-4">
     <div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
       <div>
-        <h2 class="text-sm font-semibold">TSH over time</h2>
-        <p class="text-xs text-fg3">Quarterly readings from {formatDateLong(first.date)} to {formatDateLong(latest.date)}</p>
+        <h2 class="text-sm font-semibold">{t('TSH over time')}</h2>
+        <p class="text-xs text-fg3">{t('Quarterly readings from {from} to {to}', { from: formatDateLong(first.date), to: formatDateLong(latest.date) })}</p>
       </div>
-      <span class="text-xs text-fg2">Unit: <span class="font-mono">mIU/L</span></span>
+      <span class="text-xs text-fg2">{t('Unit')}: <span class="font-mono">mIU/L</span></span>
     </div>
     <TimeSeries
       points={demoReadings}
@@ -124,11 +124,11 @@
   <section class="card overflow-hidden">
     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
       <div>
-        <h2 class="text-sm font-semibold">Readings</h2>
-        <p class="text-xs text-fg3">Most recent first · synthetic source records</p>
+        <h2 class="text-sm font-semibold">{t('Readings')}</h2>
+        <p class="text-xs text-fg3">{t('Most recent first · synthetic source records')}</p>
       </div>
       <div class="flex items-center gap-3 text-xs text-fg2">
-        <span>Latest change</span>
+        <span>{t('Latest change')}</span>
         <DeltaBadge current={latest.value} previous={demoReadings[1].value} />
       </div>
     </div>
@@ -136,12 +136,12 @@
       <table class="w-full text-sm">
         <thead class="bg-bg1 text-left text-xs uppercase tracking-wide text-fg2">
           <tr class="border-b border-line">
-            <th class="px-4 py-2.5">Date</th>
-            <th class="px-4 py-2.5">Patient</th>
-            <th class="px-4 py-2.5 text-right">Value</th>
-            <th class="px-4 py-2.5">Unit</th>
-            <th class="px-4 py-2.5">Flag</th>
-            <th class="px-4 py-2.5">Spacing</th>
+            <th class="px-4 py-2.5">{t('Date')}</th>
+            <th class="px-4 py-2.5">{t('Patient')}</th>
+            <th class="px-4 py-2.5 text-right">{t('Value')}</th>
+            <th class="px-4 py-2.5">{t('Unit')}</th>
+            <th class="px-4 py-2.5">{t('Flag')}</th>
+            <th class="px-4 py-2.5">{t('Spacing')}</th>
           </tr>
         </thead>
         <tbody>
@@ -162,6 +162,6 @@
   </section>
 
   <p class="pb-2 text-center text-xs text-fg3">
-    This public preview contains no real patient information. Use the application locally to import and review your own reports.
+    {t('This public preview contains no real patient information.')} {t('Use the application locally to import and review your own reports.')}
   </p>
 </div>

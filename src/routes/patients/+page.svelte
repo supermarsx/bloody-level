@@ -9,6 +9,8 @@
   import PatientPickerDialog from '$components/patient-picker-dialog.svelte';
   import { ageFromDob } from '$format/dates';
   import Icon, { type IconName } from '$components/icon.svelte';
+  import { t } from '$lib/i18n/index.svelte';
+  import '$lib/i18n/data-routes';
 
   type SortKey = 'name' | 'reports' | 'latest' | 'abnormal' | 'critical' | 'analytes';
 
@@ -21,7 +23,7 @@
     return sex === 'm' ? 'male' : sex === 'f' ? 'female' : sex === 'x' ? 'gender' : 'info';
   }
   function sexLabel(sex: string): string {
-    return sex === 'm' ? 'Male' : sex === 'f' ? 'Female' : sex === 'x' ? 'Other' : 'Unknown';
+    return t(sex === 'm' ? 'Male' : sex === 'f' ? 'Female' : sex === 'x' ? 'Other' : 'Unknown');
   }
 
   // ── Filter bar (collapsed by default; "Filters" button toggles) ────────
@@ -95,7 +97,7 @@
     savingNotes = true;
     try {
       await admin.setPatientNotes(notesPatient.id, notesDraft.trim() ? notesDraft : null);
-      toasts.success('Notes saved', notesPatient.display_name);
+      toasts.success(t('Notes saved'), notesPatient.display_name);
       notesOpen = false;
       await refresh();
     } catch (e) { toasts.error(e); }
@@ -221,7 +223,7 @@
         // Don't overwrite notes from this form — they have their own editor.
         notes: found?.notes ?? null
       });
-      toasts.success('Patient updated');
+      toasts.success(t('Patient updated'));
       editingId = null;
       await refresh();
     } catch (e) { toasts.error(e); }
@@ -229,13 +231,13 @@
 
   async function onDeletePatient(p: admin.PatientOverview) {
     const ok = await ask(
-      `Delete patient "${p.display_name}" and ALL ${p.report_count} report${p.report_count === 1 ? '' : 's'}?\n\nThis cannot be undone.`,
-      { title: 'Delete patient', kind: 'warning' }
+      t('Delete patient "{name}" and ALL {count} report(s)?\n\nThis cannot be undone.', { name: p.display_name, count: p.report_count }),
+      { title: t('Delete patient'), kind: 'warning' }
     );
     if (!ok) return;
     try {
       await admin.deletePatient(p.id);
-      toasts.success('Patient deleted', p.display_name);
+      toasts.success(t('Patient deleted'), p.display_name);
       await refresh();
     } catch (e) { toasts.error(e); }
   }
@@ -248,13 +250,13 @@
   async function onMergeInto(target: { id: string; display_name: string }) {
     if (!mergeSource) return;
     const ok = await ask(
-      `Merge "${mergeSource.display_name}" INTO "${target.display_name}"?\n\nAll ${mergeSource.report_count} report${mergeSource.report_count === 1 ? '' : 's'} will be reassigned, then "${mergeSource.display_name}" will be deleted. This cannot be undone.`,
-      { title: 'Merge patients', kind: 'warning' }
+      t('Merge "{source}" INTO "{target}"?\n\nAll {count} report(s) will be reassigned, then "{source}" will be deleted. This cannot be undone.', { source: mergeSource.display_name, target: target.display_name, count: mergeSource.report_count }),
+      { title: t('Merge patients'), kind: 'warning' }
     );
     if (!ok) return;
     try {
       const r = await admin.mergePatients({ source_id: mergeSource.id, target_id: target.id });
-      toasts.success('Patients merged', `${r.reports_moved} report${r.reports_moved === 1 ? '' : 's'} moved.`);
+      toasts.success(t('Patients merged'), t('{count} report(s) moved.', { count: r.reports_moved }));
       mergeSource = null;
       await refresh();
     } catch (e) { toasts.error(e); }
@@ -276,9 +278,9 @@
         dob_iso: newForm.dob_iso || null
       });
       if (r.created) {
-        toasts.success('Patient created', name);
+        toasts.success(t('Patient created'), name);
       } else {
-        toasts.warn('Patient already existed', `Updated metadata for "${name}".`);
+        toasts.warn(t('Patient already existed'), t('Updated metadata for "{name}".', { name }));
       }
       // Persist nickname separately so the create flow always lands the
       // chosen value, even if the patient row pre-existed.
@@ -298,8 +300,8 @@
     try {
       const r = await admin.backfillPatientSex();
       toasts.success(
-        'Patient sex re-inferred',
-        `${r.patients_updated}/${r.patients_scanned} updated · ${r.patients_still_unknown} still unknown`
+        t('Patient sex re-inferred'),
+        t('{updated}/{scanned} updated · {unknown} still unknown', { updated: r.patients_updated, scanned: r.patients_scanned, unknown: r.patients_still_unknown })
       );
       await refresh();
     } catch (e) { toasts.error(e); }
@@ -312,8 +314,8 @@
     try {
       const r = await admin.backfillPatientDob();
       toasts.success(
-        'Patient DOB seeded',
-        `${r.patients_updated}/${r.patients_scanned} updated (${r.exact_updates} exact · ${r.approximate_updates} approximate) · ${r.patients_still_unknown} still unknown`
+        t('Patient DOB seeded'),
+        t('{updated}/{scanned} updated ({exact} exact · {approximate} approximate) · {unknown} still unknown', { updated: r.patients_updated, scanned: r.patients_scanned, exact: r.exact_updates, approximate: r.approximate_updates, unknown: r.patients_still_unknown })
       );
       await refresh();
     } catch (e) { toasts.error(e); }
@@ -337,21 +339,21 @@
   <!-- ─── Header + actions ─── -->
   <div class="flex items-end justify-between gap-3 flex-wrap">
     <div>
-      <h1 class="text-xl font-semibold">Patients</h1>
+      <h1 class="text-xl font-semibold">{t('Patients')}</h1>
       <p class="text-xs text-fg2">
-        Every patient with reports in this vault. Edit metadata, merge duplicates, or pre-create patients before their first PDF arrives.
+        {t('Every patient with reports in this vault. Edit metadata, merge duplicates, or pre-create patients before their first PDF arrives.')}
       </p>
     </div>
     <div class="flex items-center gap-2">
       <button class="btn" disabled={backfilling} onclick={onBackfillSex}
-        title="Re-infer sex from each patient's report raw_text — fixes legacy '?' values.">
-        {backfilling ? 'Re-inferring…' : 'Re-infer sex'}
+        title={t("Re-infer sex from each patient's report raw_text — fixes legacy '?' values.")}>
+        {t(backfilling ? 'Re-inferring…' : 'Re-infer sex')}
       </button>
       <button class="btn" disabled={backfillingDob} onclick={onBackfillDob}
-        title="Seed DOB for patients without one — uses literal 'Data de Nascimento' lines if present, else age + collection date.">
-        {backfillingDob ? 'Seeding…' : 'Seed DOB'}
+        title={t("Seed DOB for patients without one — uses literal 'Data de Nascimento' lines if present, else age + collection date.")}>
+        {t(backfillingDob ? 'Seeding…' : 'Seed DOB')}
       </button>
-      <button class="btn-accent" onclick={openCreate}>+ New patient</button>
+      <button class="btn-accent" onclick={openCreate}>{t('+ New patient')}</button>
     </div>
   </div>
 
@@ -360,36 +362,36 @@
   <section aria-labelledby="kpi-window-label" class="kpi-section">
     <div id="kpi-window-label" class="kpi-section__label">
       <span class="kpi-section__dot" aria-hidden="true"></span>
-      Last 12 months
+      {t('Last 12 months')}
     </div>
     <div class="kpi-strip">
       <div class="kpi-tile">
-        <span class="kpi-tile__label">Active patients</span>
+        <span class="kpi-tile__label">{t('Active patients')}</span>
         <span class="kpi-tile__value">{totals.activePatients}</span>
-        <span class="kpi-tile__hint">of {totals.totalPatients}</span>
+        <span class="kpi-tile__hint">{t('of {count}', { count: totals.totalPatients })}</span>
       </div>
       <div class="kpi-tile">
-        <span class="kpi-tile__label">Reports</span>
+        <span class="kpi-tile__label">{t('Reports')}</span>
         <span class="kpi-tile__value">{totals.recentReports}</span>
       </div>
       <div class="kpi-tile">
-        <span class="kpi-tile__label">Abnormal</span>
+        <span class="kpi-tile__label">{t('Abnormal')}</span>
         <span class="kpi-tile__value {totals.recentAbnormal > 0 ? 'text-warn' : ''}">{totals.recentAbnormal}</span>
       </div>
       <div class="kpi-tile">
-        <span class="kpi-tile__label">Critical</span>
+        <span class="kpi-tile__label">{t('Critical')}</span>
         <span class="kpi-tile__value {totals.recentCritical > 0 ? 'text-crit' : ''}">{totals.recentCritical}</span>
       </div>
     </div>
   </section>
 
   {#if loading}
-    <div class="card p-6 text-sm text-fg2">Loading…</div>
+    <div class="card p-6 text-sm text-fg2">{t('Loading…')}</div>
   {:else if overviews.length === 0}
     <div class="card p-6 text-sm text-fg2 space-y-2">
-      <p>No patients yet.</p>
-      <p>Either ingest a PDF on the <a href="/ingest" class="text-accent hover:underline">Ingest tab</a>
-        or click <em>+ New patient</em> to create one manually.</p>
+      <p>{t('No patients yet.')}</p>
+      <p>{t('Either ingest a PDF on the')} <a href="/ingest" class="text-accent hover:underline">{t('Ingest tab')}</a>
+        {t('or click')} <em>{t('+ New patient')}</em> {t('to create one manually.')}</p>
     </div>
   {:else}
     <!-- ─── Filter bar — collapsed by default, expand for column filters ─── -->
@@ -402,7 +404,7 @@
                stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M3 5 H17 M5 10 H15 M8 15 H12"/>
           </svg>
-          <span>Filters</span>
+          <span>{t('Filters')}</span>
           {#if activeFilterCount > 0}
             <span class="filter-bar__badge">{activeFilterCount}</span>
           {/if}
@@ -414,11 +416,11 @@
           </svg>
         </button>
         <span class="filter-bar__count">
-          Showing <strong>{filtered.length}</strong> of {overviews.length}
+          {t('Showing {shown} of {total}', { shown: filtered.length, total: overviews.length })}
         </span>
         {#if activeFilterCount > 0}
           <button type="button" class="filter-bar__clear" onclick={clearFilters}>
-            Clear filters
+            {t('Clear filters')}
           </button>
         {/if}
       </header>
@@ -426,92 +428,92 @@
       {#if filtersOpen}
         <div class="filter-bar__body">
           <label class="filter-field">
-            <span class="filter-field__label">Name / id</span>
+            <span class="filter-field__label">{t('Name / id')}</span>
             <input class="filter-field__input" type="search"
-                   placeholder="contains…" bind:value={f.name} />
+                   placeholder={t('contains…')} bind:value={f.name} />
           </label>
 
           <label class="filter-field">
-            <span class="filter-field__label">Nickname</span>
+            <span class="filter-field__label">{t('Nickname')}</span>
             <input class="filter-field__input" type="search"
-                   placeholder="contains…" bind:value={f.nickname} />
+                   placeholder={t('contains…')} bind:value={f.nickname} />
           </label>
 
           <label class="filter-field">
-            <span class="filter-field__label">Sex</span>
+            <span class="filter-field__label">{t('Sex')}</span>
             <select class="filter-field__input" bind:value={f.sex}>
-              <option value="">Any</option>
-              <option value="m">Male</option>
-              <option value="f">Female</option>
-              <option value="x">Other</option>
-              <option value="?">Unknown</option>
+              <option value="">{t('Any')}</option>
+              <option value="m">{t('Male')}</option>
+              <option value="f">{t('Female')}</option>
+              <option value="x">{t('Other')}</option>
+              <option value="?">{t('Unknown')}</option>
             </select>
           </label>
 
           <label class="filter-field">
-            <span class="filter-field__label">Has reports</span>
+            <span class="filter-field__label">{t('Has reports')}</span>
             <select class="filter-field__input" bind:value={f.hasReports}>
-              <option value="">Any</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
+              <option value="">{t('Any')}</option>
+              <option value="yes">{t('Yes')}</option>
+              <option value="no">{t('No')}</option>
             </select>
           </label>
 
           <label class="filter-field">
-            <span class="filter-field__label">Has notes</span>
+            <span class="filter-field__label">{t('Has notes')}</span>
             <select class="filter-field__input" bind:value={f.hasNotes}>
-              <option value="">Any</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
+              <option value="">{t('Any')}</option>
+              <option value="yes">{t('Yes')}</option>
+              <option value="no">{t('No')}</option>
             </select>
           </label>
 
           <label class="filter-field">
-            <span class="filter-field__label">Has nickname</span>
+            <span class="filter-field__label">{t('Has nickname')}</span>
             <select class="filter-field__input" bind:value={f.hasNickname}>
-              <option value="">Any</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
+              <option value="">{t('Any')}</option>
+              <option value="yes">{t('Yes')}</option>
+              <option value="no">{t('No')}</option>
             </select>
           </label>
 
           <label class="filter-field">
-            <span class="filter-field__label">Recent activity</span>
+            <span class="filter-field__label">{t('Recent activity')}</span>
             <select class="filter-field__input" bind:value={f.activityWindow}
-              title="Limits to patients with at least one report inside the rolling 12-month window.">
-              <option value="">Any</option>
-              <option value="12m">Active in last 12 months</option>
+              title={t('Limits to patients with at least one report inside the rolling 12-month window.')}>
+              <option value="">{t('Any')}</option>
+              <option value="12m">{t('Active in last 12 months')}</option>
             </select>
           </label>
 
           <label class="filter-field">
-            <span class="filter-field__label">Min reports</span>
+            <span class="filter-field__label">{t('Min reports')}</span>
             <input class="filter-field__input" type="number" min="0" inputmode="numeric"
                    placeholder="≥" bind:value={f.minReports} />
           </label>
 
           <label class="filter-field">
-            <span class="filter-field__label">Min abnormal flags</span>
+            <span class="filter-field__label">{t('Min abnormal flags')}</span>
             <input class="filter-field__input" type="number" min="0" inputmode="numeric"
                    placeholder="≥" bind:value={f.minAbnormal} />
           </label>
 
           <label class="filter-field">
-            <span class="filter-field__label">Min critical flags</span>
+            <span class="filter-field__label">{t('Min critical flags')}</span>
             <input class="filter-field__input" type="number" min="0" inputmode="numeric"
                    placeholder="≥" bind:value={f.minCritical} />
           </label>
 
           <label class="filter-field">
-            <span class="filter-field__label">Age ≥</span>
+            <span class="filter-field__label">{t('Age ≥')}</span>
             <input class="filter-field__input filter-field__input--narrow" type="number" min="0" max="150"
-                   inputmode="numeric" placeholder="years" bind:value={f.ageMin} />
+                   inputmode="numeric" placeholder={t('years')} bind:value={f.ageMin} />
           </label>
 
           <label class="filter-field">
-            <span class="filter-field__label">Age ≤</span>
+            <span class="filter-field__label">{t('Age ≤')}</span>
             <input class="filter-field__input filter-field__input--narrow" type="number" min="0" max="150"
-                   inputmode="numeric" placeholder="years" bind:value={f.ageMax} />
+                   inputmode="numeric" placeholder={t('years')} bind:value={f.ageMax} />
           </label>
         </div>
       {/if}
@@ -535,20 +537,20 @@
                 {/if}
               </th>
             {/snippet}
-            {@render th('name', 'Patient')}
-            <th class="px-3 py-2 text-left">Sex</th>
-            <th class="px-3 py-2 text-left">DOB</th>
-            {@render th('reports', 'Reports', 'right',
-              'Number of ingested PDF reports for this patient.')}
-            {@render th('latest', 'Latest', 'left',
-              'Most recent report collection date.')}
-            {@render th('analytes', 'Analytes', 'right',
-              'Distinct analytes measured directly on this patient\'s reports — values surfaced via the "Resultados anteriores" inline-prior columns are NOT counted.')}
-            {@render th('abnormal', 'Abnormal', 'right',
-              'Result rows flagged low / high / abnormal_qual across all reports (excludes inline priors).')}
-            {@render th('critical', 'Critical', 'right',
-              'Result rows flagged critical_low / critical_high (excludes inline priors).')}
-            <th class="px-3 py-2 text-left w-64">Actions</th>
+            {@render th('name', t('Patient'))}
+            <th class="px-3 py-2 text-left">{t('Sex')}</th>
+            <th class="px-3 py-2 text-left">{t('DOB')}</th>
+            {@render th('reports', t('Reports'), 'right',
+              t('Number of ingested PDF reports for this patient.'))}
+            {@render th('latest', t('Latest'), 'left',
+              t('Most recent report collection date.'))}
+            {@render th('analytes', t('Analytes'), 'right',
+              t('Distinct analytes measured directly on this patient\'s reports — values surfaced via the "Resultados anteriores" inline-prior columns are NOT counted.'))}
+            {@render th('abnormal', t('Abnormal'), 'right',
+              t('Result rows flagged low / high / abnormal_qual across all reports (excludes inline priors).'))}
+            {@render th('critical', t('Critical'), 'right',
+              t('Result rows flagged critical_low / critical_high (excludes inline priors).'))}
+            <th class="px-3 py-2 text-left w-64">{t('Actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -570,12 +572,9 @@
                      hover-clicks here can't accidentally flip the global
                      value that drives every flag derivation. -->
                 <td class="px-3 py-2"
-                    title="Edit sex on the patient detail page (or via the row's edit action).">
+                    title={t("Edit sex on the patient detail page (or via the row's edit action).")}>
                   <span class="sex-pill sex-pill--{p.sex}">
-                    {p.sex === 'm' ? 'Male'
-                     : p.sex === 'f' ? 'Female'
-                     : p.sex === 'x' ? 'Other'
-                     : 'Unknown'}
+                    {sexLabel(p.sex)}
                   </span>
                 </td>
                 <td class="px-3 py-2 text-xs text-fg2 tabular-nums">
@@ -592,7 +591,7 @@
                 <td class="px-3 py-2 text-xs tabular-nums">
                   {p.latest_collection_date_iso ? formatDate(p.latest_collection_date_iso) : '—'}
                   {#if p.earliest_collection_date_iso && p.report_count > 1}
-                    <div class="text-[10px] text-fg3">since {formatDate(p.earliest_collection_date_iso)}</div>
+                    <div class="text-[10px] text-fg3">{t('since')} {formatDate(p.earliest_collection_date_iso)}</div>
                   {/if}
                 </td>
                 <td class="px-3 py-2 text-right tabular-nums">{p.distinct_analyte_count}</td>
@@ -603,15 +602,15 @@
                     <!-- Icon-only actions; tooltips on hover, accessible
                          names via aria-label. -->
                     <a class="row-icon" href={`/patient/${p.id}`}
-                       title="Open patient detail" aria-label="Open">
+                       title={t('Open patient detail')} aria-label={t('Open')}>
                       <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M4 10 H16 M11 5 L16 10 L11 15"/>
                       </svg>
                     </a>
                     <button type="button" class="row-icon"
                             onclick={() => openNotes(p)}
-                            title={p.notes ? 'Edit clinical notes' : 'Add clinical notes'}
-                            aria-label="Notes">
+                            title={t(p.notes ? 'Edit clinical notes' : 'Add clinical notes')}
+                            aria-label={t('Notes')}>
                       <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M5 3 H13 L16 6 V16 a1 1 0 0 1 -1 1 H5 a1 1 0 0 1 -1 -1 V4 a1 1 0 0 1 1 -1 z"/>
                         <path d="M7 8 H13 M7 11 H13 M7 14 H10"/>
@@ -620,8 +619,8 @@
                     </button>
                     <button type="button" class="row-icon"
                             onclick={() => startEdit(p)}
-                            title="Edit name, nickname, sex, DOB"
-                            aria-label="Edit">
+                            title={t('Edit name, nickname, sex, DOB')}
+                            aria-label={t('Edit')}>
                       <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M4 16 L4 13 L13 4 L16 7 L7 16 z"/>
                         <path d="M11 6 L14 9"/>
@@ -629,8 +628,8 @@
                     </button>
                     <button type="button" class="row-icon"
                             onclick={() => openMerge(p)}
-                            title="Merge this patient into another (e.g. legal name change)"
-                            aria-label="Merge">
+                            title={t('Merge this patient into another (e.g. legal name change)')}
+                            aria-label={t('Merge')}>
                       <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M5 4 v5 a3 3 0 0 0 3 3 h6"/>
                         <path d="M15 4 v5 a3 3 0 0 1 -3 3"/>
@@ -639,8 +638,8 @@
                     </button>
                     <button type="button" class="row-icon row-icon--danger"
                             onclick={() => onDeletePatient(p)}
-                            title="Delete patient and all reports"
-                            aria-label="Delete">
+                            title={t('Delete patient and all reports')}
+                            aria-label={t('Delete')}>
                       <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M5 6 H15 M8 6 V4 H12 V6 M6 6 L7 16 a1 1 0 0 0 1 1 H12 a1 1 0 0 0 1 -1 L14 6"/>
                         <path d="M9 9 V14 M11 9 V14"/>
@@ -660,35 +659,35 @@
                             <path d="M11 6 L14 9"/>
                           </svg>
                         </span>
-                        Editing patient
+                        {t('Editing patient')}
                       </span>
-                      <span class="edit-panel__id" title="Patient slug — derived from the display name">
+                      <span class="edit-panel__id" title={t('Patient slug — derived from the display name')}>
                         {p.id}
                       </span>
                     </div>
 
                     <div class="edit-grid">
                       <label class="edit-field">
-                        <span class="edit-field__label">Display name</span>
+                        <span class="edit-field__label">{t('Display name')}</span>
                         <input class="edit-field__input"
                                bind:value={editForm.display_name}
-                               placeholder="LASTNAME GIVEN NAME"
+                               placeholder={t('LASTNAME GIVEN NAME')}
                                onkeydown={(e) => { if (e.key === 'Enter') saveEdit(); else if (e.key === 'Escape') editingId = null; }} />
-                        <span class="edit-field__hint">As printed on the lab PDF.</span>
+                        <span class="edit-field__hint">{t('As printed on the lab PDF.')}</span>
                       </label>
 
                       <label class="edit-field">
-                        <span class="edit-field__label">Nickname <span class="edit-field__opt">— optional</span></span>
+                        <span class="edit-field__label">{t('Nickname')} <span class="edit-field__opt">— {t('optional')}</span></span>
                         <input class="edit-field__input"
-                               placeholder="e.g. Mom, Dad, J.A."
+                               placeholder={t('e.g. Mom, Dad, J.A.')}
                                bind:value={editForm.nickname}
                                onkeydown={(e) => { if (e.key === 'Enter') saveEdit(); else if (e.key === 'Escape') editingId = null; }} />
-                        <span class="edit-field__hint">Friendly label shown in lists & titles.</span>
+                        <span class="edit-field__hint">{t('Friendly label shown in lists & titles.')}</span>
                       </label>
 
                       <div class="edit-field">
-                        <span class="edit-field__label">Sex</span>
-                        <div class="edit-segmented" role="radiogroup" aria-label="Sex">
+                        <span class="edit-field__label">{t('Sex')}</span>
+                        <div class="edit-segmented" role="radiogroup" aria-label={t('Sex')}>
                           {#each ['m','f','x','?'] as v}
                             <button type="button" role="radio"
                                     aria-checked={editForm.sex === v}
@@ -698,28 +697,28 @@
                             </button>
                           {/each}
                         </div>
-                        <span class="edit-field__hint">Used for every flag derivation across this patient's reports.</span>
+                        <span class="edit-field__hint">{t("Used for every flag derivation across this patient's reports.")}</span>
                       </div>
 
                       <label class="edit-field">
-                        <span class="edit-field__label">Date of birth <span class="edit-field__opt">— optional</span></span>
+                        <span class="edit-field__label">{t('Date of birth')} <span class="edit-field__opt">— {t('optional')}</span></span>
                         <input type="date" class="edit-field__input edit-field__input--narrow"
                                bind:value={editForm.dob_iso} />
                         <span class="edit-field__hint">
                           {#if editForm.dob_iso && ageFromDob(editForm.dob_iso) !== null}
-                            ≈ {ageFromDob(editForm.dob_iso)} years old
+                            ≈ {ageFromDob(editForm.dob_iso)} {t('years old')}
                           {:else}
-                            Drives the calculated age column.
+                            {t('Drives the calculated age column.')}
                           {/if}
                         </span>
                       </label>
                     </div>
 
                     <div class="edit-panel__footer">
-                      <span class="edit-panel__hotkeys">⏎ save · ⎋ cancel</span>
+                      <span class="edit-panel__hotkeys">⏎ {t('save · cancel')}</span>
                       <div class="flex gap-2">
-                        <button class="btn" onclick={() => (editingId = null)}>Cancel</button>
-                        <button class="btn-accent" onclick={saveEdit}>Save changes</button>
+                        <button class="btn" onclick={() => (editingId = null)}>{t('Cancel')}</button>
+                        <button class="btn-accent" onclick={saveEdit}>{t('Save changes')}</button>
                       </div>
                     </div>
                   </div>
@@ -737,52 +736,50 @@
 {#if creating}
   <div class="fixed inset-0 z-30 bg-black/50 grid place-items-center p-4">
     <button type="button" class="absolute inset-0 cursor-default"
-            aria-label="Close dialog"
+            aria-label={t('Close dialog')}
             onclick={() => (creating = false)}></button>
     <div class="relative card p-5 w-full max-w-md space-y-3"
          role="dialog" aria-modal="true" tabindex="-1">
-      <h2 class="text-base font-semibold">New patient</h2>
+      <h2 class="text-base font-semibold">{t('New patient')}</h2>
       <p class="text-xs text-fg2">
-        Pre-create a patient before their first PDF arrives. The next ingested
-        report with the same name will UPSERT against this row, keeping the
-        sex and DOB you set here.
+        {t('Pre-create a patient before their first PDF arrives. The next ingested report with the same name will UPSERT against this row, keeping the sex and DOB you set here.')}
       </p>
       <label class="block text-xs text-fg2">
-        Display name
+        {t('Display name')}
         <input class="input mt-1 block w-full"
                bind:value={newForm.display_name}
-               placeholder="e.g. JOÃO PEDRO ALMEIDA"
+               placeholder={t('e.g. JOÃO PEDRO ALMEIDA')}
                onkeydown={(e) => e.key === 'Enter' && saveCreate()} />
       </label>
       <label class="block text-xs text-fg2">
-        Nickname <span class="text-fg3">(optional)</span>
+        {t('Nickname')} <span class="text-fg3">({t('optional')})</span>
         <input class="input mt-1 block w-full"
                bind:value={newForm.nickname}
-               placeholder="e.g. Mom, Dad, J.A." />
+               placeholder={t('e.g. Mom, Dad, J.A.')} />
       </label>
       <div class="grid grid-cols-2 gap-2">
         <label class="block text-xs text-fg2">
-          Sex
+          {t('Sex')}
           <select class="select mt-1 block w-full"
                   bind:value={newForm.sex}>
-            <option value="?">Unknown</option>
-            <option value="m">Male</option>
-            <option value="f">Female</option>
-            <option value="x">Other</option>
+            <option value="?">{t('Unknown')}</option>
+            <option value="m">{t('Male')}</option>
+            <option value="f">{t('Female')}</option>
+            <option value="x">{t('Other')}</option>
           </select>
         </label>
         <label class="block text-xs text-fg2">
-          DOB
+          {t('DOB')}
           <input type="date"
                  class="input mt-1 block w-full"
                  bind:value={newForm.dob_iso} />
         </label>
       </div>
       <div class="flex justify-end gap-2 pt-1">
-        <button class="btn" onclick={() => (creating = false)}>Cancel</button>
+        <button class="btn" onclick={() => (creating = false)}>{t('Cancel')}</button>
         <button class="btn-accent" disabled={savingNew || !newForm.display_name.trim()}
                 onclick={saveCreate}>
-          {savingNew ? 'Saving…' : 'Create patient'}
+          {t(savingNew ? 'Saving…' : 'Create patient')}
         </button>
       </div>
     </div>
@@ -793,7 +790,7 @@
 <PatientPickerDialog
   bind:open={mergeOpen}
   excludeId={mergeSource?.id ?? undefined}
-  title={mergeSource ? `Merge "${mergeSource.display_name}" into…` : 'Merge into…'}
+  title={mergeSource ? t('Merge "{name}" into…', { name: mergeSource.display_name }) : t('Merge into…')}
   onPick={onMergeInto}
 />
 
@@ -801,7 +798,7 @@
 {#if notesOpen && notesPatient}
   <div class="fixed inset-0 z-30 bg-black/50 grid place-items-center p-4">
     <button type="button" class="absolute inset-0 cursor-default"
-            aria-label="Close dialog"
+            aria-label={t('Close dialog')}
             onclick={() => (notesOpen = false)}></button>
     <div class="relative card p-5 w-full max-w-xl space-y-3"
          role="dialog" aria-modal="true" tabindex="-1">
@@ -809,22 +806,21 @@
         <h2 class="text-base font-semibold">
           Notes · {notesPatient.nickname ?? notesPatient.display_name}
         </h2>
-        <span class="text-[11px] text-fg3">Markdown not rendered — plain text only</span>
+        <span class="text-[11px] text-fg3">{t('Markdown not rendered — plain text only')}</span>
       </div>
       <p class="text-xs text-fg2">
-        Free-form clinical context that doesn't fit the structured fields:
-        allergies, family history, treatment plan, ongoing conditions.
+        {t("Free-form clinical context that doesn't fit the structured fields: allergies, family history, treatment plan, ongoing conditions.")}
       </p>
       <textarea
         class="input block w-full font-mono"
         rows="10"
-        placeholder="e.g. Type 2 diabetes since 2018, on metformin 1000mg BD…"
+        placeholder={t('e.g. Type 2 diabetes since 2018, on metformin 1000mg BD…')}
         bind:value={notesDraft}
       ></textarea>
       <div class="flex justify-end gap-2 pt-1">
-        <button class="btn" onclick={() => (notesOpen = false)}>Cancel</button>
+        <button class="btn" onclick={() => (notesOpen = false)}>{t('Cancel')}</button>
         <button class="btn-accent" disabled={savingNotes} onclick={saveNotes}>
-          {savingNotes ? 'Saving…' : 'Save notes'}
+          {t(savingNotes ? 'Saving…' : 'Save notes')}
         </button>
       </div>
     </div>
@@ -919,10 +915,6 @@
     font-size: 0.75rem;
     color: rgb(var(--fg-2));
     flex: 1 1 auto;
-  }
-  .filter-bar__count strong {
-    color: rgb(var(--fg-1));
-    font-weight: 600;
   }
   .filter-bar__clear {
     font-size: 0.7rem;

@@ -343,6 +343,13 @@ select {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
+  box-sizing: border-box;
+  min-height: 2rem;
+  border: 1px solid rgb(var(--line));
+  border-radius: 0.4rem;
+  background-color: rgb(var(--bg-1));
+  font: inherit;
+  line-height: 1.25;
   padding-right: 1.75rem;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20' fill='none' stroke='%239ca3af' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 8 10 12 14 8'/></svg>");
   background-repeat: no-repeat;
@@ -350,6 +357,22 @@ select {
   background-size: 12px 12px;
   cursor: pointer;
   color: rgb(var(--fg-1));
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    background-color 120ms ease;
+}
+select:not(:disabled):hover {
+  border-color: rgb(var(--fg-3));
+}
+select:focus-visible {
+  outline: none;
+  border-color: rgb(var(--accent));
+  box-shadow: 0 0 0 3px rgb(var(--accent) / 0.18);
+}
+select:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 /* Theme-aware chevron tint — light mode uses fg-2 grey, dark mode keeps the
    default light grey from the data URI (which already reads on dark bg). */
@@ -363,6 +386,11 @@ select {
 select option {
   background-color: rgb(var(--bg-2));
   color: rgb(var(--fg-1));
+}
+select optgroup {
+  background-color: rgb(var(--bg-2));
+  color: rgb(var(--fg-2));
+  font-weight: 600;
 }
 
 /* The native search-input cancel (×) button is an unthemed OS widget. Hide

@@ -1,3 +1,5 @@
+import { t } from "$lib/i18n/index.svelte";
+
 export type ErrorKind =
   | "locked"
   | "not_initialized"
@@ -145,5 +147,5 @@ export const ERROR_TITLES: Record<ErrorKind, string> = {
 };
 
 export function titleForError(e: AppError): string {
-  return ERROR_TITLES[e.kind] ?? "Error";
+  return t(ERROR_TITLES[e.kind] ?? "Error");
 }

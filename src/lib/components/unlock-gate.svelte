@@ -4,6 +4,7 @@
   import { AppError } from '$api/errors';
   import { ask } from '@tauri-apps/plugin-dialog';
   import Icon from './icon.svelte';
+  import { t } from '$lib/i18n/index.svelte';
 
   let { onUnlocked } = $props<{ onUnlocked: () => void }>();
 
@@ -54,7 +55,7 @@
     if (/\d/.test(p)) score += 1;
     if (/[^A-Za-z0-9]/.test(p)) score += 1;
     if (/(.)\1\1/.test(p)) score = Math.max(0, score - 1); // penalize aaa
-    const labels = ['Too short', 'Weak', 'Fair', 'Good', 'Strong', 'Excellent'];
+    const labels = ['Too short', 'Weak', 'Fair', 'Good', 'Strong', 'Excellent'].map((label) => t(label));
     const tones = ['crit', 'crit', 'warn', 'warn', 'ok', 'ok'];
     const idx = Math.min(score, labels.length - 1);
     return { score: idx, label: labels[idx], tone: tones[idx] };
@@ -68,11 +69,11 @@
   async function setupPassword() {
     err = null;
     if (password.length < 10) {
-      err = AppError.fromUnknown({ kind: 'bad_request', code: 'pw.too_short', message: 'Password must be at least 10 characters.', detail: null, retryable: false, timestamp: 0 });
+      err = AppError.fromUnknown({ kind: 'bad_request', code: 'pw.too_short', message: t('Password must be at least 10 characters.'), detail: null, retryable: false, timestamp: 0 });
       return;
     }
     if (password !== confirmPassword) {
-      err = AppError.fromUnknown({ kind: 'bad_request', code: 'pw.mismatch', message: 'Passwords do not match.', detail: null, retryable: false, timestamp: 0 });
+      err = AppError.fromUnknown({ kind: 'bad_request', code: 'pw.mismatch', message: t('Passwords do not match.'), detail: null, retryable: false, timestamp: 0 });
       return;
     }
     busy = true;
@@ -129,10 +130,10 @@
     busy = true;
     try {
       if (!passkey) {
-        throw new Error('No passkey is registered for this vault');
+        throw new Error(t('No passkey is registered for this vault'));
       }
       if (!auth.isWebAuthnAvailable()) {
-        throw new Error('WebAuthn not available in this WebView');
+        throw new Error(t('WebAuthn not available in this WebView'));
       }
       const assertion = await auth.webauthnAssert(passkey.credential_id_b64, passkey.prf_salt_b64);
       await auth.unlockPasskey({
@@ -147,23 +148,11 @@
     finally { busy = false; }
   }
 
-  async function devSkip() {
-    err = null;
-    busy = true;
-    try {
-      await auth.devSkip();
-      await refresh();
-    } catch (e) { err = AppError.fromUnknown(e); }
-    finally { busy = false; }
-  }
-
   async function resetInstance() {
     if (busy || resetting) return;
     const confirmed = await ask(
-      'Reset this bloody-level instance?\n\n' +
-      'This permanently removes the encrypted database, password, passkeys, imported reports, PDFs, and local model files from this device. Forgotten passwords cannot be recovered.\n\n' +
-      'This cannot be undone. Continue?',
-      { title: 'Reset instance', kind: 'warning' }
+      t('Reset this bloody-level instance?\n\nThis permanently removes the encrypted database, password, passkeys, imported reports, PDFs, and local model files from this device. Forgotten passwords cannot be recovered.\n\nThis cannot be undone. Continue?'),
+      { title: t('Reset instance'), kind: 'warning' }
     );
     if (!confirmed) return;
 
@@ -217,28 +206,28 @@
         <circle cx="48" cy="32" r="3" fill="url(#gateGrad)" />
       </svg>
       <h1 class="gate__title">bloody-level</h1>
-      <p class="gate__tagline">Lab results, longitudinal — fully local, fully encrypted.</p>
+      <p class="gate__tagline">{t('Lab results, longitudinal — fully local, fully encrypted.')}</p>
     </header>
 
     <div class="card gate__card">
       {#if mode === 'setup'}
         <div class="space-y-1">
-          <h2 class="text-base font-semibold">Welcome — let's set up your vault</h2>
+          <h2 class="text-base font-semibold">{t('Welcome — let\'s set up your vault')}</h2>
           <p class="text-xs text-fg2">
-            bloody-level stores everything on <em>this device only</em>. Nothing leaves your computer.
-            Choose a password to encrypt the database — you'll need it every time you open the app.
+            {t('bloody-level stores everything on this device only. Nothing leaves your computer.')}
+            <br />{t("Choose a password to encrypt the database — you'll need it every time you open the app.")}
           </p>
         </div>
 
         <div class="rounded-md border border-line/60 bg-bg2/50 p-3 text-xs text-fg2 space-y-1">
           <p class="font-medium text-fg1 flex items-center gap-1">
-            <Icon name="lock" size={14} /> Important — there is no recovery
+            <Icon name="lock" size={14} /> {t('Important — there is no recovery')}
           </p>
-          <p>If you forget this password, your data is unrecoverable. Pick something memorable but long; consider a passphrase like <span class="font-mono">"olive-piano-7-cliffside-music"</span>.</p>
+          <p>{t('If you forget this password, your data is unrecoverable. Pick something memorable but long; consider a passphrase like')} <span class="font-mono">"olive-piano-7-cliffside-music"</span>.</p>
         </div>
 
         <label class="block">
-          <span class="text-xs text-fg2">Password</span>
+          <span class="text-xs text-fg2">{t('Password')}</span>
           <div class="mt-1 relative">
             <input
               type={showPw ? 'text' : 'password'}
@@ -246,12 +235,12 @@
               bind:value={password}
               autocomplete="new-password"
               oncontextmenu={keepContextMenu}
-              placeholder="At least 10 characters; longer is much better"
+              placeholder={t('At least 10 characters; longer is much better')}
             />
             <button type="button" class="gate__pw-toggle"
               onclick={() => (showPw = !showPw)}
-              title={showPw ? 'Hide password' : 'Show password'}
-              aria-label={showPw ? 'Hide password' : 'Show password'}
+              title={t(showPw ? 'Hide password' : 'Show password')}
+              aria-label={t(showPw ? 'Hide password' : 'Show password')}
             ><Icon name={showPw ? 'eye-off' : 'eye'} size={16} /></button>
           </div>
           {#if password.length > 0}
@@ -272,7 +261,7 @@
         </label>
 
         <label class="block">
-          <span class="text-xs text-fg2">Confirm password</span>
+          <span class="text-xs text-fg2">{t('Confirm password')}</span>
           <input
             type={showPw ? 'text' : 'password'}
             class="mt-1 block w-full bg-bg1 border border-line rounded-md px-3 py-2 text-sm focus:outline-none focus:border-accent {confirmPassword && !passwordsMatch ? 'border-crit' : ''}"
@@ -280,10 +269,10 @@
             autocomplete="new-password"
             oncontextmenu={keepContextMenu}
             onkeydown={(e) => e.key === 'Enter' && setupPassword()}
-            placeholder="Type it again"
+            placeholder={t('Type it again')}
           />
           {#if confirmPassword.length > 0 && !passwordsMatch}
-            <p class="mt-1 text-[11px] text-crit">Passwords don't match yet.</p>
+            <p class="mt-1 text-[11px] text-crit">{t("Passwords don't match yet.")}</p>
           {/if}
         </label>
 
@@ -291,53 +280,40 @@
           class="btn-accent w-full"
           disabled={busy || password.length < 10 || !passwordsMatch || confirmPassword.length === 0}
           onclick={setupPassword}
-        >{busy ? 'Encrypting…' : 'Create vault'}</button>
+        >{busy ? t('Encrypting…') : t('Create vault')}</button>
 
         {#if status?.os_vault_supported}
-          <div class="gate__divider"><span>or</span></div>
+          <div class="gate__divider"><span>{t('or')}</span></div>
           <button class="btn w-full flex items-center justify-center gap-2" disabled={busy} onclick={setupOsVault}>
-            <Icon name="shield" size={15} /> {busy ? 'Preparing native vault…' : 'Use OS vault without a password'}
+            <Icon name="shield" size={15} /> {busy ? t('Preparing native vault…') : t('Use OS vault without a password')}
           </button>
           <p class="text-[11px] text-fg3">
-            The encrypted master key will be protected by {status.os_vault_platform}. Add a passkey
-            from Settings for another recovery method; anyone who can unlock this OS account may
-            access the vault.
+            {t('The encrypted master key will be protected by {platform}. Add a passkey', { platform: status.os_vault_platform })}
+            {t('from Settings for another recovery method; anyone who can unlock this OS account may')}
+            {t('access the vault.')}
           </p>
         {/if}
 
-        {#if status?.is_dev}
-          <details class="text-xs text-fg3">
-            <summary class="cursor-pointer">Developer shortcut</summary>
-            <div class="mt-2 space-y-2">
-              <button class="btn w-full" disabled={busy} onclick={devSkip}>
-                Skip — initialize with the public dev password
-              </button>
-              <p class="text-[11px] text-warn">
-                Dev builds only. Uses a hard-coded password — never load real medical data this way.
-              </p>
-            </div>
-          </details>
-        {/if}
       {:else}
         <div class="space-y-1">
-          <h2 class="text-base font-semibold">Welcome back</h2>
+          <h2 class="text-base font-semibold">{t('Welcome back')}</h2>
           <p class="text-xs text-fg2">
             {status?.has_password
-              ? 'Enter your password to unlock.'
-              : 'This vault has no password. Use the native OS vault or a registered passkey to unlock.'}
+              ? t('Enter your password to unlock.')
+              : t('This vault has no password. Use the native OS vault or a registered passkey to unlock.')}
           </p>
         </div>
 
         {#if status?.os_vault_configured && status.has_password}
           <button class="btn w-full" disabled={busy} onclick={unlockOsVault}>
-            <Icon name="shield" size={15} /> Unlock with OS vault
+            <Icon name="shield" size={15} /> {t('Unlock with OS vault')}
           </button>
-          <p class="text-[11px] text-fg3">Uses your configured native credential store; your password remains available as a fallback.</p>
+          <p class="text-[11px] text-fg3">{t('Uses your configured native credential store; your password remains available as a fallback.')}</p>
         {/if}
 
         {#if status?.has_password}
           <label class="block">
-            <span class="text-xs text-fg2">Password</span>
+            <span class="text-xs text-fg2">{t('Password')}</span>
             <div class="mt-1 relative">
               <input
                 type={showPw ? 'text' : 'password'}
@@ -346,12 +322,12 @@
                 autocomplete="current-password"
                 oncontextmenu={keepContextMenu}
                 onkeydown={(e) => e.key === 'Enter' && password && !busy && unlockPassword()}
-                placeholder="Your vault password"
+                placeholder={t('Your vault password')}
               />
               <button type="button" class="gate__pw-toggle"
                 onclick={() => (showPw = !showPw)}
-                title={showPw ? 'Hide password' : 'Show password'}
-                aria-label={showPw ? 'Hide password' : 'Show password'}
+                title={t(showPw ? 'Hide password' : 'Show password')}
+                aria-label={t(showPw ? 'Hide password' : 'Show password')}
               ><Icon name={showPw ? 'eye-off' : 'eye'} size={16} /></button>
             </div>
           </label>
@@ -360,10 +336,10 @@
             class="btn-accent w-full"
             disabled={busy || !password}
             onclick={unlockPassword}
-          >{busy ? 'Unlocking…' : 'Unlock'}</button>
+          >{busy ? t('Unlocking…') : t('Unlock')}</button>
         {:else if status?.os_vault_configured}
           <button class="btn-accent w-full" disabled={busy} onclick={unlockPassword}>
-            <Icon name="shield" size={15} /> {busy ? 'Unlocking…' : 'Unlock without password'}
+            <Icon name="shield" size={15} /> {busy ? t('Unlocking…') : t('Unlock without password')}
           </button>
         {/if}
 
@@ -375,43 +351,34 @@
             onclick={resetInstance}
           >
             <Icon name="trash" size={14} />
-            {resetting ? 'Resetting instance…' : 'Reset this instance'}
+            {resetting ? t('Resetting instance…') : t('Reset this instance')}
           </button>
-          <p>Use only if the vault password cannot be recovered.</p>
+          <p>{t('Use only if the vault password cannot be recovered.')}</p>
         </div>
 
         {#if status?.has_passkey}
-          <div class="gate__divider"><span>or</span></div>
+          <div class="gate__divider"><span>{t('or')}</span></div>
           {#if (status.passkeys?.length ?? 0) <= 1}
             <button class="btn w-full flex items-center justify-center gap-2" disabled={busy} onclick={() => unlockPasskey()}>
-              <Icon name="key" size={15} /> Use a passkey
+              <Icon name="key" size={15} /> {t('Use a passkey')}
             </button>
           {:else}
             <div class="space-y-2">
               {#each status.passkeys as passkey}
                 <button class="btn w-full flex items-center justify-center gap-2" disabled={busy} onclick={() => unlockPasskey(passkey)}>
-                  <Icon name="key" size={15} /> {passkey.label || 'Passkey'}
+                  <Icon name="key" size={15} /> {passkey.label || t('Passkey')}
                 </button>
               {/each}
             </div>
           {/if}
         {/if}
 
-        {#if status?.is_dev}
-          <details class="text-xs text-fg3">
-            <summary class="cursor-pointer">Developer shortcut</summary>
-            <button class="btn w-full mt-2" disabled={busy} onclick={devSkip}>
-              Skip (dev)
-            </button>
-          </details>
-        {/if}
-
         {#if status && status.failed_unlocks > 0}
           <p class="text-[11px] text-warn flex items-center gap-1">
             <Icon name="warning" size={14} />
-            {status.failed_unlocks} failed attempt{status.failed_unlocks === 1 ? '' : 's'} since the last successful unlock.
+            {t(status.failed_unlocks === 1 ? 'failed attempt' : 'failed attempts')} {t('since the last successful unlock.')}
             {#if backoffRemaining > 0}
-              Try again in {backoffRemaining} second{backoffRemaining === 1 ? '' : 's'}.
+              {t(backoffRemaining === 1 ? 'Try again in {count} second.' : 'Try again in {count} seconds.', { count: backoffRemaining })}
             {/if}
           </p>
         {/if}
@@ -426,10 +393,10 @@
     </div>
 
     <footer class="gate__footer">
-      <span class="gate__footer-pill"><Icon name="lock" size={13} /> Private</span>
-      <span class="gate__footer-pill"><Icon name="shield" size={13} /> Encrypted</span>
-      <span class="gate__footer-pill"><Icon name="database" size={13} /> Local-only</span>
-      <span class="gate__footer-pill"><Icon name="ban" size={13} /> No telemetry</span>
+      <span class="gate__footer-pill"><Icon name="lock" size={13} /> {t('Private')}</span>
+      <span class="gate__footer-pill"><Icon name="shield" size={13} /> {t('Encrypted')}</span>
+      <span class="gate__footer-pill"><Icon name="database" size={13} /> {t('Local-only')}</span>
+      <span class="gate__footer-pill"><Icon name="ban" size={13} /> {t('No telemetry')}</span>
     </footer>
   </div>
 </div>
