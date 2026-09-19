@@ -203,6 +203,6 @@ mod tests {
     #[test]
     fn accepts_long_passphrases() {
         assert!(validate_new_password("olive-piano-7-cliffside-music").is_ok());
-        assert!(validate_new_password("dev-skip-not-for-production-x7q2").is_ok());
+        assert!(validate_new_password("river-lantern-7-cliffside-music").is_ok());
     }
 }

@@ -30,16 +30,12 @@ pub struct AuthStatus {
     pub unlocked: bool,
     pub failed_unlocks: u32,
     pub unlock_backoff_remaining_secs: i64,
-    /// True only in debug builds. Frontend uses this to surface a dev "Skip"
-    /// button that uses a known dev password — never compiled into release.
-    pub is_dev: bool,
     pub os_vault_configured: bool,
     pub os_vault_auto_unlock: bool,
     pub os_vault_supported: bool,
     pub os_vault_platform: String,
 }
 
-const IS_DEV: bool = cfg!(debug_assertions);
 const PASSKEY_WRAP_CONTEXT: &[u8] = b"bloody-level DMK wrap v1";
 // Passkeys created by pre-rename builds use this context. Keep it as a
 // compatibility fallback so a product rename cannot strand an existing vault.
@@ -158,7 +154,6 @@ pub async fn auth_status(state: State<'_, AppState>) -> AppResult<AuthStatus> {
             unlocked,
             failed_unlocks: 0,
             unlock_backoff_remaining_secs: 0,
-            is_dev: IS_DEV,
             os_vault_configured: false,
             os_vault_auto_unlock: false,
             os_vault_supported: native.supported,
@@ -176,7 +171,6 @@ pub async fn auth_status(state: State<'_, AppState>) -> AppResult<AuthStatus> {
         unlocked,
         failed_unlocks: ks.failed_unlocks,
         unlock_backoff_remaining_secs: ks.unlock_backoff_remaining_secs(),
-        is_dev: IS_DEV,
         os_vault_configured: ks.os_vault_enabled
             && crate::crypto::native_vault::status().credential_present,
         os_vault_auto_unlock: ks.os_vault_auto_unlock,

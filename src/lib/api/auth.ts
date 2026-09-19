@@ -9,7 +9,6 @@ export interface AuthStatus {
   unlocked: boolean;
   failed_unlocks: number;
   unlock_backoff_remaining_secs: number;
-  is_dev: boolean;
   os_vault_configured: boolean;
   os_vault_auto_unlock: boolean;
   os_vault_supported: boolean;
@@ -99,20 +98,6 @@ export async function unlockPasskey(args: {
   prf_output_b64: string;
 }): Promise<void> {
   await invoke("auth_unlock_passkey", { args }, { silentAuth: true });
-}
-
-export const DEV_SKIP_PASSWORD = "dev-skip-not-for-production-x7q2";
-
-export async function devSkip(): Promise<void> {
-  const s = await status();
-  if (!s.is_dev) {
-    throw new Error("dev skip is not available in release builds");
-  }
-  if (s.initialized) {
-    await unlockPassword(DEV_SKIP_PASSWORD);
-  } else {
-    await setupPassword(DEV_SKIP_PASSWORD);
-  }
 }
 
 // ---------------------------------------------------------------------------
