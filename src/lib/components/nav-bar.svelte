@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { theme } from '$theme/store.svelte';
+  import { t } from '$lib/i18n/index.svelte';
   import * as auth from '$api/auth';
   import * as security from '$api/security';
   import GlobalSearch from './global-search.svelte';
@@ -15,7 +16,7 @@
     { href: '/records',  label: 'Records',   icon: 'records' },
     { href: '/audit',    label: 'Audit',     icon: 'audit' },
     { href: '/compare',  label: 'Compare',   icon: 'compare' },
-    { href: '/ontology', label: 'Ontology',  icon: 'ontology' },
+    { href: '/library',  label: 'Library',   icon: 'library' },
     { href: '/settings', label: 'Settings',  icon: 'settings' }
   ] as const;
 
@@ -48,7 +49,7 @@
       <!-- App icon only — no wordmark to keep the bar tight. The icon is
            a stripped-down version of the same waveform used as the OS app
            icon; clicking it routes home. -->
-      <a href="/" class="shrink-0 inline-flex items-center" aria-label="bloody-level — home" title="bloody-level">
+      <a href="/" class="shrink-0 inline-flex items-center" aria-label={t('bloody-level — home')} title="bloody-level">
         <svg viewBox="0 0 96 96" width="22" height="22" fill="none" aria-hidden="true">
           <defs>
             <linearGradient id="navGrad" x1="0" y1="0" x2="1" y2="1">
@@ -70,8 +71,8 @@
           <a
             href={l.href}
             class="nav-tab {active ? 'nav-tab--active' : ''}"
-            title={l.label}
-            aria-label={l.label}
+            title={t(l.label)}
+            aria-label={t(l.label)}
           >
             <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor"
                  stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -105,7 +106,7 @@
                 <!-- Two intersecting trend lines -->
                 <path d="M3 14 L7 10 L11 12 L17 5"/>
                 <path d="M3 7 L8 12 L13 8 L17 14"/>
-              {:else if l.icon === 'ontology'}
+              {:else if l.icon === 'library'}
                 <!-- Stylised book / atlas pages -->
                 <path d="M4 4 H9 a2 2 0 0 1 2 2 V17 H6 a2 2 0 0 1 -2 -2 z"/>
                 <path d="M16 4 H11 a2 2 0 0 0 -2 2 V17 H14 a2 2 0 0 0 2 -2 z"/>
@@ -118,7 +119,7 @@
                          M4.2 15.8 l1.4 -1.4 M14.4 5.6 l1.4 -1.4"/>
               {/if}
             </svg>
-            <span class="nav-tab__label">{l.label}</span>
+            <span class="nav-tab__label">{t(l.label)}</span>
           </a>
         {/each}
       </nav>
@@ -132,8 +133,8 @@
       <button
         class="icon-btn"
         onclick={() => theme.cycle()}
-        title="Theme: {theme.mode} · click to cycle (light → dark → system)"
-        aria-label="Cycle theme (current: {theme.mode})"
+        title={t('Theme: {mode} · click to cycle (light → dark → system)', { mode: t(theme.mode === 'light' ? 'Light' : theme.mode === 'dark' ? 'Dark' : 'System') })}
+        aria-label={t('Cycle theme (current: {mode})', { mode: t(theme.mode === 'light' ? 'Light' : theme.mode === 'dark' ? 'Dark' : 'System') })}
       >
         {#if theme.mode === 'system'}
           <!-- Half-filled circle for "follow system" — reads as both
@@ -163,8 +164,8 @@
         class="icon-btn"
         disabled={securityStatus?.os_vault_auto_unlock === true}
         onclick={lock}
-        title={securityStatus?.os_vault_auto_unlock ? 'Disable automatic unlock before locking' : 'Lock the database'}
-        aria-label="Lock"
+        title={t(securityStatus?.os_vault_auto_unlock ? 'Disable automatic unlock before locking' : 'Lock the database')}
+        aria-label={t('Lock')}
       >
         <svg viewBox="0 0 20 20" width="16" height="16" fill="none"
              stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

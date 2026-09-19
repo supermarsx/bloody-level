@@ -12,7 +12,7 @@ Use edit when a profile needs correction. Merge or delete only after checking th
 
 Records provides the broader report and row view across the vault. Use it to find imported data that is not tied to the currently selected patient, inspect processing state, and review the available reparse or maintenance actions.
 
-Reparse-all is useful after a deliberate ontology or parser change. It can change mappings across many reports, so review the resulting audit entries and spot-check representative source PDFs afterward.
+Reparse-all is useful after a deliberate Library or parser change. It can change mappings across many reports, so review the resulting audit entries and spot-check representative source PDFs afterward.
 
 ## Keep identity review explicit
 

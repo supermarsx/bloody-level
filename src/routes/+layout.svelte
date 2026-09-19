@@ -18,6 +18,7 @@
   import Splash from '$components/splash.svelte';
   import { isTauri } from '$api/index';
   import { windowTitle } from '$lib/title.svelte';
+  import { t } from '$lib/i18n/index.svelte';
   import { page } from '$app/stores';
 
   let { children } = $props();
@@ -25,7 +26,7 @@
   let unlocked = $state(false);
   let checking = $state(true);
   let splashVisible = $state(true);
-  let splashMessage = $state('Initializing…');
+  let splashMessage = $state(t('Initializing…'));
   let unsub: (() => void) | null = null;
 
   async function checkAuth() {
@@ -66,6 +67,13 @@
     splashVisible = false;
   }
 
+  async function hydratePreferences() {
+    // These settings live inside the encrypted vault. A first attempt can
+    // legitimately happen while the unlock gate is showing, so retry after
+    // the user unlocks instead of permanently keeping process defaults.
+    await Promise.all([chartPrefs.load(), appearance.load(), comparePresets.load()]);
+  }
+
   function setupGlobalErrorHandlers() {
     if (typeof window === 'undefined') return;
     window.addEventListener('unhandledrejection', (e) => {
@@ -95,7 +103,7 @@
     unsub = authEvents.on((evt) => {
       if (evt.type === 'locked') {
         if (unlocked) {
-          toasts.warn('Session locked', 'Re-enter your password to continue.');
+          toasts.warn(t('Session locked'), t('Re-enter your password to continue.'));
         }
         unlocked = false;
       }
@@ -104,20 +112,18 @@
     // Show the splash, then reveal the window — this ordering means the very
     // first frame the user sees is already painted with the splash, never an
     // empty white WebView frame.
-    splashMessage = 'Connecting to the vault…';
+    splashMessage = t('Connecting to the vault…');
     await revealWindow();
 
-    splashMessage = 'Checking unlock state…';
+    splashMessage = t('Checking unlock state…');
     await checkAuth();
     // Hydrate chart + appearance preferences from the settings table so
     // both render correctly on first paint after unlock.
-    chartPrefs.load();
-    appearance.load();
-    comparePresets.load();
+    if (unlocked) await hydratePreferences();
 
     // Hold the splash a beat longer so the fade reads as intentional rather
     // than a flicker. 220ms matches the CSS opacity transition duration.
-    splashMessage = 'Ready';
+    splashMessage = t('Ready');
     setTimeout(fadeOutSplash, 220);
   });
 
@@ -180,11 +186,11 @@
       '/records':  'Records',
       '/audit':    'Audit log',
       '/compare':  'Compare',
-      '/ontology': 'Ontology',
+      '/library': 'Library',
       '/settings': 'Settings'
     };
     if (path in generic) {
-      windowTitle.setSubject(generic[path]);
+      windowTitle.setSubject(t(generic[path]));
     }
   });
 </script>
@@ -194,7 +200,7 @@
      the underlying UI is already laid out — no second flash. -->
 {#if !checking}
   {#if !unlocked}
-    <UnlockGate onUnlocked={() => { unlocked = true; }} />
+    <UnlockGate onUnlocked={() => { unlocked = true; hydratePreferences(); }} />
   {:else}
     <!-- Plain document scroll — `overscroll-behavior: none` on body kills
          the rubber-band bounce without trapping the document, so child

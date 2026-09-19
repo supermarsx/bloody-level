@@ -7,7 +7,7 @@ Review every newly imported report before using it for comparison. The structure
 Report detail includes the source metadata, imported rows, values, units, flags, reference ranges, and parser diagnostics. Depending on the report state, you can:
 
 - Open the original PDF.
-- Reparse the report after changing ontology or ingestion settings.
+- Reparse the report after changing Library or ingestion settings.
 - Export the report rows as CSV.
 - Move through previous and next reports.
 - Delete a report and its associated imported data when appropriate.

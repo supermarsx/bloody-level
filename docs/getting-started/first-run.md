@@ -49,4 +49,4 @@ Keep the original report available for comparison. If a value is unmatched or lo
 
 ## Good first settings
 
-Review [Settings and ontology](../user-guide/settings-and-ontology.md) before importing a large archive. In particular, confirm the ingestion tier, model paths if you use optional OCR, chart defaults, and the resolved storage location shown by the app.
+Review [Settings and Library](../user-guide/settings-and-library.md) before importing a large archive. In particular, confirm the ingestion tier, model paths if you use optional OCR, chart defaults, and the resolved storage location shown by the app.

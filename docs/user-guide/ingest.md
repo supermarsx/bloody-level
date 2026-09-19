@@ -25,7 +25,7 @@ The pipeline records these stages:
 2. Hash the source bytes with SHA-256.
 3. Extract text with PDFium.
 4. Use OCR when the extracted text is sparse and the selected tier is available.
-5. Parse and normalize rows against the local ontology.
+5. Parse and normalize rows against the local analyte Library.
 6. Encrypt the managed source copy, then write the report, rows, and audit events to the encrypted vault.
 
 ## Duplicate handling

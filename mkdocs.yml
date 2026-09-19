@@ -84,7 +84,7 @@ nav:
       - Reviewing results: user-guide/reviewing-results.md
       - Patients and records: user-guide/patients-and-records.md
       - Compare and charts: user-guide/compare-and-charts.md
-      - Settings and ontology: user-guide/settings-and-ontology.md
+      - Settings and Library: user-guide/settings-and-library.md
   - Data and security:
       - How data moves: data-and-security/data-flow.md
       - Privacy and encryption: data-and-security/privacy.md

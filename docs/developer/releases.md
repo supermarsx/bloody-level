@@ -37,7 +37,7 @@ publication.
 
 Portable archives and installer/update targets are not interchangeable. Windows
 ZIPs contain the standalone `bloody-level.exe` plus its bundled `resources`
-directory (including PDFium and ontology assets), so they are portable
+directory (including PDFium and analyte Library assets), so they are portable
 applications rather than archives containing the NSIS/MSI installers. Linux
 ZIPs contain the AppImage, and macOS ZIPs contain the `.app` bundle.
 

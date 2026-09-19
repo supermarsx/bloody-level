@@ -14,7 +14,7 @@ This page describes the capability boundary users and contributors should rely o
   Keychain, or Linux Secret Service vault wrapping, with explicit automatic
   unlock control.
 - PDF import, SHA-256 duplicate detection, PDFium extraction, source-PDF retention, parsing, normalized rows, and audit diagnostics.
-- Patient and report organization, global search, comparison views, charts, CSV export, ontology controls, and storage backup/restore flows.
+- Patient and report organization, global search, comparison views, charts, CSV export, Library controls, and storage backup/restore flows.
 - Cross-platform CI and a release matrix covering the supported desktop architectures.
 
 ## Available with conditions

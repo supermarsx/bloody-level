@@ -1,4 +1,4 @@
-# Settings and ontology
+# Settings and Library
 
 Settings controls how the desktop app looks, stores data, and interprets imported rows.
 
@@ -30,11 +30,15 @@ being configured does not prove that the model is installed, compatible, or used
 successfully; check the displayed load status and report diagnostics. Model and
 language downloads show their current file, byte progress, and a Cancel action.
 
-## Ontology
+## Library
 
-The ontology maps report labels and units to canonical analytes. Search and filter entries, inspect aliases and unit information, and reload the seed data when needed.
+The Library maps report labels and units to canonical analytes. Search and filter
+entries, inspect aliases and unit information, and reload the seed data when
+needed.
 
-Treat edits to bundled entries carefully: reloading from seed data can overwrite local changes. Reparse affected reports after a deliberate ontology change, then review the audit trail and source PDFs.
+Treat edits to bundled entries carefully: reloading from seed data can overwrite
+local changes. Reparse affected reports after a deliberate Library change, then
+review the audit trail and source PDFs.
 
 ## Storage
 

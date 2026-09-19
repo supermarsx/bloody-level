@@ -10,7 +10,7 @@ Confirm that the file exists, opens in a normal PDF viewer, and is not still bei
 
 ## The report imported but has no useful rows
 
-Open the report diagnostics. A scanned or text-poor PDF may need the optional OCR tier, and a layout the parser does not recognize may produce unmatched lines. Compare with the original PDF before enabling another tier or editing ontology aliases.
+Open the report diagnostics. A scanned or text-poor PDF may need the optional OCR tier, and a layout the parser does not recognize may produce unmatched lines. Compare with the original PDF before enabling another tier or editing Library aliases.
 
 ## The same report appears twice
 
@@ -18,7 +18,7 @@ Duplicate detection uses the source bytes' SHA-256. If two files look the same b
 
 ## A value is unmatched or low confidence
 
-Treat it as unverified. Check the original report, unit, reference range, and parser diagnostics. Correct the ontology or reparse only when the mapping is understood, then review the updated row.
+Treat it as unverified. Check the original report, unit, reference range, and parser diagnostics. Correct the Library entry or reparse only when the mapping is understood, then review the updated row.
 
 ## OCR or a model is unavailable
 

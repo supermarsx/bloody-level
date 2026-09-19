@@ -221,7 +221,7 @@ contributor workflow.
 | ---------------------------- | ------------------------------------------------------------------------------------------- |
 | `src/`                       | Svelte frontend and user interface.                                                         |
 | `src-tauri/`                 | Rust core, Tauri commands, encrypted database, migrations, parser, and native integrations. |
-| `ontology/`                  | Seed analyte registry.                                                                      |
+| `ontology/`                  | Seed analyte library data bundled with the application.                                     |
 | `docs/`                      | MkDocs documentation source and site assets.                                                |
 | `mkdocs.yml`                 | Documentation theme, navigation, search, and site metadata.                                 |
 | `.github/workflows/ci.yml`   | Hosted checks, build matrix, and release publishing.                                        |

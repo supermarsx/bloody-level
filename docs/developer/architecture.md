@@ -16,15 +16,15 @@ The frontend does not open the database or hold the raw vault key. It calls regi
 
 ## Import path
 
-The ingestion command validates the file, hashes it, extracts text, optionally invokes a configured OCR tier, parses rows, maps them through the ontology, and writes a report transaction. Diagnostics are retained for review rather than discarded when a mapping is incomplete.
+The ingestion command validates the file, hashes it, extracts text, optionally invokes a configured OCR tier, parses rows, maps them through the analyte Library, and writes a report transaction. Diagnostics are retained for review rather than discarded when a mapping is incomplete.
 
 ## Main UI areas
 
 The current route and navigation model is:
 
-`Dashboard` · `Ingest` · `Patients` · `Records` · `Audit` · `Compare` · `Ontology` · `Settings`
+`Dashboard` · `Ingest` · `Patients` · `Records` · `Audit` · `Compare` · `Library` · `Settings`
 
-Global search queries patient, analyte, and report data through a debounced command path. Settings cover appearance, charts, comparison, ingestion, ontology, storage, about, and advanced maintenance.
+Global search queries patient, analyte, and report data through a debounced command path. Settings cover appearance, charts, comparison, ingestion, Library, storage, about, and advanced maintenance.
 
 ## Security boundary
 

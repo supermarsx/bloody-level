@@ -74,7 +74,7 @@ Scope:
 - Extend the current local model validation/status skeleton into a real Phi-4
   repair runtime.
 - Define a structured repair request containing row text, parsed fields,
-  ontology candidates, and parser diagnostics.
+  Library candidates, and parser diagnostics.
 
 Acceptance:
 

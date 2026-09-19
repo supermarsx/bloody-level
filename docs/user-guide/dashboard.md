@@ -9,7 +9,7 @@ The Dashboard is the starting point after unlock. It gives you a compact view of
 - Flagged or low-confidence values that deserve review.
 - Recent audit activity.
 
-Open a report or patient from the dashboard to continue into its detail view. The navigation bar keeps the main areas available: Dashboard, Ingest, Patients, Records, Audit, Compare, Ontology, and Settings.
+Open a report or patient from the dashboard to continue into its detail view. The navigation bar keeps the main areas available: Dashboard, Ingest, Patients, Records, Audit, Compare, Library, and Settings.
 
 ## Global search
 

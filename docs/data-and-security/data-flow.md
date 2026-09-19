@@ -7,7 +7,7 @@ PDF file
   -> SHA-256 identity check
   -> PDFium text extraction
   -> optional local OCR
-  -> deterministic parsing and ontology mapping
+  -> deterministic parsing and analyte Library mapping
   -> encrypted vault and audit events
   -> report, patient, chart, and CSV views
 ```
